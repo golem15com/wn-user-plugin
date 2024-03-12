@@ -31,12 +31,12 @@ class Plugin extends PluginBase
     public function pluginDetails()
     {
         return [
-            'name'        => 'golem15.user::lang.plugin.name',
+            'name' => 'golem15.user::lang.plugin.name',
             'description' => 'golem15.user::lang.plugin.description',
-            'author'      => 'Alexey Bobkov, Samuel Georges',
-            'icon'        => 'icon-user',
-            'homepage'    => 'https://github.com/wintercms/wn-user-plugin',
-            'replaces'    => ['RainLab.User' => '~1.6'],
+            'author' => 'Alexey Bobkov, Samuel Georges',
+            'icon' => 'icon-user',
+            'homepage' => 'https://github.com/wintercms/wn-user-plugin',
+            'replaces' => ['RainLab.User' => '~1.6'],
         ];
     }
 
@@ -89,7 +89,7 @@ class Plugin extends PluginBase
         $this->bindNotificationEvents();
         $this->publishes(
             [
-                base_path() . '/plugins/golem15/user/config/jwt.php'  => config_path(
+                base_path() . '/plugins/golem15/user/config/jwt.php' => config_path(
                     'jwt.php'
                 ),
                 base_path() . '/plugins/golem15/user/config/auth.php' => config_path(
@@ -103,8 +103,8 @@ class Plugin extends PluginBase
     public function registerComponents()
     {
         return [
-            \Golem15\User\Components\Session::class       => 'session',
-            \Golem15\User\Components\Account::class       => 'account',
+            \Golem15\User\Components\Session::class => 'session',
+            \Golem15\User\Components\Account::class => 'account',
             \Golem15\User\Components\ResetPassword::class => 'resetPassword'
         ];
     }
@@ -113,19 +113,19 @@ class Plugin extends PluginBase
     {
         return [
             'golem15.users.access_users' => [
-                'tab'   => 'golem15.user::lang.plugin.tab',
+                'tab' => 'golem15.user::lang.plugin.tab',
                 'label' => 'golem15.user::lang.plugin.access_users'
             ],
             'golem15.users.access_groups' => [
-                'tab'   => 'golem15.user::lang.plugin.tab',
+                'tab' => 'golem15.user::lang.plugin.tab',
                 'label' => 'golem15.user::lang.plugin.access_groups'
             ],
             'golem15.users.access_settings' => [
-                'tab'   => 'golem15.user::lang.plugin.tab',
+                'tab' => 'golem15.user::lang.plugin.tab',
                 'label' => 'golem15.user::lang.plugin.access_settings'
             ],
             'golem15.users.impersonate_user' => [
-                'tab'   => 'golem15.user::lang.plugin.tab',
+                'tab' => 'golem15.user::lang.plugin.tab',
                 'label' => 'golem15.user::lang.plugin.impersonate_user'
             ],
         ];
@@ -135,24 +135,24 @@ class Plugin extends PluginBase
     {
         return [
             'user' => [
-                'label'       => 'golem15.user::lang.users.menu_label',
-                'url'         => Backend::url('golem15/user/users'),
-                'icon'        => 'icon-user',
-                'iconSvg'     => 'plugins/golem15/user/assets/images/user-icon.svg',
+                'label' => 'golem15.user::lang.users.menu_label',
+                'url' => Backend::url('golem15/user/users'),
+                'icon' => 'icon-user',
+                'iconSvg' => 'plugins/golem15/user/assets/images/user-icon.svg',
                 'permissions' => ['golem15.users.*'],
-                'order'       => 500,
+                'order' => 500,
 
                 'sideMenu' => [
                     'users' => [
                         'label' => 'golem15.user::lang.users.menu_label',
-                        'icon'        => 'icon-user',
-                        'url'         => Backend::url('golem15/user/users'),
+                        'icon' => 'icon-user',
+                        'url' => Backend::url('golem15/user/users'),
                         'permissions' => ['golem15.users.access_users']
                     ],
                     'usergroups' => [
-                        'label'       => 'golem15.user::lang.groups.menu_label',
-                        'icon'        => 'icon-users',
-                        'url'         => Backend::url('golem15/user/usergroups'),
+                        'label' => 'golem15.user::lang.groups.menu_label',
+                        'icon' => 'icon-users',
+                        'url' => Backend::url('golem15/user/usergroups'),
                         'permissions' => ['golem15.users.access_groups']
                     ]
                 ]
@@ -164,12 +164,12 @@ class Plugin extends PluginBase
     {
         return [
             'settings' => [
-                'label'       => 'golem15.user::lang.settings.menu_label',
+                'label' => 'golem15.user::lang.settings.menu_label',
                 'description' => 'golem15.user::lang.settings.menu_description',
-                'category'    => SettingsManager::CATEGORY_USERS,
-                'icon'        => 'icon-cog',
-                'class'       => 'Golem15\User\Models\Settings',
-                'order'       => 500,
+                'category' => SettingsManager::CATEGORY_USERS,
+                'icon' => 'icon-cog',
+                'class' => 'Golem15\User\Models\Settings',
+                'order' => 500,
                 'permissions' => ['golem15.users.access_settings']
             ]
         ];
@@ -201,8 +201,8 @@ class Plugin extends PluginBase
                 ],
             ],
             'events' => [
-               \Golem15\User\NotifyRules\UserActivatedEvent::class,
-               \Golem15\User\NotifyRules\UserRegisteredEvent::class,
+                \Golem15\User\NotifyRules\UserActivatedEvent::class,
+                \Golem15\User\NotifyRules\UserRegisteredEvent::class,
             ],
             'actions' => [],
             'conditions' => [
@@ -265,9 +265,17 @@ class Plugin extends PluginBase
         User::extend(
             static function ($model) {
                 $model->addDynamicMethod(
-                    'getAuthApiAttributes',
-                    static function () {
-                        return [];
+                    'getApiArray',
+                    static function () use ($model) {
+                        return [
+                            'name' => $model->name,
+                            'surname' => $model->surname,
+                            'email' => $model->email,
+                            'is_activated' => $model->is_activated,
+                            'permissions' => $model->permissions,
+                            'avatar' => $model->getAvatarThumb(),
+                            'groups' => $model->groups->pluck('name', 'id')->toArray()
+                        ];
                     }
                 );
             }

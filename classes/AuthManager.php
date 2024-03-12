@@ -1,6 +1,7 @@
 <?php namespace Golem15\User\Classes;
 
 use Golem15\User\Models\User;
+use PHPOpenSourceSaver\JWTAuth\Facades\JWTAuth;
 use Winter\Storm\Auth\Manager as StormAuthManager;
 use Golem15\User\Models\Settings as UserSettings;
 use Golem15\User\Models\UserGroup as UserGroupModel;
@@ -23,6 +24,12 @@ class AuthManager extends StormAuthManager implements Auth
         $this->useThrottle = UserSettings::get('use_throttle', $this->useThrottle);
         $this->requireActivation = UserSettings::get('require_activation', $this->requireActivation);
         parent::init();
+    }
+
+    public function logout(bool $force = false)
+    {
+        parent::logout();
+        JWTAuth::invalidate($force);
     }
 
     /**

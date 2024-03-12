@@ -27,7 +27,7 @@ Route::group(
         Route::get(
             'fetch',
             static function (Request $request) {
-                return (new \Golem15\User\Controllers\ApiController())->fetch();
+                return (new \Golem15\User\Controllers\ApiController())->fetch($request);
             }
         );
         Route::post(
