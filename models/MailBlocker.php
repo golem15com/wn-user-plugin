@@ -1,6 +1,6 @@
 <?php
 
-namespace Winter\User\Models;
+namespace Golem15\User\Models;
 
 use Model;
 use Exception;
@@ -17,7 +17,7 @@ class MailBlocker extends Model
     /**
      * @var string The database table used by the model.
      */
-    public $table = 'winter_user_mail_blockers';
+    public $table = 'golem15_user_mail_blockers';
 
     /**
      * @var array Guarded fields
@@ -35,7 +35,7 @@ class MailBlocker extends Model
      * @var array Templates names that cannot be blocked.
      */
     protected static $safeTemplates = [
-        'winter.user::mail.restore'
+        'golem15.user::mail.restore'
     ];
 
     /**
@@ -53,7 +53,7 @@ class MailBlocker extends Model
      * - verify: Only allow mail templates that are registered in the system.
      *
      * @param  array $templates Template name as key and boolean as value. If false, template is blocked.
-     * @param  \Winter\User\Models\User $user
+     * @param  \Golem15\User\Models\User $user
      * @param  array $options
      * @return void
      */
@@ -103,7 +103,7 @@ class MailBlocker extends Model
     /**
      * Adds a block for a user and a mail view/template code.
      * @param string                   $template
-     * @param \Winter\User\Models\User $user
+     * @param \Golem15\User\Models\User $user
      * @return bool
      */
     public static function addBlock($template, $user)
@@ -132,7 +132,7 @@ class MailBlocker extends Model
     /**
      * Removes a block for a user and a mail view/template code.
      * @param string                   $template
-     * @param \Winter\User\Models\User $user
+     * @param \Golem15\User\Models\User $user
      * @return bool
      */
     public static function removeBlock($template, $user)
@@ -160,7 +160,7 @@ class MailBlocker extends Model
 
     /**
      * Blocks all mail messages for a user.
-     * @param \Winter\User\Models\User $user
+     * @param \Golem15\User\Models\User $user
      * @return bool
      */
     public static function blockAll($user)
@@ -170,7 +170,7 @@ class MailBlocker extends Model
 
     /**
      * Removes block on all mail messages for a user.
-     * @param \Winter\User\Models\User $user
+     * @param \Golem15\User\Models\User $user
      * @return bool
      */
     public static function unblockAll($user)
@@ -180,7 +180,7 @@ class MailBlocker extends Model
 
     /**
      * Checks if a user is blocking all templates.
-     * @param \Winter\User\Models\User $user
+     * @param \Golem15\User\Models\User $user
      * @return bool
      */
     public static function isBlockAll($user)

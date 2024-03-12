@@ -47,7 +47,7 @@ As a security precaution, you may restrict users from having sessions across mul
 
 #### Notifications
 
-When a user is first activated -- either by registration, email confirmation or administrator approval -- they are sent a welcome email. To disable the welcome email, select "Do not send a notification" from the **Welcome mail template** dropdown. The default message template used is `winter.user::mail.welcome` and you can customize this by selecting **Mail > Mail Templates** from the settings menu.
+When a user is first activated -- either by registration, email confirmation or administrator approval -- they are sent a welcome email. To disable the welcome email, select "Do not send a notification" from the **Welcome mail template** dropdown. The default message template used is `golem15.user::mail.welcome` and you can customize this by selecting **Mail > Mail Templates** from the settings menu.
 
 ## Session component
 
@@ -93,7 +93,7 @@ The `security` property can be user, guest or all. The `redirect` property refer
 Access to routes can be restricted by applying the `AuthMiddleware`.
 
 ```php
-Route::group(['middleware' => 'Winter\User\Classes\AuthMiddleware'], function () {
+Route::group(['middleware' => 'Golem15\User\Classes\AuthMiddleware'], function () {
     // All routes here will require authentication
 });
 ```
@@ -334,7 +334,7 @@ $user = Auth::register([
 
 > **Important**: If you are using guest accounts, it is important to disable sensitive functionality for user accounts that are not verified, since it may be possible for anyone to inherit a guest account.
 
-You may also convert a guest to a registered user with the `convertToRegistered` method. This will generate a random password and sends an invitation using the `winter.user::mail.invite` template.
+You may also convert a guest to a registered user with the `convertToRegistered` method. This will generate a random password and sends an invitation using the `golem15.user::mail.invite` template.
 
 ```php
 $user->convertToRegistered();
@@ -350,22 +350,22 @@ $user->convertToRegistered(false);
 
 This plugin will fire some global events that can be useful for interacting with other plugins.
 
-- `winter.user.beforeRegister`: Before the user's registration is processed. Passed the `$data` variable by reference to enable direct modifications to the `$data` provided to the `Auth::register()` method.
-- `winter.user.register`: The user has successfully registered. Passed the `$user` object and the submitted `$data` variable.
-- `winter.user.beforeAuthenticate`: Before the user is attempting to authenticate using the Account component.
-- `winter.user.login`: The user has successfully signed in.
-- `winter.user.logout`: The user has successfully signed out.
-- `winter.user.activate`: The user has activated their own account by email validation.
-- `winter.user.deactivate`: The user has opted-out of the site by deactivating their account. This should be used to disable any content the user may want removed.
-- `winter.user.reactivate`: The user has reactivated their own account by signing back in. This should revive the users content on the site.
-- `winter.user.getNotificationVars`: Fires when sending a user notification to enable passing more variables to the email templates. Passes the `$user` model the template will be for.
-- `winter.user.view.extendListToolbar`: Fires when the user listing page's toolbar is rendered.
-- `winter.user.view.extendPreviewToolbar`: Fires when the user preview page's toolbar is rendered.
+- `golem15.user.beforeRegister`: Before the user's registration is processed. Passed the `$data` variable by reference to enable direct modifications to the `$data` provided to the `Auth::register()` method.
+- `golem15.user.register`: The user has successfully registered. Passed the `$user` object and the submitted `$data` variable.
+- `golem15.user.beforeAuthenticate`: Before the user is attempting to authenticate using the Account component.
+- `golem15.user.login`: The user has successfully signed in.
+- `golem15.user.logout`: The user has successfully signed out.
+- `golem15.user.activate`: The user has activated their own account by email validation.
+- `golem15.user.deactivate`: The user has opted-out of the site by deactivating their account. This should be used to disable any content the user may want removed.
+- `golem15.user.reactivate`: The user has reactivated their own account by signing back in. This should revive the users content on the site.
+- `golem15.user.getNotificationVars`: Fires when sending a user notification to enable passing more variables to the email templates. Passes the `$user` model the template will be for.
+- `golem15.user.view.extendListToolbar`: Fires when the user listing page's toolbar is rendered.
+- `golem15.user.view.extendPreviewToolbar`: Fires when the user preview page's toolbar is rendered.
 
 Here is an example of hooking an event:
 
 ```php
-Event::listen('winter.user.deactivate', function($user) {
+Event::listen('golem15.user.deactivate', function($user) {
     // Hide all posts by the user
 });
 ```
@@ -373,7 +373,7 @@ Event::listen('winter.user.deactivate', function($user) {
 A common requirement is to adapt another to a legacy authentication system. In the example below, the `WordPressLogin::check` method would check the user password using an alternative hashing method, and if successful, update to the new one used by Winter CMS.
 
 ```php
-Event::listen('winter.user.beforeAuthenticate', function($component, $credentials) {
+Event::listen('golem15.user.beforeAuthenticate', function($component, $credentials) {
     $login = array_get($credentials, 'login');
     $password = array_get($credentials, 'password');
 

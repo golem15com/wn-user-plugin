@@ -1,9 +1,9 @@
-<?php namespace Winter\User\Facades;
+<?php namespace Golem15\User\Facades;
 
 use Winter\Storm\Support\Facade;
 
 /**
- * @see \Winter\User\Classes\AuthManager
+ * @see \Golem15\User\Classes\AuthManager
  */
 class Auth extends Facade
 {

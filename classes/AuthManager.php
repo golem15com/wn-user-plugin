@@ -1,20 +1,22 @@
-<?php namespace Winter\User\Classes;
+<?php namespace Golem15\User\Classes;
 
+use Golem15\User\Models\User;
 use Winter\Storm\Auth\Manager as StormAuthManager;
-use Winter\User\Models\Settings as UserSettings;
-use Winter\User\Models\UserGroup as UserGroupModel;
+use Golem15\User\Models\Settings as UserSettings;
+use Golem15\User\Models\UserGroup as UserGroupModel;
+use PHPOpenSourceSaver\JWTAuth\Contracts\Providers\Auth;
 
-class AuthManager extends StormAuthManager
+class AuthManager extends StormAuthManager implements Auth
 {
     protected static $instance;
 
     protected $sessionKey = 'user_auth';
 
-    protected $userModel = 'Winter\User\Models\User';
+    protected $userModel = 'Golem15\User\Models\User';
 
-    protected $groupModel = 'Winter\User\Models\UserGroup';
+    protected $groupModel = 'Golem15\User\Models\UserGroup';
 
-    protected $throttleModel = 'Winter\User\Models\Throttle';
+    protected $throttleModel = 'Golem15\User\Models\Throttle';
 
     public function init()
     {
@@ -28,7 +30,7 @@ class AuthManager extends StormAuthManager
      */
     public function extendUserQuery($query)
     {
-        $query->withTrashed();
+        $query->withTrashed()->with('groups');;
     }
 
     /**
@@ -125,5 +127,32 @@ class AuthManager extends StormAuthManager
         $user->password = null;
 
         return $this->user = $user;
+    }
+
+    #[\Override] public function byCredentials(array $credentials)
+    {
+        return $this->attempt($credentials);
+    }
+
+    #[\Override] public function byId($id)
+    {
+        return User::where('id', $id)->count() > 0;
+    }
+
+    public function user()
+    {
+        $user = $this->getUser();
+        if (!$user) {
+            try {
+                $userId = \JWTAuth::getPayload()->get('sub');
+
+                $user = User::where('id', $userId)->with('groups')->firstOrFail();
+            } catch (\Exception $e) {
+                \Log::error($e->getMessage(). ' '. $e->getTrace());
+                return null;
+            }
+        }
+
+        return $user;
     }
 }

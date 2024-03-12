@@ -1,4 +1,4 @@
-<?php namespace Winter\User\Classes;
+<?php namespace Golem15\User\Classes;
 
 use Auth;
 use Closure;

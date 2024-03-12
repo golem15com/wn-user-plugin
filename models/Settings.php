@@ -1,4 +1,4 @@
-<?php namespace Winter\User\Models;
+<?php namespace Golem15\User\Models;
 
 use Model;
 
@@ -28,30 +28,30 @@ class Settings extends Model
 
     public function initSettingsData()
     {
-        $this->require_activation = config('winter.user::requireActivation', true);
-        $this->activate_mode = config('winter.user::activateMode', self::ACTIVATE_AUTO);
-        $this->use_throttle = config('winter.user::useThrottle', true);
-        $this->block_persistence = config('winter.user::blockPersistence', false);
-        $this->allow_registration = config('winter.user::allowRegistration', true);
-        $this->login_attribute = config('winter.user::loginAttribute', self::LOGIN_EMAIL);
-        $this->remember_login = config('winter.user::rememberLogin', self::REMEMBER_ALWAYS);
-        $this->use_register_throttle = config('winter.user::useRegisterThrottle', true);
+        $this->require_activation = config('golem15.user::requireActivation', true);
+        $this->activate_mode = config('golem15.user::activateMode', self::ACTIVATE_AUTO);
+        $this->use_throttle = config('golem15.user::useThrottle', true);
+        $this->block_persistence = config('golem15.user::blockPersistence', false);
+        $this->allow_registration = config('golem15.user::allowRegistration', true);
+        $this->login_attribute = config('golem15.user::loginAttribute', self::LOGIN_EMAIL);
+        $this->remember_login = config('golem15.user::rememberLogin', self::REMEMBER_ALWAYS);
+        $this->use_register_throttle = config('golem15.user::useRegisterThrottle', true);
     }
 
     public function getActivateModeOptions()
     {
         return [
             self::ACTIVATE_AUTO => [
-                'winter.user::lang.settings.activate_mode_auto',
-                'winter.user::lang.settings.activate_mode_auto_comment'
+                'golem15.user::lang.settings.activate_mode_auto',
+                'golem15.user::lang.settings.activate_mode_auto_comment'
             ],
             self::ACTIVATE_USER => [
-                'winter.user::lang.settings.activate_mode_user',
-                'winter.user::lang.settings.activate_mode_user_comment'
+                'golem15.user::lang.settings.activate_mode_user',
+                'golem15.user::lang.settings.activate_mode_user_comment'
             ],
             self::ACTIVATE_ADMIN => [
-                'winter.user::lang.settings.activate_mode_admin',
-                'winter.user::lang.settings.activate_mode_admin_comment'
+                'golem15.user::lang.settings.activate_mode_admin',
+                'golem15.user::lang.settings.activate_mode_admin_comment'
             ]
         ];
     }
@@ -68,8 +68,8 @@ class Settings extends Model
     public function getLoginAttributeOptions()
     {
         return [
-            self::LOGIN_EMAIL => ['winter.user::lang.login.attribute_email'],
-            self::LOGIN_USERNAME => ['winter.user::lang.login.attribute_username']
+            self::LOGIN_EMAIL => ['golem15.user::lang.login.attribute_email'],
+            self::LOGIN_USERNAME => ['golem15.user::lang.login.attribute_username']
         ];
     }
 
@@ -77,13 +77,13 @@ class Settings extends Model
     {
         return [
             self::REMEMBER_ALWAYS => [
-                'winter.user::lang.settings.remember_always',
+                'golem15.user::lang.settings.remember_always',
             ],
             self::REMEMBER_NEVER => [
-                'winter.user::lang.settings.remember_never',
+                'golem15.user::lang.settings.remember_never',
             ],
             self::REMEMBER_ASK => [
-                'winter.user::lang.settings.remember_ask',
+                'golem15.user::lang.settings.remember_ask',
             ]
         ];
     }

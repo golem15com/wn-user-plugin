@@ -3,29 +3,29 @@
 # ===================================
 
 # Record name
-name: winter.user::lang.group.label
+name: golem15.user::lang.group.label
 
 # Model Form Field configuration
-form: $/winter/user/models/usergroup/fields.yaml
+form: $/golem15/user/models/usergroup/fields.yaml
 
 # Model Class name
-modelClass: Winter\User\Models\UserGroup
+modelClass: Golem15\User\Models\UserGroup
 
 # Default redirect location
-defaultRedirect: winter/user/usergroups
+defaultRedirect: golem15/user/usergroups
 
 # Create page
 create:
-    title: winter.user::lang.groups.create_title
-    redirect: winter/user/usergroups/update/:id
-    redirectClose: winter/user/usergroups
+    title: golem15.user::lang.groups.create_title
+    redirect: golem15/user/usergroups/update/:id
+    redirectClose: golem15/user/usergroups
 
 # Update page
 update:
-    title: winter.user::lang.groups.update_title
-    redirect: winter/user/usergroups
-    redirectClose: winter/user/usergroups
+    title: golem15.user::lang.groups.update_title
+    redirect: golem15/user/usergroups
+    redirectClose: golem15/user/usergroups
 
 # Preview page
 preview:
-    title: winter.user::lang.groups.update_title
+    title: golem15.user::lang.groups.update_title

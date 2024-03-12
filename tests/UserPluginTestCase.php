@@ -1,8 +1,8 @@
-<?php namespace Winter\User\Tests;
+<?php namespace Golem15\User\Tests;
 
 use App;
 use Illuminate\Foundation\AliasLoader;
-use Winter\User\Models\Settings;
+use Golem15\User\Models\Settings;
 
 abstract class UserPluginTestCase extends \PluginTestCase
 {
@@ -26,14 +26,14 @@ abstract class UserPluginTestCase extends \PluginTestCase
         Settings::resetDefault();
 
         // log out after each test
-        \Winter\User\Classes\AuthManager::instance()->logout();
+        \Golem15\User\Classes\AuthManager::instance()->logout();
 
         // register the auth facade
         $alias = AliasLoader::getInstance();
-        $alias->alias('Auth', 'Winter\User\Facades\Auth');
+        $alias->alias('Auth', 'Golem15\User\Facades\Auth');
 
         App::singleton('user.auth', function () {
-            return \Winter\User\Classes\AuthManager::instance();
+            return \Golem15\User\Classes\AuthManager::instance();
         });
     }
 }

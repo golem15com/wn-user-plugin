@@ -6,22 +6,22 @@ scopes:
 
     groups:
         # Filter name
-        label: winter.user::lang.group.label
+        label: golem15.user::lang.group.label
         # Model Class name
-        modelClass: Winter\User\Models\UserGroup
+        modelClass: Golem15\User\Models\UserGroup
         # Model attribute to display for the name
         nameFrom: name
         # Filter scope
         scope: filterByGroup
 
     created_date:
-        label: winter.user::lang.user.created_at
+        label: golem15.user::lang.user.created_at
         type: daterange
         conditions: created_at >= ':after' AND created_at <= ':before'
 
     activated:
         # Filter name
-        label: winter.user::lang.user.status_activated
+        label: golem15.user::lang.user.status_activated
         # Filter type
         type: switch
         # SQL conditions

@@ -1,10 +1,10 @@
 <?php
 
-namespace Winter\User\Tests\Unit\Facades;
+namespace Golem15\User\Tests\Unit\Facades;
 
 use Auth;
-use Winter\User\Models\User;
-use Winter\User\Tests\UserPluginTestCase;
+use Golem15\User\Models\User;
+use Golem15\User\Tests\UserPluginTestCase;
 
 class AuthFacadeTest extends UserPluginTestCase
 {
@@ -20,7 +20,7 @@ class AuthFacadeTest extends UserPluginTestCase
 
         // our one user should be returned
         $this->assertEquals(1, User::count());
-        $this->assertInstanceOf('Winter\User\Models\User', $user);
+        $this->assertInstanceOf('Golem15\User\Models\User', $user);
 
         // and that user should have the following data
         $this->assertFalse($user->is_activated);
@@ -52,7 +52,7 @@ class AuthFacadeTest extends UserPluginTestCase
 
         // our one guest should be returned
         $this->assertEquals(1, User::count());
-        $this->assertInstanceOf('Winter\User\Models\User', $guest);
+        $this->assertInstanceOf('Golem15\User\Models\User', $guest);
 
         // and that guest should have the following data
         $this->assertTrue($guest->is_guest);

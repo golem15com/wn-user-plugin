@@ -1,4 +1,4 @@
-<?php namespace Winter\User\Updates;
+<?php namespace Golem15\User\Updates;
 
 use Carbon\Carbon;
 use Schema;

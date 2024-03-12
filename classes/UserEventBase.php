@@ -1,4 +1,4 @@
-<?php namespace Winter\User\Classes;
+<?php namespace Golem15\User\Classes;
 
 use Winter\Notify\Classes\EventBase;
 
@@ -8,7 +8,7 @@ class UserEventBase extends EventBase
      * @var array Local conditions supported by this event.
      */
     public $conditions = [
-        \Winter\User\NotifyRules\UserAttributeCondition::class
+        \Golem15\User\NotifyRules\UserAttributeCondition::class
     ];
 
     /**

@@ -1,4 +1,4 @@
-<?php namespace Winter\User\Models;
+<?php namespace Golem15\User\Models;
 
 use Winter\Storm\Auth\Models\Throttle as ThrottleBase;
 

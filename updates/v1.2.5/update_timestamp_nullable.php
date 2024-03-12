@@ -1,4 +1,4 @@
-<?php namespace Winter\User\Updates;
+<?php namespace Golem15\User\Updates;
 
 use Winter\Storm\Database\Updates\Migration;
 use DbDongle;

@@ -1,9 +1,9 @@
-<?php namespace Winter\User\Controllers;
+<?php namespace Golem15\User\Controllers;
 
 use Flash;
 use BackendMenu;
 use Backend\Classes\Controller;
-use Winter\User\Models\UserGroup;
+use Golem15\User\Models\UserGroup;
 
 /**
  * User Groups Back-end Controller
@@ -36,7 +36,7 @@ class UserGroups extends Controller
     /**
      * @var array Permissions required to view this page.
      */
-    public $requiredPermissions = ['winter.users.access_groups'];
+    public $requiredPermissions = ['golem15.users.access_groups'];
 
     /**
      * Constructor.
@@ -45,6 +45,6 @@ class UserGroups extends Controller
     {
         parent::__construct();
 
-        BackendMenu::setContext('Winter.User', 'user', 'usergroups');
+        BackendMenu::setContext('Golem15.User', 'user', 'usergroups');
     }
 }

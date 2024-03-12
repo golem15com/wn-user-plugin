@@ -1,4 +1,4 @@
-<?php namespace Winter\User\Updates;
+<?php namespace Golem15\User\Updates;
 
 use Schema;
 use Winter\Storm\Database\Updates\Migration;
@@ -13,7 +13,7 @@ class RenameIndexes extends Migration
     {
         foreach (self::TABLES as $table) {
             $from = 'rainlab_user_' . $table;
-            $to = 'winter_user_' . $table;
+            $to = 'golem15_user_' . $table;
 
             $this->updateIndexNames($from, $to, $to);
         }
@@ -22,7 +22,7 @@ class RenameIndexes extends Migration
     public function down()
     {
         foreach (self::TABLES as $table) {
-            $from = 'winter_user_' . $table;
+            $from = 'golem15_user_' . $table;
             $to = 'rainlab_user_' . $table;
 
             $this->updateIndexNames($from, $to, $from);

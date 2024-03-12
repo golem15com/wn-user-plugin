@@ -3,23 +3,23 @@
 # ===================================
 
 # Record name
-name: winter.user::lang.user.label
+name: golem15.user::lang.user.label
 
 # Model Form Field configuration
-form: $/winter/user/models/user/fields.yaml
+form: $/golem15/user/models/user/fields.yaml
 
 # Model Class name
-modelClass: Winter\User\Models\User
+modelClass: Golem15\User\Models\User
 
 # Default redirect location
-defaultRedirect: winter/user/users
+defaultRedirect: golem15/user/users
 
 # Create page
 create:
-    redirect: winter/user/users/preview/:id
-    redirectClose: winter/user/users
+    redirect: golem15/user/users/preview/:id
+    redirectClose: golem15/user/users
 
 # Update page
 update:
-    redirect: winter/user/users/update/:id
-    redirectClose: winter/user/users/preview/:id
+    redirect: golem15/user/users/update/:id
+    redirectClose: golem15/user/users/preview/:id

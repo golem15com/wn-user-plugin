@@ -1,13 +1,13 @@
 <?php
 
-namespace Winter\User\Tests\Unit\Models;
+namespace Golem15\User\Tests\Unit\Models;
 
 use Illuminate\Mail\Message;
 use Mockery;
 use Symfony\Component\Mime\Email;
-use Winter\User\Models\MailBlocker;
-use Winter\User\Models\User;
-use Winter\User\Tests\UserPluginTestCase;
+use Golem15\User\Models\MailBlocker;
+use Golem15\User\Models\User;
+use Golem15\User\Tests\UserPluginTestCase;
 
 class MailBlockerModelTest extends UserPluginTestCase
 {

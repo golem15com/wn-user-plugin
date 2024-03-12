@@ -1,6 +1,6 @@
-<?php namespace Winter\User\Updates;
+<?php namespace Golem15\User\Updates;
 
-use Winter\User\Models\UserGroup;
+use Golem15\User\Models\UserGroup;
 use Winter\Storm\Database\Updates\Seeder;
 
 class SeedUserGroupsTable extends Seeder

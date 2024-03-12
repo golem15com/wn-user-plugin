@@ -1,4 +1,4 @@
-<?php namespace Winter\User\Components;
+<?php namespace Golem15\User\Components;
 
 use Lang;
 use Auth;
@@ -9,7 +9,7 @@ use Response;
 use Redirect;
 use Cms\Classes\Page;
 use Cms\Classes\ComponentBase;
-use Winter\User\Models\UserGroup;
+use Golem15\User\Models\UserGroup;
 use ValidationException;
 
 /**
@@ -27,8 +27,8 @@ class Session extends ComponentBase
     public function componentDetails()
     {
         return [
-            'name'        => 'winter.user::lang.session.session',
-            'description' => 'winter.user::lang.session.session_desc'
+            'name'        => 'golem15.user::lang.session.session',
+            'description' => 'golem15.user::lang.session.session_desc'
         ];
     }
 
@@ -36,26 +36,26 @@ class Session extends ComponentBase
     {
         return [
             'security' => [
-                'title'       => 'winter.user::lang.session.security_title',
-                'description' => 'winter.user::lang.session.security_desc',
+                'title'       => 'golem15.user::lang.session.security_title',
+                'description' => 'golem15.user::lang.session.security_desc',
                 'type'        => 'dropdown',
                 'default'     => 'all',
                 'options'     => [
-                    'all'   => 'winter.user::lang.session.all',
-                    'user'  => 'winter.user::lang.session.users',
-                    'guest' => 'winter.user::lang.session.guests'
+                    'all'   => 'golem15.user::lang.session.all',
+                    'user'  => 'golem15.user::lang.session.users',
+                    'guest' => 'golem15.user::lang.session.guests'
                 ]
             ],
             'allowedUserGroups' => [
-                'title'       => 'winter.user::lang.session.allowed_groups_title',
-                'description' => 'winter.user::lang.session.allowed_groups_description',
+                'title'       => 'golem15.user::lang.session.allowed_groups_title',
+                'description' => 'golem15.user::lang.session.allowed_groups_description',
                 'placeholder' => '*',
                 'type'        => 'set',
                 'default'     => []
             ],
             'redirect' => [
-                'title'       => 'winter.user::lang.session.redirect_title',
-                'description' => 'winter.user::lang.session.redirect_desc',
+                'title'       => 'golem15.user::lang.session.redirect_title',
+                'description' => 'golem15.user::lang.session.redirect_desc',
                 'type'        => 'dropdown',
                 'default'     => ''
             ]
@@ -91,7 +91,7 @@ class Session extends ComponentBase
             if (empty($this->property('redirect'))) {
                 throw new \InvalidArgumentException('Redirect property is empty');
             }
-            
+
             $redirectUrl = $this->controller->pageUrl($this->property('redirect'));
             return Redirect::guest($redirectUrl);
         }
@@ -102,7 +102,7 @@ class Session extends ComponentBase
     /**
      * Returns the logged in user, if available, and touches
      * the last seen timestamp.
-     * @return Winter\User\Models\User
+     * @return Golem15\User\Models\User
      */
     public function user()
     {
@@ -142,12 +142,12 @@ class Session extends ComponentBase
         Auth::logout();
 
         if ($user) {
-            Event::fire('winter.user.logout', [$user]);
+            Event::fire('golem15.user.logout', [$user]);
         }
 
         $url = post('redirect', Request::fullUrl());
 
-        Flash::success(Lang::get('winter.user::lang.session.logout'));
+        Flash::success(Lang::get('golem15.user::lang.session.logout'));
 
         return Redirect::to($url);
     }
@@ -166,7 +166,7 @@ class Session extends ComponentBase
 
         $url = post('redirect', Request::fullUrl());
 
-        Flash::success(Lang::get('winter.user::lang.session.stop_impersonate_success'));
+        Flash::success(Lang::get('golem15.user::lang.session.stop_impersonate_success'));
 
         return Redirect::to($url);
     }

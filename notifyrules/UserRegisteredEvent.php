@@ -1,6 +1,6 @@
-<?php namespace Winter\User\NotifyRules;
+<?php namespace Golem15\User\NotifyRules;
 
-use Winter\User\Classes\UserEventBase;
+use Golem15\User\Classes\UserEventBase;
 
 class UserRegisteredEvent extends UserEventBase
 {

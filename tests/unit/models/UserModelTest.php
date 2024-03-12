@@ -1,10 +1,10 @@
 <?php
 
-namespace Winter\User\Tests\Unit\Models;
+namespace Golem15\User\Tests\Unit\Models;
 
 use Mockery;
-use Winter\User\Models\User;
-use Winter\User\Tests\UserPluginTestCase;
+use Golem15\User\Models\User;
+use Golem15\User\Tests\UserPluginTestCase;
 
 class UserModelTest extends UserPluginTestCase
 {

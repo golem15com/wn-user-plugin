@@ -1,5 +1,6 @@
-<?php namespace Winter\User\Models;
+<?php namespace Golem15\User\Models;
 
+use PHPOpenSourceSaver\JWTAuth\Contracts\JWTSubject;
 use Str;
 use Auth;
 use Mail;
@@ -8,10 +9,10 @@ use Config;
 use BackendAuth;
 use Carbon\Carbon;
 use Winter\Storm\Auth\Models\User as UserBase;
-use Winter\User\Models\Settings as UserSettings;
+use Golem15\User\Models\Settings as UserSettings;
 use Winter\Storm\Auth\AuthException;
 
-class User extends UserBase
+class User extends UserBase implements JWTSubject
 {
     use \Winter\Storm\Database\Traits\SoftDelete;
 
@@ -101,7 +102,7 @@ class User extends UserBase
             }
         }
 
-        Event::fire('winter.user.activate', [$this]);
+        Event::fire('golem15.user.activate', [$this]);
 
         return true;
     }
@@ -235,7 +236,7 @@ class User extends UserBase
      */
     public static function getMinPasswordLength()
     {
-        return Config::get('winter.user::minPasswordLength', 8);
+        return Config::get('golem15.user::minPasswordLength', 8);
     }
 
     //
@@ -329,17 +330,17 @@ class User extends UserBase
         if ($this->trashed()) {
             $this->restore();
 
-            Mail::sendTo($this, 'winter.user::mail.reactivate', [
+            Mail::sendTo($this, 'golem15.user::mail.reactivate', [
                 'name' => $this->name
             ]);
 
-            Event::fire('winter.user.reactivate', [$this]);
+            Event::fire('golem15.user.reactivate', [$this]);
         }
         else {
             parent::afterLogin();
         }
 
-        Event::fire('winter.user.login', [$this]);
+        Event::fire('golem15.user.login', [$this]);
     }
 
     /**
@@ -349,7 +350,7 @@ class User extends UserBase
     public function afterDelete()
     {
         if ($this->isSoftDelete()) {
-            Event::fire('winter.user.deactivate', [$this]);
+            Event::fire('golem15.user.deactivate', [$this]);
             return;
         }
 
@@ -519,7 +520,7 @@ class User extends UserBase
         /*
          * Extensibility
          */
-        $results = Event::fire('winter.user.getNotificationVars', [$this]);
+        $results = Event::fire('golem15.user.getNotificationVars', [$this]);
         if ($results && is_array($results)) {
             $tempResults = [];
             foreach ($results as $result) {
@@ -534,12 +535,12 @@ class User extends UserBase
     }
 
     /**
-     * Sends an invitation to the user using template "winter.user::mail.invite".
+     * Sends an invitation to the user using template "golem15.user::mail.invite".
      * @return void
      */
     protected function sendInvitation()
     {
-        Mail::sendTo($this, 'winter.user::mail.invite', $this->getNotificationVars());
+        Mail::sendTo($this, 'golem15.user::mail.invite', $this->getNotificationVars());
     }
 
     /**
@@ -557,7 +558,7 @@ class User extends UserBase
 
     /**
      * Check if this user can be impersonated by the provided impersonator
-     * Only backend users with the `winter.users.impersonate_user` permission are allowed to impersonate
+     * Only backend users with the `golem15.users.impersonate_user` permission are allowed to impersonate
      * users.
      *
      * @param \Winter\Storm\Auth\Models\User|false $impersonator The user attempting to impersonate this user, false when not available
@@ -566,7 +567,7 @@ class User extends UserBase
     public function canBeImpersonated($impersonator = false)
     {
         $user = BackendAuth::getUser();
-        if (!$user || !$user->hasAccess('winter.users.impersonate_user')) {
+        if (!$user || !$user->hasAccess('golem15.users.impersonate_user')) {
             return false;
         }
 
@@ -579,5 +580,15 @@ class User extends UserBase
     public function isActivatedByUser(): bool
     {
         return (UserSettings::get('activate_mode') === UserSettings::ACTIVATE_USER);
+    }
+
+    #[\Override] public function getJWTIdentifier()
+    {
+        return $this->getKey();
+    }
+
+    #[\Override] public function getJWTCustomClaims()
+    {
+        return [];
     }
 }

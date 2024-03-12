@@ -1,4 +1,4 @@
-<?php namespace Winter\User\Components;
+<?php namespace Golem15\User\Components;
 
 use Auth;
 use Lang;
@@ -6,7 +6,7 @@ use Mail;
 use Validator;
 use ValidationException;
 use Cms\Classes\ComponentBase;
-use Winter\User\Models\User as UserModel;
+use Golem15\User\Models\User as UserModel;
 
 /**
  * Password reset workflow
@@ -19,8 +19,8 @@ class ResetPassword extends ComponentBase
     public function componentDetails()
     {
         return [
-            'name'        => /*Reset Password*/'winter.user::lang.reset_password.reset_password',
-            'description' => /*Forgotten password form.*/'winter.user::lang.reset_password.reset_password_desc'
+            'name'        => /*Reset Password*/'golem15.user::lang.reset_password.reset_password',
+            'description' => /*Forgotten password form.*/'golem15.user::lang.reset_password.reset_password_desc'
         ];
     }
 
@@ -28,8 +28,8 @@ class ResetPassword extends ComponentBase
     {
         return [
             'paramCode' => [
-                'title'       => /*Reset Code Param*/'winter.user::lang.reset_password.code_param',
-                'description' => /*The page URL parameter used for the reset code*/'winter.user::lang.reset_password.code_param_desc',
+                'title'       => /*Reset Code Param*/'golem15.user::lang.reset_password.code_param',
+                'description' => /*The page URL parameter used for the reset code*/'golem15.user::lang.reset_password.code_param_desc',
                 'type'        => 'string',
                 'default'     => 'code'
             ]
@@ -89,7 +89,7 @@ class ResetPassword extends ComponentBase
             'code' => $code
         ];
 
-        Mail::queue('winter.user::mail.restore', $data, function($message) use ($user) {
+        Mail::queue('golem15.user::mail.restore', $data, function($message) use ($user) {
             $message->to($user->email, $user->full_name);
         });
     }
@@ -109,7 +109,7 @@ class ResetPassword extends ComponentBase
             throw new ValidationException($validation);
         }
 
-        $errorFields = ['code' => Lang::get(/*Invalid activation code supplied.*/'winter.user::lang.account.invalid_activation_code')];
+        $errorFields = ['code' => Lang::get(/*Invalid activation code supplied.*/'golem15.user::lang.account.invalid_activation_code')];
 
         /*
          * Break up the code parts

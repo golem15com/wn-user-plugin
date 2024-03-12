@@ -1,14 +1,24 @@
-<?php namespace Winter\User;
+<?php namespace Golem15\User;
 
 use App;
 use Auth;
 use Event;
 use Backend;
+use Illuminate\Auth\AuthManager;
+use Illuminate\Contracts\Auth\Factory;
+use PHPOpenSourceSaver\JWTAuth\Facades\JWTAuth;
+use PHPOpenSourceSaver\JWTAuth\Facades\JWTFactory;
+use PHPOpenSourceSaver\JWTAuth\Http\Middleware\RefreshToken;
+use Golem15\User\Middleware\JwtAuthenticate;
+use Golem15\User\Classes\JwtServiceProvider;
+use Golem15\User\Guards\JwtAuthGuard;
+use Golem15\User\Guards\JwtAuthGuardServiceProvider;
+use Golem15\User\Models\User;
 use System\Classes\PluginBase;
 use System\Classes\SettingsManager;
 use Illuminate\Foundation\AliasLoader;
-use Winter\User\Classes\UserRedirector;
-use Winter\User\Models\MailBlocker;
+use Golem15\User\Classes\UserRedirector;
+use Golem15\User\Models\MailBlocker;
 use Winter\Notify\Classes\Notifier;
 
 class Plugin extends PluginBase
@@ -21,8 +31,8 @@ class Plugin extends PluginBase
     public function pluginDetails()
     {
         return [
-            'name'        => 'winter.user::lang.plugin.name',
-            'description' => 'winter.user::lang.plugin.description',
+            'name'        => 'golem15.user::lang.plugin.name',
+            'description' => 'golem15.user::lang.plugin.description',
             'author'      => 'Alexey Bobkov, Samuel Georges',
             'icon'        => 'icon-user',
             'homepage'    => 'https://github.com/wintercms/wn-user-plugin',
@@ -30,14 +40,26 @@ class Plugin extends PluginBase
         ];
     }
 
+    public function boot()
+    {
+        $this->enableAuth();
+    }
+
     public function register()
     {
-        $alias = AliasLoader::getInstance();
-        $alias->alias('Auth', 'Winter\User\Facades\Auth');
-
-        App::singleton('user.auth', function () {
-            return \Winter\User\Classes\AuthManager::instance();
-        });
+        $this->app->bind(
+            AuthManager::class,
+            static function ($app) {
+                return new AuthManager($app);
+            }
+        );
+        $this->app->singleton(
+            'auth',
+            static function ($app) {
+                return new AuthManager($app);
+            }
+        );
+        $this->app->bind(Factory::class, AuthManager::class);
 
         App::singleton('redirect', function ($app) {
             // overrides with our own extended version of Redirector to support
@@ -65,35 +87,46 @@ class Plugin extends PluginBase
          * Compatability with Winter.Notify
          */
         $this->bindNotificationEvents();
+        $this->publishes(
+            [
+                base_path() . '/plugins/golem15/user/config/jwt.php'  => config_path(
+                    'jwt.php'
+                ),
+                base_path() . '/plugins/golem15/user/config/auth.php' => config_path(
+                    'auth.php'
+                ),
+            ],
+            'config'
+        );
     }
 
     public function registerComponents()
     {
         return [
-            \Winter\User\Components\Session::class       => 'session',
-            \Winter\User\Components\Account::class       => 'account',
-            \Winter\User\Components\ResetPassword::class => 'resetPassword'
+            \Golem15\User\Components\Session::class       => 'session',
+            \Golem15\User\Components\Account::class       => 'account',
+            \Golem15\User\Components\ResetPassword::class => 'resetPassword'
         ];
     }
 
     public function registerPermissions()
     {
         return [
-            'winter.users.access_users' => [
-                'tab'   => 'winter.user::lang.plugin.tab',
-                'label' => 'winter.user::lang.plugin.access_users'
+            'golem15.users.access_users' => [
+                'tab'   => 'golem15.user::lang.plugin.tab',
+                'label' => 'golem15.user::lang.plugin.access_users'
             ],
-            'winter.users.access_groups' => [
-                'tab'   => 'winter.user::lang.plugin.tab',
-                'label' => 'winter.user::lang.plugin.access_groups'
+            'golem15.users.access_groups' => [
+                'tab'   => 'golem15.user::lang.plugin.tab',
+                'label' => 'golem15.user::lang.plugin.access_groups'
             ],
-            'winter.users.access_settings' => [
-                'tab'   => 'winter.user::lang.plugin.tab',
-                'label' => 'winter.user::lang.plugin.access_settings'
+            'golem15.users.access_settings' => [
+                'tab'   => 'golem15.user::lang.plugin.tab',
+                'label' => 'golem15.user::lang.plugin.access_settings'
             ],
-            'winter.users.impersonate_user' => [
-                'tab'   => 'winter.user::lang.plugin.tab',
-                'label' => 'winter.user::lang.plugin.impersonate_user'
+            'golem15.users.impersonate_user' => [
+                'tab'   => 'golem15.user::lang.plugin.tab',
+                'label' => 'golem15.user::lang.plugin.impersonate_user'
             ],
         ];
     }
@@ -102,25 +135,25 @@ class Plugin extends PluginBase
     {
         return [
             'user' => [
-                'label'       => 'winter.user::lang.users.menu_label',
-                'url'         => Backend::url('winter/user/users'),
+                'label'       => 'golem15.user::lang.users.menu_label',
+                'url'         => Backend::url('golem15/user/users'),
                 'icon'        => 'icon-user',
-                'iconSvg'     => 'plugins/winter/user/assets/images/user-icon.svg',
-                'permissions' => ['winter.users.*'],
+                'iconSvg'     => 'plugins/golem15/user/assets/images/user-icon.svg',
+                'permissions' => ['golem15.users.*'],
                 'order'       => 500,
 
                 'sideMenu' => [
                     'users' => [
-                        'label' => 'winter.user::lang.users.menu_label',
+                        'label' => 'golem15.user::lang.users.menu_label',
                         'icon'        => 'icon-user',
-                        'url'         => Backend::url('winter/user/users'),
-                        'permissions' => ['winter.users.access_users']
+                        'url'         => Backend::url('golem15/user/users'),
+                        'permissions' => ['golem15.users.access_users']
                     ],
                     'usergroups' => [
-                        'label'       => 'winter.user::lang.groups.menu_label',
+                        'label'       => 'golem15.user::lang.groups.menu_label',
                         'icon'        => 'icon-users',
-                        'url'         => Backend::url('winter/user/usergroups'),
-                        'permissions' => ['winter.users.access_groups']
+                        'url'         => Backend::url('golem15/user/usergroups'),
+                        'permissions' => ['golem15.users.access_groups']
                     ]
                 ]
             ]
@@ -131,13 +164,13 @@ class Plugin extends PluginBase
     {
         return [
             'settings' => [
-                'label'       => 'winter.user::lang.settings.menu_label',
-                'description' => 'winter.user::lang.settings.menu_description',
+                'label'       => 'golem15.user::lang.settings.menu_label',
+                'description' => 'golem15.user::lang.settings.menu_description',
                 'category'    => SettingsManager::CATEGORY_USERS,
                 'icon'        => 'icon-cog',
-                'class'       => 'Winter\User\Models\Settings',
+                'class'       => 'Golem15\User\Models\Settings',
                 'order'       => 500,
-                'permissions' => ['winter.users.access_settings']
+                'permissions' => ['golem15.users.access_settings']
             ]
         ];
     }
@@ -145,12 +178,12 @@ class Plugin extends PluginBase
     public function registerMailTemplates()
     {
         return [
-            'winter.user::mail.activate',
-            'winter.user::mail.welcome',
-            'winter.user::mail.restore',
-            'winter.user::mail.new_user',
-            'winter.user::mail.reactivate',
-            'winter.user::mail.invite',
+            'golem15.user::mail.activate',
+            'golem15.user::mail.welcome',
+            'golem15.user::mail.restore',
+            'golem15.user::mail.new_user',
+            'golem15.user::mail.reactivate',
+            'golem15.user::mail.invite',
         ];
     }
 
@@ -168,12 +201,12 @@ class Plugin extends PluginBase
                 ],
             ],
             'events' => [
-               \Winter\User\NotifyRules\UserActivatedEvent::class,
-               \Winter\User\NotifyRules\UserRegisteredEvent::class,
+               \Golem15\User\NotifyRules\UserActivatedEvent::class,
+               \Golem15\User\NotifyRules\UserRegisteredEvent::class,
             ],
             'actions' => [],
             'conditions' => [
-                \Winter\User\NotifyRules\UserAttributeCondition::class,
+                \Golem15\User\NotifyRules\UserAttributeCondition::class,
             ],
         ];
     }
@@ -185,8 +218,8 @@ class Plugin extends PluginBase
         }
 
         Notifier::bindEvents([
-            'winter.user.activate' => \Winter\User\NotifyRules\UserActivatedEvent::class,
-            'winter.user.register' => \Winter\User\NotifyRules\UserRegisteredEvent::class,
+            'golem15.user.activate' => \Golem15\User\NotifyRules\UserActivatedEvent::class,
+            'golem15.user.register' => \Golem15\User\NotifyRules\UserRegisteredEvent::class,
         ]);
 
         Notifier::instance()->registerCallback(function ($manager) {
@@ -194,5 +227,50 @@ class Plugin extends PluginBase
                 'user' => Auth::getUser()
             ]);
         });
+    }
+
+    private function enableAuth()
+    {
+        $alias = AliasLoader::getInstance();
+        $alias->alias('Auth', 'Golem15\User\Facades\Auth');
+
+        App::singleton('user.auth', function () {
+            return \Golem15\User\Classes\AuthManager::instance();
+        });
+
+        $this->app->register(JwtServiceProvider::class);
+        $facade = AliasLoader::getInstance();
+        $facade->alias('JWTAuth', JWTAuth::class);
+        $facade->alias('JWTFactory', JWTFactory::class);
+
+        $this->app['auth']->extend('jwt', function ($app, $name, array $config) {
+            $guard = new JwtAuthGuard(
+                $app['tymon.jwt'],
+                $app['auth']->createUserProvider($config['provider']),
+                $app['request']
+            );
+            $app->refresh('request', $guard, 'setRequest');
+
+            return $guard;
+        });
+
+
+        $this->app['router']->middleware('jwt.auth', JwtAuthenticate::class);
+        $this->app['router']->middleware('jwt.refresh', RefreshToken::class);
+        $this->app->register(JwtAuthGuardServiceProvider::class);
+        $this->app->bind(AuthManager::class, function ($app) {
+            return $this->app['auth'];
+        });
+
+        User::extend(
+            static function ($model) {
+                $model->addDynamicMethod(
+                    'getAuthApiAttributes',
+                    static function () {
+                        return [];
+                    }
+                );
+            }
+        );
     }
 }

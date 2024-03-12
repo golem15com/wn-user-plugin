@@ -1,6 +1,6 @@
 <?php
 
-use Winter\User\Models\Settings;
+use Golem15\User\Models\Settings;
 
 return [
 

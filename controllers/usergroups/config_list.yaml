@@ -3,16 +3,16 @@
 # ===================================
 
 # Model List Column configuration
-list: $/winter/user/models/usergroup/columns.yaml
+list: $/golem15/user/models/usergroup/columns.yaml
 
 # Model Class name
-modelClass: Winter\User\Models\UserGroup
+modelClass: Golem15\User\Models\UserGroup
 
 # List Title
-title: winter.user::lang.groups.list_title
+title: golem15.user::lang.groups.list_title
 
 # Link URL for each record
-recordUrl: winter/user/usergroups/update/:id
+recordUrl: golem15/user/usergroups/update/:id
 
 # Message to display if the list is empty
 noRecordsMessage: backend::lang.list.no_records

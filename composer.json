@@ -1,5 +1,5 @@
 {
-    "name": "winter/wn-user-plugin",
+    "name": "golem15/wn-user-plugin",
     "type": "winter-plugin",
     "description": "User plugin for Winter CMS",
     "homepage": "https://github.com/wintercms/wn-user-plugin",
@@ -29,7 +29,12 @@
     },
     "require": {
         "php": ">=7.2",
-        "composer/installers": "~1.0"
+        "composer/installers": "~1.0",
+        "php-open-source-saver/jwt-auth": "1.*",
+        "firebase/php-jwt": "5.0",
+        "google/recaptcha": "^1.2",
+        "pragmarx/google2fa": "^8.0",
+        "bacon/bacon-qr-code": "^2.0"
     },
     "replace": {
         "rainlab/user-plugin": "~1.5"

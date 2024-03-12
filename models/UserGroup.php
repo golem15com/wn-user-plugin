@@ -1,4 +1,4 @@
-<?php namespace Winter\User\Models;
+<?php namespace Golem15\User\Models;
 
 use Winter\Storm\Auth\Models\Group as GroupBase;
 use ApplicationException;
@@ -45,7 +45,7 @@ class UserGroup extends GroupBase
 
     /**
      * Returns the guest user group.
-     * @return Winter\User\Models\UserGroup
+     * @return Golem15\User\Models\UserGroup
      */
     public static function getGuestGroup()
     {

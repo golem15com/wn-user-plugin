@@ -1,8 +1,8 @@
-<?php namespace Winter\User\Updates;
+<?php namespace Golem15\User\Updates;
 
 use Schema;
 use Winter\Storm\Database\Updates\Migration;
-use Winter\User\Models\User;
+use Golem15\User\Models\User;
 
 class UsersAddLoginColumn extends Migration
 {
