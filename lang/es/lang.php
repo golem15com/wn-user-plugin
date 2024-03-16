@@ -8,7 +8,7 @@ return [
         'access_users' => 'Administrar usuarios',
         'access_groups' => 'Administrar grupos',
         'access_settings' => 'Preferencias de usuario',
-        'impersonate_user' => 'Personificar Usuario'
+        'impersonate_user' => 'Personificar Usuario',
     ],
     'users' => [
         'menu_label' => 'Usuarios',
@@ -63,6 +63,10 @@ return [
         'unban_selected_confirm' => '¿Desbloquear los usuarios seleccionados?',
         'unban_selected_empty' => 'No hay usuarios seleccionados a desbloquear.',
         'unban_selected_success' => 'Se desbloquearon exitosamente los usuarios seleccionados.',
+        'unsuspend_success' => 'golem15.user::lang.users.unsuspend_success',
+        '' => '',
+        'unsuspend_confirm' => 'golem15.user::lang.users.unsuspend_confirm',
+        'unsuspend' => 'golem15.user::lang.users.unsuspend',
     ],
     'settings' => [
         'users' => 'Usuarios',
@@ -97,6 +101,8 @@ return [
         'remember_always' => 'Siempre',
         'remember_never' => 'Nunca',
         'remember_ask' => 'Preguntar al usuario al iniciar sesión',
+        'use_register_throttle' => 'golem15.user::lang.settings.use_register_throttle',
+        'use_register_throttle_comment' => 'golem15.user::lang.settings.use_register_throttle_comment',
     ],
     'user' => [
         'label' => 'Usuario',
@@ -129,6 +135,8 @@ return [
         'status_guest' => 'Invitado',
         'status_activated' => 'Activado',
         'status_registered' => 'Registrado',
+        'created_ip_address' => 'golem15.user::lang.user.created_ip_address',
+        'last_ip_address' => 'golem15.user::lang.user.last_ip_address',
     ],
     'group' => [
         'label' => 'Grupo',
@@ -138,7 +146,7 @@ return [
         'code' => 'Código',
         'code_comment' => 'Ingrese un código único para identificar este grupo.',
         'created_at' => 'Creado',
-        'users_count' => 'Usuarios'
+        'users_count' => 'Usuarios',
     ],
     'groups' => [
         'menu_label' => 'Grupos',
@@ -153,11 +161,11 @@ return [
         'return_to_users' => 'Volver a la lista de usuarios',
         'create_title' => 'Añadir grupo',
         'update_title' => 'Editar grupo',
-        'preview_title' => 'Vista previa de grupo'
+        'preview_title' => 'Vista previa de grupo',
     ],
     'login' => [
         'attribute_email' => 'Email',
-        'attribute_username' => 'Nombre de usuario'
+        'attribute_username' => 'Nombre de usuario',
     ],
     'account' => [
         'account' => 'Perfil',
@@ -185,13 +193,22 @@ return [
         'password' => 'Contraseña',
         'login' => 'Iniciar sesión',
         'new_password' => 'Nueva contraseña',
-        'new_password_confirm' => 'Confirme su nueva contraseña'
+        'new_password_confirm' => 'Confirme su nueva contraseña',
+        'registration_throttled' => 'golem15.user::lang.account.registration_throttled',
+        'update_requires_password' => 'golem15.user::lang.account.update_requires_password',
+        'update_requires_password_comment' => 'golem15.user::lang.account.update_requires_password_comment',
+        'invalid_username' => 'golem15.user::lang.account.invalid_username',
+        'invalid_email' => 'golem15.user::lang.account.invalid_email',
+        'activation_by_admin' => 'golem15.user::lang.account.activation_by_admin',
+        'invalid_current_pass' => 'golem15.user::lang.account.invalid_current_pass',
+        'no_avatar' => 'golem15.user::lang.account.no_avatar',
+        'avatar_removed' => 'golem15.user::lang.account.avatar_removed',
     ],
     'reset_password' => [
         'reset_password' => 'Restablecer contraseña',
         'reset_password_desc' => 'Formulario de contraseña olvidada.',
         'code_param' => 'Parámetro para el código de restablecimiento',
-        'code_param_desc' => 'El parámetro de URL de la página usado para el código de restablecimiento.e'
+        'code_param_desc' => 'El parámetro de URL de la página usado para el código de restablecimiento.e',
     ],
     'session' => [
         'session' => 'Sesión',
@@ -207,5 +224,5 @@ return [
         'redirect_desc' => 'Página a la cual redirigir si el acceso es denegado.',
         'logout' => '¡Ha terminado exitosamente su sesión!',
         'stop_impersonate_success' => 'Has dejado de personificar al usuario.',
-    ]
+    ],
 ];

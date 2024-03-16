@@ -65,7 +65,8 @@ return [
         'unban_selected_success' => 'Seçilen üyelerin engeli kaldırıldı.',
         'unsuspend' => 'Askıya alma',
         'unsuspend_success' => 'Üye askıya alındı.',
-        'unsuspend_confirm' => 'Üye askıya alınsın mı?'
+        'unsuspend_confirm' => 'Üye askıya alınsın mı?',
+        '' => '',
     ],
     'settings' => [
         'users' => 'Üyeler',
@@ -101,6 +102,8 @@ return [
         'remember_always' => 'Her zaman',
         'remember_never' => 'Hiçbir zaman',
         'remember_ask' => 'Üye girişi sırasında sor',
+        'use_register_throttle' => 'golem15.user::lang.settings.use_register_throttle',
+        'use_register_throttle_comment' => 'golem15.user::lang.settings.use_register_throttle_comment',
     ],
     'user' => [
         'label' => 'User',
@@ -195,7 +198,12 @@ return [
         'new_password' => 'Yeni Parola',
         'new_password_confirm' => 'Yeni Şifre Onayla',
         'update_requires_password' => 'Güncelleme sırasında onay gereksin',
-        'update_requires_password_comment' => 'Üye bilgi güncelleme ekranında mevcut şifre zorunlu olsun.'
+        'update_requires_password_comment' => 'Üye bilgi güncelleme ekranında mevcut şifre zorunlu olsun.',
+        'invalid_username' => 'golem15.user::lang.account.invalid_username',
+        'invalid_email' => 'golem15.user::lang.account.invalid_email',
+        'activation_by_admin' => 'golem15.user::lang.account.activation_by_admin',
+        'no_avatar' => 'golem15.user::lang.account.no_avatar',
+        'avatar_removed' => 'golem15.user::lang.account.avatar_removed',
     ],
     'reset_password' => [
         'reset_password' => 'Parolanızı Sıfırlayın',

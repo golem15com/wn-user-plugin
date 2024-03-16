@@ -8,7 +8,7 @@ return [
         'access_users' => 'Kelola Pengguna',
         'access_groups' => 'Kelola Grup Pengguna',
         'access_settings' => 'Kelola Pengaturan Pengguna',
-        'impersonate_user' => 'Menyamar Sebagai Pengguna'
+        'impersonate_user' => 'Menyamar Sebagai Pengguna',
     ],
     'users' => [
         'menu_label' => 'Pengguna',
@@ -63,6 +63,10 @@ return [
         'unban_selected_confirm' => 'Batalkan pemblokiran pengguna yang dipilih?',
         'unban_selected_empty' => 'Tidak ada pengguna yang dipilih untuk dibatalkan pemblokirannya.',
         'unban_selected_success' => 'Berhasil membatalkan pemblokiran pengguna yang dipilih.',
+        'unsuspend_success' => 'golem15.user::lang.users.unsuspend_success',
+        '' => '',
+        'unsuspend_confirm' => 'golem15.user::lang.users.unsuspend_confirm',
+        'unsuspend' => 'golem15.user::lang.users.unsuspend',
     ],
     'settings' => [
         'users' => 'Pengguna',
@@ -141,7 +145,7 @@ return [
         'code' => 'Kode',
         'code_comment' => 'Masukkan kode unik untuk mengidentifikasi grup ini.',
         'created_at' => 'Dibuat',
-        'users_count' => 'Pengguna'
+        'users_count' => 'Pengguna',
     ],
     'groups' => [
         'menu_label' => 'Grup',
@@ -156,11 +160,11 @@ return [
         'return_to_users' => 'Kembali ke daftar pengguna',
         'create_title' => 'Buat Grup Pengguna',
         'update_title' => 'Edit Grup Pengguna',
-        'preview_title' => 'Pratinjau Grup Pengguna'
+        'preview_title' => 'Pratinjau Grup Pengguna',
     ],
     'login' => [
         'attribute_email' => 'Email',
-        'attribute_username' => 'Nama Pengguna'
+        'attribute_username' => 'Nama Pengguna',
     ],
     'account' => [
         'account' => 'Akun',
@@ -192,13 +196,18 @@ return [
         'new_password' => 'Kata Sandi Baru',
         'new_password_confirm' => 'Konfirmasi Kata Sandi Baru',
         'update_requires_password' => 'Konfirmasikan kata sandi saat pembaruan',
-        'update_requires_password_comment' => 'Kata sandi diperlukan saat mengubah profil.'
+        'update_requires_password_comment' => 'Kata sandi diperlukan saat mengubah profil.',
+        'invalid_username' => 'golem15.user::lang.account.invalid_username',
+        'invalid_email' => 'golem15.user::lang.account.invalid_email',
+        'activation_by_admin' => 'golem15.user::lang.account.activation_by_admin',
+        'no_avatar' => 'golem15.user::lang.account.no_avatar',
+        'avatar_removed' => 'golem15.user::lang.account.avatar_removed',
     ],
     'reset_password' => [
         'reset_password' => 'Setel Ulang Kata Sandi',
         'reset_password_desc' => 'Formulir lupa kata sandi.',
         'code_param' => 'Parameter Penyetelan Ulang Kata Sandi',
-        'code_param_desc' => 'Parameter URL pada halaman yang digunakan untuk kode reset'
+        'code_param_desc' => 'Parameter URL pada halaman yang digunakan untuk kode reset',
     ],
     'session' => [
         'session' => 'Sesi',
@@ -214,5 +223,5 @@ return [
         'redirect_desc' => 'Nama halaman untuk dialihkan jika akses ditolak.',
         'logout' => 'Anda telah berhasil keluar!',
         'stop_impersonate_success' => 'Anda tidak lagi bertidak sebagai pengguna.',
-    ]
+    ],
 ];

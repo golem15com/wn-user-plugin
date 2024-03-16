@@ -8,7 +8,7 @@ return [
         'access_users' => 'Fiókok kezelése',
         'access_groups' => 'Csoportok kezelése',
         'access_settings' => 'Beállítások kezelése',
-        'impersonate_user' => 'Átjelentkezett felhasználók'
+        'impersonate_user' => 'Átjelentkezett felhasználók',
     ],
     'users' => [
         'menu_label' => 'Felhasználók',
@@ -65,7 +65,8 @@ return [
         'unban_selected_success' => 'A kiválasztott felhasználók sikeresen engedélyezve lettek.',
         'unsuspend' => 'Felfüggesztés',
         'unsuspend_success' => 'A felfüggesztés sikeresen megtörtént.',
-        'unsuspend_confirm' => 'Felfüggeszti a felhasználót?'
+        'unsuspend_confirm' => 'Felfüggeszti a felhasználót?',
+        '' => '',
     ],
     'settings' => [
         'users' => 'Felhasználók',
@@ -100,7 +101,7 @@ return [
         'remember_login_comment' => 'Válassza ki az alábbiak közül a munkamenet időtartalmát.',
         'remember_always' => 'Mindig',
         'remember_never' => 'Soha',
-        'remember_ask' => 'Kérdezzen rá'
+        'remember_ask' => 'Kérdezzen rá',
     ],
     'user' => [
         'label' => 'Felhasználó',
@@ -134,7 +135,7 @@ return [
         'status_activated' => 'Aktivált',
         'status_registered' => 'Regisztrált',
         'created_ip_address' => 'Létrehozott IP cím',
-        'last_ip_address' => 'Legutóbbi IP cím'
+        'last_ip_address' => 'Legutóbbi IP cím',
     ],
     'group' => [
         'label' => 'Csoport',
@@ -144,7 +145,7 @@ return [
         'code' => 'Kód',
         'code_comment' => 'Egyedi azonosító az API eléréshez.',
         'created_at' => 'Létrehozva',
-        'users_count' => 'Felhasználók'
+        'users_count' => 'Felhasználók',
     ],
     'groups' => [
         'menu_label' => 'Csoportok',
@@ -159,11 +160,11 @@ return [
         'return_to_users' => 'Vissza a felhasználókhoz',
         'create_title' => 'Csoport létrehozása',
         'update_title' => 'Csoport szerkesztése',
-        'preview_title' => 'Csoport előnézete'
+        'preview_title' => 'Csoport előnézete',
     ],
     'login' => [
         'attribute_email' => 'E-mail cím',
-        'attribute_username' => 'Felhasználónév'
+        'attribute_username' => 'Felhasználónév',
     ],
     'account' => [
         'account' => 'Fiók',
@@ -196,13 +197,17 @@ return [
         'new_password' => 'Új jelszó',
         'new_password_confirm' => 'Új jelszó megerősítése',
         'update_requires_password' => 'Biztonságos adatmódosítás',
-        'update_requires_password_comment' => 'A profil megváltoztatásakor a rendszer elkéri a felhasználó jelenlegi jelszavát.'
+        'update_requires_password_comment' => 'A profil megváltoztatásakor a rendszer elkéri a felhasználó jelenlegi jelszavát.',
+        'invalid_username' => 'golem15.user::lang.account.invalid_username',
+        'invalid_email' => 'golem15.user::lang.account.invalid_email',
+        'no_avatar' => 'golem15.user::lang.account.no_avatar',
+        'avatar_removed' => 'golem15.user::lang.account.avatar_removed',
     ],
     'reset_password' => [
         'reset_password' => 'Új jelszó megadása',
         'reset_password_desc' => 'Elfelejtett jelszó űrlap.',
         'code_param' => 'Visszaállító kód',
-        'code_param_desc' => 'A visszaállító kódhoz használt oldal webcíme.'
+        'code_param_desc' => 'A visszaállító kódhoz használt oldal webcíme.',
     ],
     'session' => [
         'session' => 'Munkamenet',
@@ -217,6 +222,6 @@ return [
         'redirect_title' => 'Átirányítás',
         'redirect_desc' => 'Az átirányítandó oldal neve, ha a hozzáférés meg van tagadva.',
         'logout' => 'Sikeresen kijelentkezett!',
-        'stop_impersonate_success' => 'Sikeresen visszajelentkezett az eredeti profiljába.'
-    ]
+        'stop_impersonate_success' => 'Sikeresen visszajelentkezett az eredeti profiljába.',
+    ],
 ];

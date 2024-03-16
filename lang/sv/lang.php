@@ -8,7 +8,7 @@ return [
         'access_users' => 'Hantera användare',
         'access_groups' => 'Hantera användargrupper',
         'access_settings' => 'Hantera användarinställningar',
-        'impersonate_user' => 'Personifiera Användare'
+        'impersonate_user' => 'Personifiera Användare',
     ],
     'users' => [
         'menu_label' => 'Användare',
@@ -63,6 +63,10 @@ return [
         'unban_selected_confirm' => 'Unban de valda användarna?',
         'unban_selected_empty' => 'Det finns inga utvalda användare att unban.',
         'unban_selected_success' => 'Unbanned de utvalda användarna.',
+        'unsuspend_success' => 'golem15.user::lang.users.unsuspend_success',
+        '' => '',
+        'unsuspend_confirm' => 'golem15.user::lang.users.unsuspend_confirm',
+        'unsuspend' => 'golem15.user::lang.users.unsuspend',
     ],
     'settings' => [
         'users' => 'Användare',
@@ -90,6 +94,13 @@ return [
         'block_persistence_comment' => 'När aktiverade användare inte kan logga in på flera enheter samtidigt.',
         'login_attribute' => 'Logga in egenskaper',
         'login_attribute_comment' => 'Välj vilken primär användarinfo som ska användas för inloggning.',
+        'remember_login' => 'golem15.user::lang.settings.remember_login',
+        'remember_login_comment' => 'golem15.user::lang.settings.remember_login_comment',
+        'use_register_throttle' => 'golem15.user::lang.settings.use_register_throttle',
+        'use_register_throttle_comment' => 'golem15.user::lang.settings.use_register_throttle_comment',
+        'remember_always' => 'golem15.user::lang.settings.remember_always',
+        'remember_never' => 'golem15.user::lang.settings.remember_never',
+        'remember_ask' => 'golem15.user::lang.settings.remember_ask',
     ],
     'user' => [
         'label' => 'Användare',
@@ -122,6 +133,8 @@ return [
         'status_guest' => 'Gäst',
         'status_activated' => 'Aktiverad',
         'status_registered' => 'Registrerad',
+        'created_ip_address' => 'golem15.user::lang.user.created_ip_address',
+        'last_ip_address' => 'golem15.user::lang.user.last_ip_address',
     ],
     'group' => [
         'label' => 'Grupp',
@@ -131,7 +144,7 @@ return [
         'code' => 'Kod',
         'code_comment' => 'Ange en unik kod som används för att identifiera den här gruppen.',
         'created_at' => 'Skapat',
-        'users_count' => 'Användare'
+        'users_count' => 'Användare',
     ],
     'groups' => [
         'menu_label' => 'Grupper',
@@ -146,11 +159,11 @@ return [
         'return_to_users' => 'Tillbaka till användarlistan',
         'create_title' => 'Skapa användargrupp',
         'update_title' => 'Redigera användargrupp',
-        'preview_title' => 'Förhandsgranska användargrupp'
+        'preview_title' => 'Förhandsgranska användargrupp',
     ],
     'login' => [
         'attribute_email' => 'Email',
-        'attribute_username' => 'Användarnamn'
+        'attribute_username' => 'Användarnamn',
     ],
     'account' => [
         'account' => 'Konto',
@@ -178,13 +191,22 @@ return [
         'password' => 'Lösenord',
         'login' => 'Logga in',
         'new_password' => 'Nytt lösenord',
-        'new_password_confirm' => 'Bekräfta nytt lösenord'
+        'new_password_confirm' => 'Bekräfta nytt lösenord',
+        'registration_throttled' => 'golem15.user::lang.account.registration_throttled',
+        'update_requires_password' => 'golem15.user::lang.account.update_requires_password',
+        'update_requires_password_comment' => 'golem15.user::lang.account.update_requires_password_comment',
+        'invalid_username' => 'golem15.user::lang.account.invalid_username',
+        'invalid_email' => 'golem15.user::lang.account.invalid_email',
+        'activation_by_admin' => 'golem15.user::lang.account.activation_by_admin',
+        'invalid_current_pass' => 'golem15.user::lang.account.invalid_current_pass',
+        'no_avatar' => 'golem15.user::lang.account.no_avatar',
+        'avatar_removed' => 'golem15.user::lang.account.avatar_removed',
     ],
     'reset_password' => [
         'reset_password' => 'Återställ lösenord',
         'reset_password_desc' => 'Glömt lösenordsformulär.',
         'code_param' => 'Återställ kodparam',
-        'code_param_desc' => 'Sidadressparametern som används för återställningskoden'
+        'code_param_desc' => 'Sidadressparametern som används för återställningskoden',
     ],
     'session' => [
         'session' => 'Session',
@@ -200,5 +222,5 @@ return [
         'redirect_desc' => 'Sidnamn att omdirigera om åtkomst nekas.',
         'logout' => 'Du har blivit framgångsrik utloggad!',
         'stop_impersonate_success' => 'Du personifierar inte längre en användare.',
-    ]
+    ],
 ];

@@ -8,7 +8,7 @@ return [
         'access_users' => 'Gérer les utilisateurs',
         'access_groups' => 'Gérer les groupes',
         'access_settings' => 'Gérer les paramètres',
-        'impersonate_user' => 'Usurper l\'identité des utilisateurs'
+        'impersonate_user' => 'Usurper l\'identité des utilisateurs',
     ],
     'users' => [
         'menu_label' => 'Utilisateurs',
@@ -63,6 +63,10 @@ return [
         'unban_selected_confirm' => 'Lever le bannissement des utilisateurs sélectionnés ?',
         'unban_selected_empty' => 'Il n’y a aucun utilisateur sélectionné pour lesquels lever le bannissement.',
         'unban_selected_success' => 'Le bannissement des utilisateurs sélectionnés a été levé avec succès.',
+        'unsuspend_success' => 'golem15.user::lang.users.unsuspend_success',
+        '' => '',
+        'unsuspend_confirm' => 'golem15.user::lang.users.unsuspend_confirm',
+        'unsuspend' => 'golem15.user::lang.users.unsuspend',
     ],
     'settings' => [
         'users' => 'Utilisateurs',
@@ -90,6 +94,13 @@ return [
         'block_persistence_comment' => 'Lorsque activée, les utilisateurs ne peuvent pas se connecter à plusieurs appareils en même temps.',
         'login_attribute' => 'Attribut pour l’identifiant',
         'login_attribute_comment' => 'Choisissez l’attribut utilisateur à utiliser comme identifiant.',
+        'remember_login' => 'golem15.user::lang.settings.remember_login',
+        'remember_login_comment' => 'golem15.user::lang.settings.remember_login_comment',
+        'use_register_throttle' => 'golem15.user::lang.settings.use_register_throttle',
+        'use_register_throttle_comment' => 'golem15.user::lang.settings.use_register_throttle_comment',
+        'remember_always' => 'golem15.user::lang.settings.remember_always',
+        'remember_never' => 'golem15.user::lang.settings.remember_never',
+        'remember_ask' => 'golem15.user::lang.settings.remember_ask',
     ],
     'user' => [
         'label' => 'Utilisateur',
@@ -122,6 +133,8 @@ return [
         'status_guest' => 'Invité',
         'status_activated' => 'Activé',
         'status_registered' => 'Enregistré',
+        'created_ip_address' => 'golem15.user::lang.user.created_ip_address',
+        'last_ip_address' => 'golem15.user::lang.user.last_ip_address',
     ],
     'group' => [
         'label' => 'Groupe d’utilisateurs',
@@ -179,6 +192,15 @@ return [
         'login' => 'Identifiant',
         'new_password' => 'Nouveau mot de passe',
         'new_password_confirm' => 'Confirmez le nouveau mot de passe',
+        'registration_throttled' => 'golem15.user::lang.account.registration_throttled',
+        'update_requires_password' => 'golem15.user::lang.account.update_requires_password',
+        'update_requires_password_comment' => 'golem15.user::lang.account.update_requires_password_comment',
+        'invalid_username' => 'golem15.user::lang.account.invalid_username',
+        'invalid_email' => 'golem15.user::lang.account.invalid_email',
+        'activation_by_admin' => 'golem15.user::lang.account.activation_by_admin',
+        'invalid_current_pass' => 'golem15.user::lang.account.invalid_current_pass',
+        'no_avatar' => 'golem15.user::lang.account.no_avatar',
+        'avatar_removed' => 'golem15.user::lang.account.avatar_removed',
     ],
     'reset_password' => [
         'reset_password' => 'Réinitialiser le mot de passe',
@@ -201,5 +223,4 @@ return [
         'logout' => 'Vous avez été déconnecté avec succès.',
         'stop_impersonate_success' => 'Vous n\'êtes plus en train d\'usurper l\'identité d\'un utilisateur',
     ],
-   
 ];

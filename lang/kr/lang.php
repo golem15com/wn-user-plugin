@@ -8,7 +8,7 @@ return [
         'access_users' => '회원관리',
         'access_groups' => '그룹관리',
         'access_settings' => '회원설정',
-        'impersonate_user' => '위장 로그인'
+        'impersonate_user' => '위장 로그인',
     ],
     'users' => [
         'menu_label' => '계정',
@@ -63,6 +63,10 @@ return [
         'unban_selected_confirm' => '선택한 사용자를 차단해제하시겠습니까?',
         'unban_selected_empty' => '차단해제할 선택한 사용자가 없습니다.',
         'unban_selected_success' => '선택한 사용자를 성공적으로 차단해제했습니다.',
+        'unsuspend_success' => 'golem15.user::lang.users.unsuspend_success',
+        '' => '',
+        'unsuspend_confirm' => 'golem15.user::lang.users.unsuspend_confirm',
+        'unsuspend' => 'golem15.user::lang.users.unsuspend',
     ],
     'settings' => [
         'users' => '사용자',
@@ -90,6 +94,13 @@ return [
         'block_persistence_comment' => '활성화된 경우 사용자는 한번에 여러 장치에 로그인할 수 없습니다.',
         'login_attribute' => '로그인 속성',
         'login_attribute_comment' => '로그인에 사용할 기본 사용자 세부 정보를 선택합니다.',
+        'remember_login' => 'golem15.user::lang.settings.remember_login',
+        'remember_login_comment' => 'golem15.user::lang.settings.remember_login_comment',
+        'use_register_throttle' => 'golem15.user::lang.settings.use_register_throttle',
+        'use_register_throttle_comment' => 'golem15.user::lang.settings.use_register_throttle_comment',
+        'remember_always' => 'golem15.user::lang.settings.remember_always',
+        'remember_never' => 'golem15.user::lang.settings.remember_never',
+        'remember_ask' => 'golem15.user::lang.settings.remember_ask',
     ],
     'user' => [
         'label' => '사용자',
@@ -122,6 +133,8 @@ return [
         'status_guest' => '손님',
         'status_activated' => '활성화 상태',
         'status_registered' => '등록한',
+        'created_ip_address' => 'golem15.user::lang.user.created_ip_address',
+        'last_ip_address' => 'golem15.user::lang.user.last_ip_address',
     ],
     'group' => [
         'label' => '그룹',
@@ -131,7 +144,7 @@ return [
         'code' => '코드',
         'code_comment' => '이 그룹을 식별하는 데 사용되는 고유 한 코드를 입력하십시오.',
         'created_at' => '생성날짜',
-        'users_count' => '사용자 수'
+        'users_count' => '사용자 수',
     ],
     'groups' => [
         'menu_label' => '그룹 목록',
@@ -179,6 +192,15 @@ return [
         'login' => '로그인.',
         'new_password' => '새 암호',
         'new_password_confirm' => '암호 재확인',
+        'registration_throttled' => 'golem15.user::lang.account.registration_throttled',
+        'update_requires_password' => 'golem15.user::lang.account.update_requires_password',
+        'update_requires_password_comment' => 'golem15.user::lang.account.update_requires_password_comment',
+        'invalid_username' => 'golem15.user::lang.account.invalid_username',
+        'invalid_email' => 'golem15.user::lang.account.invalid_email',
+        'activation_by_admin' => 'golem15.user::lang.account.activation_by_admin',
+        'invalid_current_pass' => 'golem15.user::lang.account.invalid_current_pass',
+        'no_avatar' => 'golem15.user::lang.account.no_avatar',
+        'avatar_removed' => 'golem15.user::lang.account.avatar_removed',
     ],
     'reset_password' => [
         'reset_password' => '비밀번호 재설정',
@@ -200,5 +222,5 @@ return [
         'redirect_desc' => '액세스가 거부된 경우 리디렉션 할 페이지 이름입니다.',
         'logout' => '성공적으로 로그아웃되었습니다!',
         'stop_impersonate_success' => '더 이상 사용자를 가장하지 않습니다.',
-    ]
+    ],
 ];

@@ -7,7 +7,8 @@ return [
         'tab' => 'Utenti',
         'access_users' => 'Gestisci Utenti',
         'access_groups' => 'Gestisci Gruppi di Utenti',
-        'access_settings' => 'Gestisci Impostazioni Utenti'
+        'access_settings' => 'Gestisci Impostazioni Utenti',
+        'impersonate_user' => 'golem15.user::lang.plugin.impersonate_user',
     ],
     'users' => [
         'menu_label' => 'Utenti',
@@ -55,6 +56,15 @@ return [
         'unban_selected_confirm' => 'Sbloccare gli utenti selezionati?',
         'unban_selected_empty' => 'Non ci sono utenti selezionati da sbloccare.',
         'unban_selected_success' => 'Utenti selezionati sbloccati con successo.',
+        'impersonate_success' => 'golem15.user::lang.users.impersonate_success',
+        'unsuspend_success' => 'golem15.user::lang.users.unsuspend_success',
+        '' => '',
+        'impersonate_confirm' => 'golem15.user::lang.users.impersonate_confirm',
+        'impersonate_user' => 'golem15.user::lang.users.impersonate_user',
+        'unsuspend_confirm' => 'golem15.user::lang.users.unsuspend_confirm',
+        'unsuspend' => 'golem15.user::lang.users.unsuspend',
+        'activate_selected_confirm' => 'golem15.user::lang.users.activate_selected_confirm',
+        'activate_selected' => 'golem15.user::lang.users.activate_selected',
     ],
     'settings' => [
         'users' => 'Utenti',
@@ -81,7 +91,14 @@ return [
         'use_throttle' => 'Limita tentativi',
         'use_throttle_comment' => 'Ripetuti tentativi errati di accesso porteranno alla sospensione temporanea dell\'utente.',
         'login_attribute' => 'Metodo di login',
-        'login_attribute_comment' => 'Seleziona che attributo gli utenti useranno per effettuare il login.' ,
+        'login_attribute_comment' => 'Seleziona che attributo gli utenti useranno per effettuare il login.',
+        'remember_login' => 'golem15.user::lang.settings.remember_login',
+        'remember_login_comment' => 'golem15.user::lang.settings.remember_login_comment',
+        'use_register_throttle' => 'golem15.user::lang.settings.use_register_throttle',
+        'use_register_throttle_comment' => 'golem15.user::lang.settings.use_register_throttle_comment',
+        'remember_always' => 'golem15.user::lang.settings.remember_always',
+        'remember_never' => 'golem15.user::lang.settings.remember_never',
+        'remember_ask' => 'golem15.user::lang.settings.remember_ask',
     ],
     'user' => [
         'label' => 'Utente',
@@ -114,6 +131,8 @@ return [
         'status_guest' => 'Anonimo',
         'status_activated' => 'Attivato',
         'status_registered' => 'Registrato',
+        'created_ip_address' => 'golem15.user::lang.user.created_ip_address',
+        'last_ip_address' => 'golem15.user::lang.user.last_ip_address',
     ],
     'group' => [
         'label' => 'Gruppo',
@@ -123,7 +142,7 @@ return [
         'code' => 'Codice',
         'code_comment' => 'Inserisci un codice univoco per identificare il gruppo.',
         'created_at' => 'Creato',
-        'users_count' => 'Utenti'
+        'users_count' => 'Utenti',
     ],
     'groups' => [
         'menu_label' => 'Gruppi',
@@ -138,11 +157,11 @@ return [
         'return_to_users' => 'Torna alla lista utenti',
         'create_title' => 'Crea Gruppo di Utenti',
         'update_title' => 'Modifica Gruppo di Utenti',
-        'preview_title' => 'Anteprima Gruppo'
+        'preview_title' => 'Anteprima Gruppo',
     ],
     'login' => [
         'attribute_email' => 'Email',
-        'attribute_username' => 'Username'
+        'attribute_username' => 'Username',
     ],
     'account' => [
         'account' => 'Account',
@@ -168,13 +187,24 @@ return [
         'password' => 'Password',
         'login' => 'Login',
         'new_password' => 'Nuova Password',
-        'new_password_confirm' => 'Conferma Nuova Password'
+        'new_password_confirm' => 'Conferma Nuova Password',
+        'registration_throttled' => 'golem15.user::lang.account.registration_throttled',
+        'force_secure' => 'golem15.user::lang.account.force_secure',
+        'force_secure_desc' => 'golem15.user::lang.account.force_secure_desc',
+        'update_requires_password' => 'golem15.user::lang.account.update_requires_password',
+        'update_requires_password_comment' => 'golem15.user::lang.account.update_requires_password_comment',
+        'invalid_username' => 'golem15.user::lang.account.invalid_username',
+        'invalid_email' => 'golem15.user::lang.account.invalid_email',
+        'banned' => 'golem15.user::lang.account.banned',
+        'invalid_current_pass' => 'golem15.user::lang.account.invalid_current_pass',
+        'no_avatar' => 'golem15.user::lang.account.no_avatar',
+        'avatar_removed' => 'golem15.user::lang.account.avatar_removed',
     ],
     'reset_password' => [
         'reset_password' => 'Ripristina Password',
         'reset_password_desc' => 'Form password dimenticata.',
         'code_param' => 'Parametro codice di ripristino',
-        'code_param_desc' => 'Parametro dell\'URL usato per il codice di ripristino'
+        'code_param_desc' => 'Parametro dell\'URL usato per il codice di ripristino',
     ],
     'session' => [
         'session' => 'Sessione',
@@ -186,6 +216,9 @@ return [
         'guests' => 'Anonimi',
         'redirect_title' => 'Reindirizza a',
         'redirect_desc' => 'Nome della pagina a cui reindirizzare se l\'accesso è negato.',
-        'logout' => 'Sei stato scollegato con successo!'
-    ]
+        'logout' => 'Sei stato scollegato con successo!',
+        'allowed_groups_title' => 'golem15.user::lang.session.allowed_groups_title',
+        'allowed_groups_description' => 'golem15.user::lang.session.allowed_groups_description',
+        'stop_impersonate_success' => 'golem15.user::lang.session.stop_impersonate_success',
+    ],
 ];

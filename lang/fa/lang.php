@@ -1,4 +1,4 @@
-<?php 
+<?php
 
 return [
     'plugin' => [
@@ -8,7 +8,7 @@ return [
         'access_users' => 'مدیریت کاربران',
         'access_groups' => 'مدیریت گروه‌های کاربران',
         'access_settings' => 'مدیریت تنطیمات کاربران',
-        'impersonate_user' => 'از دید کاربران'
+        'impersonate_user' => 'از دید کاربران',
     ],
     'users' => [
         'menu_label' => 'کاربران',
@@ -64,7 +64,9 @@ return [
         'unban_selected_empty' => 'کاربری برای رفع انسداد انتخاب نشده است',
         'unban_selected_success' => 'کاربران انتخاب شده با موفقیت رفع انسداد شدند',
         'unsuspend_success' => 'کاربر لغو تعلیق شده است',
-        'unsuspend_confirm' => 'این کاربر لغو تعلیق شود؟'
+        'unsuspend_confirm' => 'این کاربر لغو تعلیق شود؟',
+        '' => '',
+        'unsuspend' => 'golem15.user::lang.users.unsuspend',
     ],
     'settings' => [
         'users' => 'کاربران',
@@ -89,17 +91,17 @@ return [
         'require_activation_comment' => 'کاربران باید دارای حساب کاربری فعال جهت ورود باشند.',
         'use_throttle' => 'جلو گیری از ورود',
         'use_throttle_comment' => 'تکرار ورود نا موفق کاربر را به طور موقت غیر فعال میکند.',
-        'login_attribute' => 'مشخصه ی ورود',
-        'login_attribute_comment' => 'مشخصه ای را که کاربر برای ورود باید وارد نماید انتخاب نمایید.',
-        'block_persistence' => 'جلوگیری از نشست های همزمان ',
-        'block_persistence_comment' => 'وقتی کاربران فعال هستند نمی توانند همزمان به چندین دستگاه وارد شوند.',
         'login_attribute' => 'ویژگی ورود',
         'login_attribute_comment' => 'انتخاب کنید که چه جزئیات کاربر اصلی باید برای ورود به سیستم استفاده شود.',
+        'block_persistence' => 'جلوگیری از نشست های همزمان ',
+        'block_persistence_comment' => 'وقتی کاربران فعال هستند نمی توانند همزمان به چندین دستگاه وارد شوند.',
         'remember_login' => 'حالت ورود را به خاطر بسپارید',
         'remember_login_comment' => 'انتخاب کنید که آیا جلسه کاربر باید دائمی باشد.',
         'remember_always' => 'همیشه',
         'remember_never' => 'هرگز',
         'remember_ask' => 'از کاربر در هنگام ورود بپرسید',
+        'use_register_throttle' => 'golem15.user::lang.settings.use_register_throttle',
+        'use_register_throttle_comment' => 'golem15.user::lang.settings.use_register_throttle_comment',
     ],
     'user' => [
         'label' => 'کاربر',
@@ -195,7 +197,11 @@ return [
         'new_password' => 'کلمه عبور جدید',
         'new_password_confirm' => 'تایید کلمه عبور',
         'update_requires_password' => 'تایید رمز عبور در به روز رسانی',
-        'update_requires_password_comment' => 'هنگام تغییر نمایه کاربر، رمز عبور فعلی را ملزم کنید.'
+        'update_requires_password_comment' => 'هنگام تغییر نمایه کاربر، رمز عبور فعلی را ملزم کنید.',
+        'invalid_username' => 'golem15.user::lang.account.invalid_username',
+        'invalid_email' => 'golem15.user::lang.account.invalid_email',
+        'no_avatar' => 'golem15.user::lang.account.no_avatar',
+        'avatar_removed' => 'golem15.user::lang.account.avatar_removed',
     ],
     'reset_password' => [
         'reset_password' => 'بازنشانی کلمه عبور',

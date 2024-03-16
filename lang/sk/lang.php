@@ -7,7 +7,7 @@ return [
         'access_users' => 'Správa používateľov',
         'access_groups' => 'Správa skupín používateľov',
         'access_settings' => 'Správa používateľských nastavení',
-        'impersonate_user' => 'Zosobniť používateľov'
+        'impersonate_user' => 'Zosobniť používateľov',
     ],
     'users' => [
         'menu_label' => 'Používatelia',
@@ -62,6 +62,10 @@ return [
         'unban_selected_confirm' => 'Zrušiť zakáz vybraných používateľov?',
         'unban_selected_empty' => 'Nie sú vybraní žiadni používatelia na zrušenie zakázu.',
         'unban_selected_success' => 'Vybraným používateľom bol úspešne zrušený zakáz.',
+        'unsuspend_success' => 'golem15.user::lang.users.unsuspend_success',
+        '' => '',
+        'unsuspend_confirm' => 'golem15.user::lang.users.unsuspend_confirm',
+        'unsuspend' => 'golem15.user::lang.users.unsuspend',
     ],
     'settings' => [
         'users' => 'Používatelia',
@@ -89,6 +93,13 @@ return [
         'block_persistence_comment' => 'Po zapnutí sa používatelia nemôžu prihlásiť do viacerých zariadení súčasne.',
         'login_attribute' => 'Prihlasovací atribút',
         'login_attribute_comment' => 'Vyberte, aké základný údaj používateľa sa má použiť pri prihlasovaní.',
+        'remember_login' => 'golem15.user::lang.settings.remember_login',
+        'remember_login_comment' => 'golem15.user::lang.settings.remember_login_comment',
+        'use_register_throttle' => 'golem15.user::lang.settings.use_register_throttle',
+        'use_register_throttle_comment' => 'golem15.user::lang.settings.use_register_throttle_comment',
+        'remember_always' => 'golem15.user::lang.settings.remember_always',
+        'remember_never' => 'golem15.user::lang.settings.remember_never',
+        'remember_ask' => 'golem15.user::lang.settings.remember_ask',
     ],
     'user' => [
         'label' => 'Používateľ',
@@ -121,6 +132,8 @@ return [
         'status_guest' => 'Hosť',
         'status_activated' => 'Aktivovaný',
         'status_registered' => 'Registrovaný',
+        'created_ip_address' => 'golem15.user::lang.user.created_ip_address',
+        'last_ip_address' => 'golem15.user::lang.user.last_ip_address',
     ],
     'group' => [
         'label' => 'Skupina',
@@ -130,7 +143,7 @@ return [
         'code' => 'Kód',
         'code_comment' => 'Zadajte jedinečný kód použitý na identifikáciu tejto skupiny.',
         'created_at' => 'Vytvorená',
-        'users_count' => 'Používatelia'
+        'users_count' => 'Používatelia',
     ],
     'groups' => [
         'menu_label' => 'Skupiny',
@@ -145,11 +158,11 @@ return [
         'return_to_users' => 'Späť na zoznam používateľov',
         'create_title' => 'Vytvoriť skupinu používateľov',
         'update_title' => 'Upraviť skupinu používateľov',
-        'preview_title' => 'Ukážka skupiny používateľov'
+        'preview_title' => 'Ukážka skupiny používateľov',
     ],
     'login' => [
         'attribute_email' => 'E-mail',
-        'attribute_username' => 'Užívateľské meno'
+        'attribute_username' => 'Užívateľské meno',
     ],
     'account' => [
         'account' => 'Účet',
@@ -177,13 +190,22 @@ return [
         'password' => 'Heslo',
         'login' => 'Prihlásiť sa',
         'new_password' => 'Nové heslo',
-        'new_password_confirm' => 'Potvrďte nové heslo'
+        'new_password_confirm' => 'Potvrďte nové heslo',
+        'registration_throttled' => 'golem15.user::lang.account.registration_throttled',
+        'update_requires_password' => 'golem15.user::lang.account.update_requires_password',
+        'update_requires_password_comment' => 'golem15.user::lang.account.update_requires_password_comment',
+        'invalid_username' => 'golem15.user::lang.account.invalid_username',
+        'invalid_email' => 'golem15.user::lang.account.invalid_email',
+        'activation_by_admin' => 'golem15.user::lang.account.activation_by_admin',
+        'invalid_current_pass' => 'golem15.user::lang.account.invalid_current_pass',
+        'no_avatar' => 'golem15.user::lang.account.no_avatar',
+        'avatar_removed' => 'golem15.user::lang.account.avatar_removed',
     ],
     'reset_password' => [
         'reset_password' => 'Obnoviť heslo',
         'reset_password_desc' => 'Formulár pre zabudnuté heslo.',
         'code_param' => 'Obnovovací kód Parameter',
-        'code_param_desc' => 'Parameter URL stránky použitý pre obnovovací kód'
+        'code_param_desc' => 'Parameter URL stránky použitý pre obnovovací kód',
     ],
     'session' => [
         'session' => 'Relácia',
@@ -199,5 +221,5 @@ return [
         'redirect_desc' => 'Názov stránky pre presmerovanie, ak je prístup zamietnutý.',
         'logout' => 'Úspešne ste sa odhlásili!',
         'stop_impersonate_success' => 'Už sa nezosobňujete používateľa.',
-    ]
+    ],
 ];

@@ -66,6 +66,7 @@ return [
         'unsuspend' => 'Blokkade opheffen',
         'unsuspend_success' => 'Blokkade voor de gebruiker is opgeheven.',
         'unsuspend_confirm' => 'Blokkade voor deze gebruiker opheffen?',
+        '' => '',
     ],
     'settings' => [
         'users' => 'Gebruikers',
@@ -198,6 +199,10 @@ return [
         'new_password_confirm' => 'Herhaal nieuw wachtwoord',
         'update_requires_password' => 'Bevestig wachtwoord bij update',
         'update_requires_password_comment' => 'Vereis het huidige wachtwoord van de gebruiker wanneer hij zijn profiel wijzigt.',
+        'invalid_username' => 'golem15.user::lang.account.invalid_username',
+        'invalid_email' => 'golem15.user::lang.account.invalid_email',
+        'no_avatar' => 'golem15.user::lang.account.no_avatar',
+        'avatar_removed' => 'golem15.user::lang.account.avatar_removed',
     ],
     'reset_password' => [
         'reset_password' => 'Reset wachtwoord',

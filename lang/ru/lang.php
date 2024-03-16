@@ -66,6 +66,7 @@ return [
         'unsuspend' => 'Возобновить',
         'unsuspend_success' => 'Пользователь был восстановлен.',
         'unsuspend_confirm' => 'Возобновить этого пользователя?',
+        '' => '',
     ],
     'settings' => [
         'users' => 'Пользователи',
@@ -197,6 +198,10 @@ return [
         'new_password_confirm' => 'Подтверждение пароля',
         'update_requires_password' => 'Подтверждать пароль при обновлении',
         'update_requires_password_comment' => 'Запрашивать текущий пароль пользователя при редактировании его профиля.',
+        'invalid_username' => 'golem15.user::lang.account.invalid_username',
+        'invalid_email' => 'golem15.user::lang.account.invalid_email',
+        'no_avatar' => 'golem15.user::lang.account.no_avatar',
+        'avatar_removed' => 'golem15.user::lang.account.avatar_removed',
     ],
     'reset_password' => [
         'reset_password' => 'Сброс пароля',

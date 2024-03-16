@@ -8,7 +8,7 @@ return [
         'access_users' => 'Manage Users',
         'access_groups' => 'Manage User Groups',
         'access_settings' => 'Manage User Settings',
-        'impersonate_user' => 'Impersonate Users'
+        'impersonate_user' => 'Impersonate Users',
     ],
     'users' => [
         'menu_label' => 'Users',
@@ -65,7 +65,8 @@ return [
         'unban_selected_success' => 'Successfully unbanned the selected users.',
         'unsuspend' => 'Unsuspend',
         'unsuspend_success' => 'User has been unsuspended.',
-        'unsuspend_confirm' => 'Unsuspend this user?'
+        'unsuspend_confirm' => 'Unsuspend this user?',
+        '' => '',
     ],
     'settings' => [
         'users' => 'Users',
@@ -144,7 +145,7 @@ return [
         'code' => 'Code',
         'code_comment' => 'Enter a unique code used to identify this group.',
         'created_at' => 'Created',
-        'users_count' => 'Users'
+        'users_count' => 'Users',
     ],
     'groups' => [
         'menu_label' => 'Groups',
@@ -159,11 +160,11 @@ return [
         'return_to_users' => 'Back to users list',
         'create_title' => 'Create User Group',
         'update_title' => 'Edit User Group',
-        'preview_title' => 'Preview User Group'
+        'preview_title' => 'Preview User Group',
     ],
     'login' => [
         'attribute_email' => 'Email',
-        'attribute_username' => 'Username'
+        'attribute_username' => 'Username',
     ],
     'account' => [
         'account' => 'Account',
@@ -206,7 +207,7 @@ return [
         'reset_password' => 'Reset Password',
         'reset_password_desc' => 'Forgotten password form.',
         'code_param' => 'Reset Code Param',
-        'code_param_desc' => 'The page URL parameter used for the reset code'
+        'code_param_desc' => 'The page URL parameter used for the reset code',
     ],
     'session' => [
         'session' => 'Session',
@@ -222,5 +223,5 @@ return [
         'redirect_desc' => 'Page name to redirect if access is denied.',
         'logout' => 'You have been successfully logged out!',
         'stop_impersonate_success' => 'You are no longer impersonating a user.',
-    ]
+    ],
 ];

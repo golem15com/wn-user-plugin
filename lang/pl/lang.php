@@ -8,7 +8,7 @@ return [
         'access_users' => 'Zarządzaj użytkownikami',
         'access_groups' => 'Zarządzaj grupami użytkowników',
         'access_settings' => 'Zarządzaj ustawieniami użytkownika',
-        'impersonate_user' => 'Wcielaj się w użytkowników'
+        'impersonate_user' => 'Wcielaj się w użytkowników',
     ],
     'users' => [
         'menu_label' => 'Użytkownicy',
@@ -63,6 +63,10 @@ return [
         'unban_selected_confirm' => 'Odbanować wybranych użytkowników?',
         'unban_selected_empty' => 'Nie ma wybranych użytkowników do odbanowania.',
         'unban_selected_success' => 'Z powodzeniem odbanowano wybranych użytkowników.',
+        'unsuspend_success' => 'Udało się odblokować użytkownika.',
+        '' => '',
+        'unsuspend_confirm' => 'Potwierdź odblokowanie użytkownika',
+        'unsuspend' => 'Odblokuj',
     ],
     'settings' => [
         'users' => 'Użytkownicy',
@@ -90,6 +94,13 @@ return [
         'block_persistence_comment' => 'Aktywni użytkownicy nie mogą zalogować się na wielu urządzeniach w tym samym czasie.',
         'login_attribute' => 'Dane do logowania',
         'login_attribute_comment' => 'Wybierz, jakie podstawowe dane użytkownika mają być używane do logowania.',
+        'remember_login' => 'Zapamiętaj',
+        'remember_login_comment' => 'Zapamiętuje sesje użytkownika',
+        'use_register_throttle' => 'Użyj limitu rejestracji',
+        'use_register_throttle_comment' => 'Ilość maksymalnych rejestracji na minutę',
+        'remember_always' => 'Zawsze pamiętaj',
+        'remember_never' => 'Nigdy nie pamiętaj',
+        'remember_ask' => 'Zapytaj',
     ],
     'user' => [
         'label' => 'Użytkownik',
@@ -122,6 +133,8 @@ return [
         'status_guest' => 'Gość',
         'status_activated' => 'Aktywowany',
         'status_registered' => 'Zarejestrowany',
+        'created_ip_address' => 'Stworzono z IP',
+        'last_ip_address' => 'Ostatnie IP',
     ],
     'group' => [
         'label' => 'Grupa',
@@ -131,7 +144,7 @@ return [
         'code' => 'Kod',
         'code_comment' => 'Wpisz unikalny kod służący do identyfikacji tej grupy.',
         'created_at' => 'Utworzona',
-        'users_count' => 'Użytkownicy'
+        'users_count' => 'Użytkownicy',
     ],
     'groups' => [
         'menu_label' => 'Grupy',
@@ -146,11 +159,11 @@ return [
         'return_to_users' => 'Powrót do listy użytkowników',
         'create_title' => 'Utwórz grupę użytkowników',
         'update_title' => 'Edytuj grupę użytkowników',
-        'preview_title' => 'Podejrzyj grupę użytkowników'
+        'preview_title' => 'Podejrzyj grupę użytkowników',
     ],
     'login' => [
         'attribute_email' => 'Email',
-        'attribute_username' => 'Nazwa użytkownika'
+        'attribute_username' => 'Nazwa użytkownika',
     ],
     'account' => [
         'account' => 'Konto',
@@ -178,13 +191,22 @@ return [
         'password' => 'Hasło',
         'login' => 'Login',
         'new_password' => 'Nowe hasło',
-        'new_password_confirm' => 'Potwierdź nowe hasło'
+        'new_password_confirm' => 'Potwierdź nowe hasło',
+        'registration_throttled' => 'Limit rejestracji',
+        'update_requires_password' => 'Aktualizacja wymaga hasła',
+        'update_requires_password_comment' => 'Hasło jest wymagane do zmiany danych użytkownika',
+        'invalid_username' => 'Nieprawidłowa nazwa użytkownika',
+        'invalid_email' => 'Nieprawidłowy e-mail',
+        'activation_by_admin' => 'Aktywacja przez administratora',
+        'invalid_current_pass' => 'Nieprawidłowe hasło',
+        'no_avatar' => 'Brak avatara',
+        'avatar_removed' => 'Avatar usunięty',
     ],
     'reset_password' => [
         'reset_password' => 'Zresetuj hasło',
         'reset_password_desc' => 'Formularz zapomnianego hasła.',
         'code_param' => 'Kod do resetu hasła - parametr',
-        'code_param_desc' => 'Parametr URL strony używany do resetu hasła'
+        'code_param_desc' => 'Parametr URL strony używany do resetu hasła',
     ],
     'session' => [
         'session' => 'Sesja',
@@ -200,5 +222,5 @@ return [
         'redirect_desc' => 'Nazwa strony do przekierowania w przypadku odmowy dostępu.',
         'logout' => 'Wylogowałeś się poprawnie!',
         'stop_impersonate_success' => 'Nie wcielasz się już w użytkownika.',
-    ]
+    ],
 ];
