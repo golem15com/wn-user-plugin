@@ -46,7 +46,7 @@ return [
         'unban_selected' => 'Zrušit ban vybraným',
         'impersonate_success' => 'Nyní jste simulování tohoto uživatele',
         'unsuspend_success' => 'Uživatel byl obnoven.',
-        '' => 'golem15.user::lang.users.',
+        '' => 'golem15.uživatel',
         'impersonate_confirm' => 'Simulovat tohoto uživatele? Můžete se vrátit do původního stavu tím, že se odhlásíte.',
         'impersonate_user' => 'Simulovat uživatele',
         'unsuspend_confirm' => 'Obnovit tohoto uživatele?',

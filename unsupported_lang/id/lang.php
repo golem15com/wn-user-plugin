@@ -50,7 +50,7 @@ return [
         'unban_selected_confirm' => 'Buka blokir pengguna yang dipilih?',
         'unban_selected' => 'Buka blokir yang dipilih',
         'unsuspend_success' => 'Pengguna berhasil diaktifkan kembali.',
-        '' => 'golem15.user::lang.users.',
+        '' => 'golem15.pengguna.',
         'unsuspend_confirm' => 'Aktifkan kembali pengguna ini?',
         'unsuspend' => 'Aktifkan kembali',
     ],
