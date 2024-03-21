@@ -140,7 +140,7 @@ class Plugin extends PluginBase
                 'icon' => 'icon-user',
                 'iconSvg' => 'plugins/golem15/user/assets/images/user-icon.svg',
                 'permissions' => ['golem15.users.*'],
-                'order' => 500,
+                'order' => 555,
 
                 'sideMenu' => [
                     'users' => [
