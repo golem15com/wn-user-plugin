@@ -383,12 +383,14 @@ class Account extends ComponentBase
             if (!strlen(trim($userId)) || !strlen(trim($code))) {
                 throw new ValidationException($errorFields);
             }
+            
 
             if (!$user = Auth::findUserById($userId)) {
                 throw new ValidationException($errorFields);
             }
-
+         
             if (!$user->attemptActivation($code)) {
+
                 throw new ValidationException($errorFields);
             }
 
@@ -399,10 +401,16 @@ class Account extends ComponentBase
              */
             Auth::login($user);
 
+            return redirect()->to('/');
+
         }
         catch (Exception $ex) {
-            if (Request::ajax()) throw $ex;
-            else Flash::error($ex->getMessage());
+            throw $ex;
+            if (Request::ajax()){
+                throw $ex;
+            }
+            Flash::error($ex->getMessage());
+            return redirect()->to('/');
         }
     }
 

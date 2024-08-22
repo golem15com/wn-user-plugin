@@ -95,6 +95,7 @@ class User extends UserBase implements JWTSubject
                 return false;
             }
         } else {
+            
             $result = parent::attemptActivation($code);
 
             if ($result === false) {
