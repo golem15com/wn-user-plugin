@@ -84,3 +84,15 @@
 "2.1.0": "Enforce password length rules on sign in. Compatibility fixes."
 "2.2.0": "Add avatar removal. Password resets will activate users if User activation mode is enabled."
 "2.2.1": "Fixes a bug introduced by the adoption of symfony/mime required since Laravel 7.x where sending an email to a blocked email address would not be prevented."
+"2.3.0":
+    - "Add QR code-based device authorization system."
+    - v2.1.0/create_device_auth_sessions_table.php
+"2.3.1":
+    - "Add HBO-style 8-character short codes for device authorization."
+    - v2.3.1/add_short_code_to_device_auth_sessions.php
+"2.3.2":
+    - "Make user_id nullable for guest device authorization flow."
+    - v2.3.2/make_user_id_nullable_in_device_auth_sessions.php
+"2.3.3":
+    - "Extend short_code length to 9 characters for XXXX-XXXX format."
+    - v2.3.3/extend_short_code_length.php

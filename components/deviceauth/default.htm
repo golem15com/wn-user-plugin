@@ -1,0 +1,120 @@
+<div class="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900 py-12 px-4 sm:px-6 lg:px-8">
+    <div class="max-w-md w-full space-y-8">
+        {% if error %}
+            <!-- Error State -->
+            <div class="text-center">
+                <div class="mx-auto h-24 w-24 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center mb-6">
+                    <svg class="h-12 w-12 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </div>
+                <h2 class="text-3xl font-extrabold text-gray-900 dark:text-gray-100">Authorization Failed</h2>
+                <p class="mt-4 text-lg text-gray-600 dark:text-gray-400">{{ error }}</p>
+                <div class="mt-6">
+                    <a href="{{ url('/') }}" class="btn btn-primary">
+                        Return to Home
+                    </a>
+                </div>
+            </div>
+        {% else %}
+            <!-- Waiting for Authorization -->
+            <div class="text-center">
+                <div class="mx-auto h-24 w-24 rounded-full bg-quest-primary/10 flex items-center justify-center mb-6 animate-pulse">
+                    <svg class="h-12 w-12 text-quest-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
+                    </svg>
+                </div>
+                <h2 class="text-3xl font-extrabold text-gray-900 dark:text-gray-100">Authorizing Device</h2>
+                <p class="mt-4 text-lg text-gray-600 dark:text-gray-400" id="status-message">
+                    Waiting for authorization from your primary device...
+                </p>
+
+                <!-- Progress indicator -->
+                <div class="mt-8">
+                    <div class="flex items-center justify-center space-x-2">
+                        <div class="w-3 h-3 bg-quest-primary rounded-full animate-bounce" style="animation-delay: 0s;"></div>
+                        <div class="w-3 h-3 bg-quest-primary rounded-full animate-bounce" style="animation-delay: 0.2s;"></div>
+                        <div class="w-3 h-3 bg-quest-primary rounded-full animate-bounce" style="animation-delay: 0.4s;"></div>
+                    </div>
+                </div>
+
+                <!-- Expiry countdown -->
+                <p class="mt-6 text-sm text-gray-500 dark:text-gray-400" id="expiry-message">
+                    This authorization will expire in <span id="countdown" class="font-semibold">5:00</span>
+                </p>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+{% if not error %}
+<script>
+    (function() {
+        const token = '{{ session.token }}';
+        let pollInterval;
+        let countdownInterval;
+        let expiresInSeconds = {{ session.expires_at|date('U') }} - Math.floor(Date.now() / 1000);
+
+        // Polling function to check authorization status
+        function checkStatus() {
+            Snowboard.request(null, 'deviceAuth::onCheckStatus', {
+                data: { token: token },
+                success: function(response) {
+                    if (response.status === 'confirmed') {
+                        // Authorization confirmed!
+                        document.getElementById('status-message').textContent = response.message;
+                        clearInterval(pollInterval);
+                        clearInterval(countdownInterval);
+
+                        // Redirect to /select page
+                        setTimeout(function() {
+                            window.location.href = response.redirect_url;
+                        }, 1000);
+                    } else if (response.status === 'expired') {
+                        // Token expired
+                        document.getElementById('status-message').textContent = response.message;
+                        document.getElementById('status-message').classList.add('text-red-600', 'dark:text-red-400');
+                        clearInterval(pollInterval);
+                        clearInterval(countdownInterval);
+                    } else if (response.status === 'pending') {
+                        // Still waiting
+                        expiresInSeconds = response.expires_in_seconds;
+                    }
+                },
+                error: function(error) {
+                    console.error('Status check failed:', error);
+                }
+            });
+        }
+
+        // Countdown timer
+        function updateCountdown() {
+            if (expiresInSeconds <= 0) {
+                document.getElementById('countdown').textContent = 'Expired';
+                document.getElementById('expiry-message').textContent = 'Authorization request has expired.';
+                document.getElementById('expiry-message').classList.add('text-red-600', 'dark:text-red-400');
+                clearInterval(pollInterval);
+                clearInterval(countdownInterval);
+                return;
+            }
+
+            const minutes = Math.floor(expiresInSeconds / 60);
+            const seconds = expiresInSeconds % 60;
+            document.getElementById('countdown').textContent =
+                minutes + ':' + (seconds < 10 ? '0' : '') + seconds;
+
+            expiresInSeconds--;
+        }
+
+        // Start polling every 3 seconds
+        pollInterval = setInterval(checkStatus, 3000);
+
+        // Start countdown every second
+        countdownInterval = setInterval(updateCountdown, 1000);
+
+        // Initial check
+        checkStatus();
+        updateCountdown();
+    })();
+</script>
+{% endif %}

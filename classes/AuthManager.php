@@ -29,7 +29,16 @@ class AuthManager extends StormAuthManager implements Auth
     public function logout(bool $force = false)
     {
         parent::logout();
-        JWTAuth::invalidate($force);
+
+        // Only invalidate JWT token if one exists
+        try {
+            if (JWTAuth::getToken()) {
+                JWTAuth::invalidate($force);
+            }
+        } catch (\Exception $e) {
+            // Silently catch JWT exceptions during logout
+            // The session logout above already succeeded
+        }
     }
 
     /**

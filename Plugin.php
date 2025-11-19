@@ -4,6 +4,7 @@ use App;
 use Auth;
 use Event;
 use Backend;
+use Golem15\QuestStream\Models\Team;
 use Illuminate\Auth\AuthManager;
 use Illuminate\Contracts\Auth\Factory;
 use PHPOpenSourceSaver\JWTAuth\Facades\JWTAuth;
@@ -105,7 +106,8 @@ class Plugin extends PluginBase
         return [
             \Golem15\User\Components\Session::class => 'session',
             \Golem15\User\Components\Account::class => 'account',
-            \Golem15\User\Components\ResetPassword::class => 'resetPassword'
+            \Golem15\User\Components\ResetPassword::class => 'resetPassword',
+            \Golem15\User\Components\DeviceAuth::class => 'deviceAuth',
         ];
     }
 
@@ -264,6 +266,14 @@ class Plugin extends PluginBase
 
         User::extend(
             static function ($model) {
+                $model->hasOne['owned_team'] = [
+                    Team::class,
+                    'key' => 'owner_id',
+                ];
+                $model->belongsTo['team'] = [
+                    Team::class,
+                    'key' => 'team_id',
+                ];
                 $model->addDynamicMethod(
                     'getApiArray',
                     static function () use ($model) {
