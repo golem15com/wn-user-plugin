@@ -54,6 +54,7 @@ class User extends UserBase implements JWTSubject
         'email',
         'password',
         'password_confirmation',
+        'pin',
         'created_ip_address',
         'last_ip_address'
     ];
