@@ -96,3 +96,6 @@
 "2.3.3":
     - "Extend short_code length to 9 characters for XXXX-XXXX format."
     - v2.3.3/extend_short_code_length.php
+"2.3.4":
+    - "Add is_onboarded flag to users and mark existing users as onboarded."
+    - v2.3.4/add_is_onboarded_to_users.php

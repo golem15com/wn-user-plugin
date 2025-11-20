@@ -56,7 +56,8 @@ class User extends UserBase implements JWTSubject
         'password_confirmation',
         'pin',
         'created_ip_address',
-        'last_ip_address'
+        'last_ip_address',
+        'is_onboarded',
     ];
 
     /**
@@ -78,6 +79,10 @@ class User extends UserBase implements JWTSubject
         'updated_at',
         'activated_at',
         'last_login'
+    ];
+
+    protected $casts = [
+        'is_onboarded' => 'boolean',
     ];
 
     public static $loginAttribute = null;
