@@ -190,6 +190,8 @@ return [
         'activation_by_admin' => 'You have successfully registered. Your account is not yet active and must be approved by an administrator.',
         'registration_disabled' => 'Registrations are currently disabled.',
         'registration_throttled' => 'Registration is throttled. Please try again later.',
+        'beta_key_required' => 'This is required to register during beta testing.',
+        'beta_key_invalid' => 'The beta tester key you entered is invalid.',
         'sign_in' => 'Sign in',
         'register' => 'Register',
         'full_name' => 'Full Name',

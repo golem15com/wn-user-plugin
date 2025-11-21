@@ -80,6 +80,7 @@ class Account extends ComponentBase
         $this->page['loginAttributeLabel'] = $this->loginAttributeLabel();
         $this->page['updateRequiresPassword'] = $this->updateRequiresPassword();
         $this->page['rememberLoginMode'] = $this->rememberLoginMode();
+        $this->page['requiresBetaKey'] = $this->requiresBetaKey();
     }
 
     /**
@@ -161,6 +162,39 @@ class Account extends ComponentBase
     public function rememberLoginMode()
     {
         return UserSettings::get('remember_login', UserSettings::REMEMBER_ALWAYS);
+    }
+
+    /**
+     * Check if beta tester key is required for registration
+     * @return bool
+     */
+    public function requiresBetaKey()
+    {
+        $betaKey = env('BETATESTER_KEY', '');
+        return !empty($betaKey);
+    }
+
+    /**
+     * Validate beta tester key using constant-time comparison
+     * @param string $inputKey
+     * @return bool
+     */
+    protected function validateBetaKey($inputKey)
+    {
+        $expectedKey = env('BETATESTER_KEY', '');
+
+        // If no beta key is configured, validation passes
+        if (empty($expectedKey)) {
+            return true;
+        }
+
+        // If no input key provided, validation fails
+        if (empty($inputKey)) {
+            return false;
+        }
+
+        // Use hash_equals for constant-time comparison to prevent timing attacks
+        return hash_equals($expectedKey, $inputKey);
     }
 
     /**
@@ -280,6 +314,18 @@ class Account extends ComponentBase
 
             if ($this->isRegisterThrottled()) {
                 throw new ApplicationException(Lang::get(/*Registration is throttled. Please try again later.*/'golem15.user::lang.account.registration_throttled'));
+            }
+
+            /*
+             * Validate beta tester key if required
+             */
+            if ($this->requiresBetaKey()) {
+                $betaKey = post('beta_key');
+                if (!$this->validateBetaKey($betaKey)) {
+                    throw new ValidationException([
+                        'beta_key' => Lang::get('golem15.user::lang.account.beta_key_invalid')
+                    ]);
+                }
             }
 
             /*
