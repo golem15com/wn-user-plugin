@@ -58,6 +58,7 @@ class User extends UserBase implements JWTSubject
         'created_ip_address',
         'last_ip_address',
         'is_onboarded',
+        'preferred_locale',
     ];
 
     /**
@@ -101,7 +102,7 @@ class User extends UserBase implements JWTSubject
                 return false;
             }
         } else {
-            
+
             $result = parent::attemptActivation($code);
 
             if ($result === false) {
@@ -273,6 +274,12 @@ class User extends UserBase implements JWTSubject
     public function beforeValidate()
     {
         /*
+         * Clean up broken avatar file attachments before validation
+         * This prevents validation failures when the avatar file is deleted but the record exists
+         */
+        $this->cleanupBrokenAvatar();
+
+        /*
          * Guests are special
          */
         if ($this->is_guest && !$this->password) {
@@ -295,6 +302,38 @@ class User extends UserBase implements JWTSubject
         $minPasswordLength = static::getMinPasswordLength();
         $this->rules['password'] = "required:create|between:$minPasswordLength,255|confirmed";
         $this->rules['password_confirmation'] = "required_with:password|between:$minPasswordLength,255";
+    }
+
+    /**
+     * Clean up broken avatar file attachments
+     * Removes orphaned avatar records where the underlying file no longer exists
+     * @return void
+     */
+    protected function cleanupBrokenAvatar()
+    {
+        try {
+            // Check if avatar relation exists but file is missing
+            if ($this->avatar && $this->avatar->disk_name) {
+                $filePath = $this->avatar->getLocalPath();
+                if ($filePath && !file_exists($filePath)) {
+                    \Log::warning('User avatar file missing, clearing broken attachment', [
+                        'user_id' => $this->id,
+                        'user_email' => $this->email,
+                        'missing_file' => $filePath
+                    ]);
+                    // Delete the orphaned file record
+                    $this->avatar->delete();
+                    // Clear the relation so it doesn't interfere with validation/save
+                    $this->reloadRelations('avatar');
+                }
+            }
+        } catch (\Exception $e) {
+            // Log but don't fail - this is a cleanup operation
+            \Log::error('Failed to cleanup broken avatar', [
+                'user_id' => $this->id,
+                'error' => $e->getMessage()
+            ]);
+        }
     }
 
     /**
@@ -345,6 +384,15 @@ class User extends UserBase implements JWTSubject
         }
         else {
             parent::afterLogin();
+        }
+
+        // Set user's preferred locale if they have one saved
+        if ($this->preferred_locale) {
+            try {
+                \Winter\Translate\Classes\Translator::instance()->setLocale($this->preferred_locale, true);
+            } catch (\Exception $e) {
+                // Translator may not be available, ignore
+            }
         }
 
         Event::fire('golem15.user.login', [$this]);
