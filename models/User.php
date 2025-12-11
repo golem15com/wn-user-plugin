@@ -59,6 +59,13 @@ class User extends UserBase implements JWTSubject
         'last_ip_address',
         'is_onboarded',
         'preferred_locale',
+        'oauth_provider',
+        'oauth_provider_id',
+        'oauth_access_token',
+        'oauth_refresh_token',
+        'oauth_token_expires_at',
+        'oauth_profile_data',
+        'oauth_linked_at',
     ];
 
     /**
@@ -79,11 +86,14 @@ class User extends UserBase implements JWTSubject
         'created_at',
         'updated_at',
         'activated_at',
-        'last_login'
+        'last_login',
+        'oauth_token_expires_at',
+        'oauth_linked_at',
     ];
 
     protected $casts = [
         'is_onboarded' => 'boolean',
+        'oauth_profile_data' => 'array',
     ];
 
     public static $loginAttribute = null;
@@ -645,5 +655,187 @@ class User extends UserBase implements JWTSubject
     #[\Override] public function getJWTCustomClaims()
     {
         return [];
+    }
+
+    //
+    // OAuth / Social Login
+    //
+
+    /**
+     * Check if this user has an OAuth provider linked
+     * @param string|null $provider Check for specific provider (google, facebook, etc.)
+     * @return boolean
+     */
+    public function hasOAuthProvider($provider = null)
+    {
+        if (!$this->oauth_provider) {
+            return false;
+        }
+
+        if ($provider === null) {
+            return true;
+        }
+
+        return $this->oauth_provider === $provider;
+    }
+
+    /**
+     * Get the display name for the OAuth provider
+     * @return string|null
+     */
+    public function getOAuthProviderName()
+    {
+        if (!$this->oauth_provider) {
+            return null;
+        }
+
+        $providers = [
+            'google' => 'Google',
+            'facebook' => 'Facebook',
+            'github' => 'GitHub',
+        ];
+
+        return $providers[$this->oauth_provider] ?? ucfirst($this->oauth_provider);
+    }
+
+    /**
+     * Link an OAuth provider to this user account
+     * @param string $provider Provider name (google, facebook, etc.)
+     * @param string $providerId Unique ID from the provider
+     * @param array $tokens Array with 'token' and optionally 'refreshToken', 'expiresIn'
+     * @param array $profileData Additional profile data from provider
+     * @return void
+     * @throws \Exception if account already linked to different user
+     */
+    public function linkOAuthProvider($provider, $providerId, $tokens, $profileData = [])
+    {
+        // Check if this OAuth account is already linked to another user
+        $existingUser = static::where('oauth_provider', $provider)
+            ->where('oauth_provider_id', $providerId)
+            ->where('id', '!=', $this->id)
+            ->first();
+
+        if ($existingUser) {
+            throw new \Exception(
+                Lang::get('golem15.user::lang.oauth.account_already_linked')
+            );
+        }
+
+        // Encrypt tokens for security
+        $this->oauth_provider = $provider;
+        $this->oauth_provider_id = $providerId;
+        $this->oauth_access_token = encrypt($tokens['token']);
+
+        if (isset($tokens['refreshToken'])) {
+            $this->oauth_refresh_token = encrypt($tokens['refreshToken']);
+        }
+
+        if (isset($tokens['expiresIn'])) {
+            $this->oauth_token_expires_at = Carbon::now()->addSeconds($tokens['expiresIn']);
+        }
+
+        $this->oauth_profile_data = $profileData;
+        $this->oauth_linked_at = Carbon::now();
+
+        $this->save();
+
+        \Log::info('OAuth account linked', [
+            'user_id' => $this->id,
+            'provider' => $provider,
+            'email' => $this->email
+        ]);
+    }
+
+    /**
+     * Unlink OAuth provider from this user account
+     * @return void
+     */
+    public function unlinkOAuthProvider()
+    {
+        $provider = $this->oauth_provider;
+
+        $this->oauth_provider = null;
+        $this->oauth_provider_id = null;
+        $this->oauth_access_token = null;
+        $this->oauth_refresh_token = null;
+        $this->oauth_token_expires_at = null;
+        $this->oauth_profile_data = null;
+        $this->oauth_linked_at = null;
+
+        $this->save();
+
+        \Log::info('OAuth account unlinked', [
+            'user_id' => $this->id,
+            'provider' => $provider,
+            'email' => $this->email
+        ]);
+    }
+
+    /**
+     * Get decrypted OAuth access token
+     * @return string|null
+     */
+    public function getOAuthAccessToken()
+    {
+        if (!$this->oauth_access_token) {
+            return null;
+        }
+
+        try {
+            return decrypt($this->oauth_access_token);
+        } catch (\Exception $e) {
+            \Log::error('Failed to decrypt OAuth access token', [
+                'user_id' => $this->id,
+                'error' => $e->getMessage()
+            ]);
+            return null;
+        }
+    }
+
+    /**
+     * Get decrypted OAuth refresh token
+     * @return string|null
+     */
+    public function getOAuthRefreshToken()
+    {
+        if (!$this->oauth_refresh_token) {
+            return null;
+        }
+
+        try {
+            return decrypt($this->oauth_refresh_token);
+        } catch (\Exception $e) {
+            \Log::error('Failed to decrypt OAuth refresh token', [
+                'user_id' => $this->id,
+                'error' => $e->getMessage()
+            ]);
+            return null;
+        }
+    }
+
+    /**
+     * Check if OAuth token is expired
+     * @return boolean
+     */
+    public function isOAuthTokenExpired()
+    {
+        if (!$this->oauth_token_expires_at) {
+            return false;
+        }
+
+        return Carbon::now()->isAfter($this->oauth_token_expires_at);
+    }
+
+    /**
+     * Find user by OAuth provider credentials
+     * @param string $provider Provider name (google, facebook, etc.)
+     * @param string $providerId Unique ID from the provider
+     * @return static|null
+     */
+    public static function findByOAuthProvider($provider, $providerId)
+    {
+        return static::where('oauth_provider', $provider)
+            ->where('oauth_provider_id', $providerId)
+            ->first();
     }
 }

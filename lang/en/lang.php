@@ -226,4 +226,53 @@ return [
         'logout' => 'You have been successfully logged out!',
         'stop_impersonate_success' => 'You are no longer impersonating a user.',
     ],
+    'socialauth' => [
+        'component_name' => 'Social Authentication',
+        'component_desc' => 'Provides OAuth/social login functionality (Google, Facebook, GitHub, etc.)',
+        'redirect_after_auth' => 'Redirect after authentication',
+        'redirect_after_auth_desc' => 'Page name to redirect to after OAuth login/registration',
+        'redirect_after_link' => 'Redirect after account linking',
+        'redirect_after_link_desc' => 'Page name to redirect to after linking OAuth account',
+    ],
+    'oauth' => [
+        // OAuth button labels
+        'sign_in_with' => 'Sign in with :provider',
+        'sign_up_with' => 'Sign up with :provider',
+        'or_continue_with' => 'Or continue with',
+        'connect' => 'Connect :provider Account',
+        'unlink' => 'Unlink',
+        'connected' => 'Connected',
+        'not_connected' => 'Not connected',
+
+        // Status messages
+        'connected_as' => 'Connected as :email',
+        'linked_on' => 'Linked on :date',
+        'connected_accounts' => 'Connected Accounts',
+        'manage_oauth' => 'Manage your social login connections',
+
+        // Success messages
+        'login_success' => 'Successfully signed in with :provider!',
+        'registration_success' => 'Welcome! Your account has been created.',
+        'link_success' => ':provider account successfully linked!',
+        'unlink_success' => ':provider account has been unlinked.',
+
+        // Error messages
+        'invalid_provider' => 'Invalid OAuth provider specified.',
+        'provider_not_configured' => ':provider login is not configured. Please contact the administrator.',
+        'provider_error' => 'OAuth authentication failed: :error',
+        'code_expired' => 'Your login session has expired. Please try signing in again.',
+        'invalid_action' => 'Invalid OAuth action specified.',
+        'must_be_logged_in' => 'You must be logged in to link an OAuth account.',
+        'account_not_found' => 'No account found. Would you like to register?',
+        'email_exists_link_account' => 'An account with this email already exists. Please sign in and link your :provider account from settings.',
+        'account_already_registered' => 'This :provider account is already registered. Please sign in.',
+        'account_already_linked' => 'This :provider account is already linked to another user.',
+        'no_provider_linked' => 'No OAuth provider is currently linked to your account.',
+        'cannot_unlink_without_password' => 'You must set a password before unlinking your OAuth account to prevent being locked out.',
+        'replacing_provider' => 'Linking :new will replace your existing :old connection.',
+
+        // Settings page
+        'security_notice' => 'Security Notice',
+        'password_required' => 'You must have a password set on your account before unlinking OAuth providers to ensure you can still sign in.',
+    ],
 ];

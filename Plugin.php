@@ -88,6 +88,20 @@ class Plugin extends PluginBase
          * Compatability with Winter.Notify
          */
         $this->bindNotificationEvents();
+
+        /*
+         * Register Laravel Socialite service provider
+         */
+        $this->app->register(\Laravel\Socialite\SocialiteServiceProvider::class);
+
+        /*
+         * Merge OAuth services configuration
+         */
+        $this->mergeConfigFrom(
+            __DIR__ . '/config/services.php',
+            'services'
+        );
+
         $this->publishes(
             [
                 base_path() . '/plugins/golem15/user/config/jwt.php' => config_path(
@@ -95,6 +109,9 @@ class Plugin extends PluginBase
                 ),
                 base_path() . '/plugins/golem15/user/config/auth.php' => config_path(
                     'auth.php'
+                ),
+                base_path() . '/plugins/golem15/user/config/services.php' => config_path(
+                    'services.php'
                 ),
             ],
             'config'
@@ -108,6 +125,7 @@ class Plugin extends PluginBase
             \Golem15\User\Components\Account::class => 'account',
             \Golem15\User\Components\ResetPassword::class => 'resetPassword',
             \Golem15\User\Components\DeviceAuth::class => 'deviceAuth',
+            \Golem15\User\Components\SocialAuth::class => 'socialAuth',
         ];
     }
 

@@ -106,3 +106,6 @@
 "2.3.7":
     - "Add preferred_locale field for persistent user language preferences."
     - v2.3.7/add_preferred_locale_to_users.php
+"2.4.0":
+    - "Add OAuth/social login support (Google, Facebook, etc.)."
+    - v2.4.0/add_oauth_fields_to_users.php

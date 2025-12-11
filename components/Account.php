@@ -81,6 +81,9 @@ class Account extends ComponentBase
         $this->page['updateRequiresPassword'] = $this->updateRequiresPassword();
         $this->page['rememberLoginMode'] = $this->rememberLoginMode();
         $this->page['requiresBetaKey'] = $this->requiresBetaKey();
+        $this->page['googleOAuthEnabled'] = $this->isOAuthProviderEnabled('google');
+        $this->page['facebookOAuthEnabled'] = $this->isOAuthProviderEnabled('facebook');
+        $this->page['githubOAuthEnabled'] = $this->isOAuthProviderEnabled('github');
     }
 
     /**
@@ -697,5 +700,21 @@ class Account extends ComponentBase
         }
 
         return UserModel::isRegisterThrottled(Request::ip());
+    }
+
+    /**
+     * Check if OAuth provider is configured and enabled
+     * @param string $provider Provider name (google, facebook, github)
+     * @return bool
+     */
+    protected function isOAuthProviderEnabled($provider)
+    {
+        $config = config("services.{$provider}");
+
+        if (!$config) {
+            return false;
+        }
+
+        return !empty($config['client_id']) && !empty($config['client_secret']);
     }
 }

@@ -68,3 +68,29 @@ Route::group(
             }
         );
     });
+
+/*
+|--------------------------------------------------------------------------
+| OAuth / Social Login Routes
+|--------------------------------------------------------------------------
+|
+| Routes for OAuth authentication with Google, Facebook, GitHub, etc.
+| Rate limited to prevent abuse (20 requests per minute per IP).
+|
+*/
+
+Route::group(['prefix' => 'oauth', 'middleware' => ['web', 'throttle:20,1']], function () {
+
+    // Redirect to OAuth provider
+    Route::get('/{provider}', function ($provider) {
+        $component = new \Golem15\User\Components\SocialAuth();
+        return $component->onRedirectToProvider($provider);
+    })->where('provider', 'google|facebook|github');
+
+    // OAuth callback from provider
+    Route::get('/{provider}/callback', function ($provider) {
+        $component = new \Golem15\User\Components\SocialAuth();
+        return $component->onOAuthCallback($provider);
+    })->where('provider', 'google|facebook|github');
+
+});
