@@ -11,7 +11,7 @@ return new class extends Migration
         Schema::table('users', function (Blueprint $table) {
             // Check if columns don't exist before adding
             if (!Schema::hasColumn('users', 'pin_recovery_token')) {
-                $table->string('pin_recovery_token', 64)->nullable()->index()->after('pin_locked_until');
+                $table->string('pin_recovery_token', 64)->nullable()->index()->after('is_onboarded');
             }
 
             if (!Schema::hasColumn('users', 'pin_recovery_expires_at')) {
