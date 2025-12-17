@@ -334,6 +334,37 @@ class SocialAuth extends ComponentBase
             }
         }
 
+        /*
+         * Record GDPR consent for OAuth users (implicit consent)
+         * OAuth users accept terms and privacy by using OAuth registration
+         */
+        $currentPolicyVersion = config('gdpr.current_privacy_version', '2024-12-17');
+        $user->recordConsent(
+            $currentPolicyVersion,
+            $currentPolicyVersion,
+            Request::ip(),
+            Request::userAgent()
+        );
+
+        // OAuth users implicitly consent to marketing (they can withdraw later)
+        $user->marketing_consent = true;
+        $user->marketing_consent_at = now();
+        $user->save();
+
+        \Golem15\User\Models\ConsentAudit::create([
+            'user_id' => $user->id,
+            'consent_type' => \Golem15\User\Models\ConsentAudit::CONSENT_TYPE_MARKETING,
+            'action' => \Golem15\User\Models\ConsentAudit::ACTION_GRANTED,
+            'ip_address' => Request::ip(),
+            'user_agent' => Request::userAgent(),
+            'metadata' => json_encode(['oauth_provider' => $provider]),
+        ]);
+
+        \Log::info("OAuth registration consent recorded", [
+            'user_id' => $user->id,
+            'provider' => $provider,
+        ]);
+
         // Fire registration event (triggers Family creation in QuestStream)
         Event::fire('golem15.user.register', [$user, []]);
 

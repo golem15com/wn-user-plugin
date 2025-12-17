@@ -39,6 +39,10 @@ class User extends UserBase implements JWTSubject
         'groups' => [UserGroup::class, 'table' => 'users_groups']
     ];
 
+    public $hasMany = [
+        'consentAudits' => [ConsentAudit::class, 'key' => 'user_id']
+    ];
+
     public $attachOne = [
         'avatar' => \System\Models\File::class
     ];
@@ -66,6 +70,12 @@ class User extends UserBase implements JWTSubject
         'oauth_token_expires_at',
         'oauth_profile_data',
         'oauth_linked_at',
+        // GDPR consent fields
+        'terms_accepted',
+        'privacy_accepted',
+        'marketing_consent',
+        'consent_ip_address',
+        'deletion_reason',
     ];
 
     /**
@@ -89,11 +99,21 @@ class User extends UserBase implements JWTSubject
         'last_login',
         'oauth_token_expires_at',
         'oauth_linked_at',
+        // GDPR consent timestamps
+        'terms_accepted_at',
+        'privacy_accepted_at',
+        'marketing_consent_at',
+        'deletion_requested_at',
+        'deletion_scheduled_for',
     ];
 
     protected $casts = [
         'is_onboarded' => 'boolean',
         'oauth_profile_data' => 'array',
+        // GDPR consent booleans
+        'terms_accepted' => 'boolean',
+        'privacy_accepted' => 'boolean',
+        'marketing_consent' => 'boolean',
     ];
 
     public static $loginAttribute = null;
@@ -837,5 +857,372 @@ class User extends UserBase implements JWTSubject
         return static::where('oauth_provider', $provider)
             ->where('oauth_provider_id', $providerId)
             ->first();
+    }
+
+    //
+    // GDPR Compliance Methods
+    //
+
+    /**
+     * Record user consent with full audit trail (GDPR Article 7)
+     *
+     * @param string $termsVersion Version of Terms of Use accepted
+     * @param string $privacyVersion Version of Privacy Policy accepted
+     * @param string|null $ipAddress IP address (defaults to request IP)
+     * @param string|null $userAgent User agent string (defaults to request user agent)
+     * @return void
+     */
+    public function recordConsent($termsVersion, $privacyVersion, $ipAddress = null, $userAgent = null)
+    {
+        $this->terms_accepted = true;
+        $this->terms_accepted_at = now();
+        $this->terms_version = $termsVersion;
+        $this->privacy_accepted = true;
+        $this->privacy_accepted_at = now();
+        $this->privacy_version = $privacyVersion;
+        $this->consent_ip_address = $ipAddress ?? request()->ip();
+        $this->save();
+
+        // Create audit records for terms
+        ConsentAudit::create([
+            'user_id' => $this->id,
+            'consent_type' => ConsentAudit::CONSENT_TYPE_TERMS,
+            'action' => ConsentAudit::ACTION_GRANTED,
+            'policy_version' => $termsVersion,
+            'ip_address' => $this->consent_ip_address,
+            'user_agent' => $userAgent ?? request()->userAgent(),
+        ]);
+
+        // Create audit record for privacy
+        ConsentAudit::create([
+            'user_id' => $this->id,
+            'consent_type' => ConsentAudit::CONSENT_TYPE_PRIVACY,
+            'action' => ConsentAudit::ACTION_GRANTED,
+            'policy_version' => $privacyVersion,
+            'ip_address' => $this->consent_ip_address,
+            'user_agent' => $userAgent ?? request()->userAgent(),
+        ]);
+
+        \Log::info("User consent recorded", [
+            'user_id' => $this->id,
+            'email' => $this->email,
+            'terms_version' => $termsVersion,
+            'privacy_version' => $privacyVersion,
+            'ip' => $this->consent_ip_address,
+        ]);
+    }
+
+    /**
+     * Check if user has accepted current policy versions
+     *
+     * @param string $currentTermsVersion Current Terms of Use version
+     * @param string $currentPrivacyVersion Current Privacy Policy version
+     * @return bool
+     */
+    public function hasCurrentConsent($currentTermsVersion, $currentPrivacyVersion)
+    {
+        return $this->terms_accepted
+            && $this->privacy_accepted
+            && $this->terms_version === $currentTermsVersion
+            && $this->privacy_version === $currentPrivacyVersion;
+    }
+
+    /**
+     * Withdraw marketing consent (GDPR Article 7(3))
+     *
+     * @return void
+     */
+    public function withdrawMarketingConsent()
+    {
+        if (!$this->marketing_consent) {
+            return;
+        }
+
+        $this->marketing_consent = false;
+        $this->save();
+
+        ConsentAudit::create([
+            'user_id' => $this->id,
+            'consent_type' => ConsentAudit::CONSENT_TYPE_MARKETING,
+            'action' => ConsentAudit::ACTION_WITHDRAWN,
+            'ip_address' => request()->ip(),
+            'user_agent' => request()->userAgent(),
+        ]);
+
+        \Log::info("Marketing consent withdrawn", ['user_id' => $this->id]);
+    }
+
+    /**
+     * Request account deletion with grace period (GDPR Article 17)
+     *
+     * @param string|null $reason Optional reason for deletion
+     * @return void
+     * @throws \ApplicationException
+     */
+    public function requestDeletion($reason = null)
+    {
+        // Check if primary parent with family members
+        if ($this->isParent() && $this->isPrimaryParent()) {
+            $family = $this->family;
+            if ($family && ($family->parents()->count() > 1 || $family->children()->count() > 0)) {
+                throw new \ApplicationException(
+                    'Cannot delete account. You are the primary parent with family members. ' .
+                    'Please transfer ownership or remove all members first.'
+                );
+            }
+        }
+
+        $gracePeriodDays = config('gdpr.deletion_grace_period_days', 30);
+
+        $this->deletion_requested_at = now();
+        $this->deletion_scheduled_for = now()->addDays($gracePeriodDays);
+        $this->deletion_reason = $reason;
+        $this->save();
+
+        // Fire event for admin notification
+        Event::fire('golem15.user.deletion_requested', [$this]);
+
+        \Log::warning("Account deletion requested", [
+            'user_id' => $this->id,
+            'email' => $this->email,
+            'scheduled_for' => $this->deletion_scheduled_for,
+            'reason' => $reason,
+        ]);
+    }
+
+    /**
+     * Cancel pending deletion request
+     *
+     * @return void
+     */
+    public function cancelDeletion()
+    {
+        $this->deletion_requested_at = null;
+        $this->deletion_scheduled_for = null;
+        $this->deletion_reason = null;
+        $this->save();
+
+        \Log::info("Account deletion cancelled", [
+            'user_id' => $this->id,
+            'email' => $this->email,
+        ]);
+    }
+
+    /**
+     * Permanently delete user and all related data (GDPR Article 17)
+     * WARNING: This is irreversible!
+     *
+     * @param bool $skipFamilyCheck Skip primary parent validation (for cascading child deletions)
+     * @return void
+     * @throws \ApplicationException
+     */
+    public function hardDelete($skipFamilyCheck = false)
+    {
+        \DB::beginTransaction();
+
+        try {
+            \Log::warning("Starting hard delete for user", [
+                'user_id' => $this->id,
+                'email' => $this->email,
+            ]);
+
+            // 1. Check if primary parent with family members (unless skipped)
+            if (!$skipFamilyCheck && $this->isParent() && $this->isPrimaryParent()) {
+                $family = $this->family;
+                if ($family && ($family->parents()->count() > 1 || $family->children()->count() > 0)) {
+                    throw new \ApplicationException(
+                        'Cannot delete user. They are the primary parent with family members.'
+                    );
+                }
+            }
+
+            // 2. Delete avatar file
+            if ($this->avatar) {
+                $this->avatar->delete();
+            }
+
+            // 3. Delete quest completion photos (System\Models\File)
+            $userQuests = \DB::table('golem15_queststream_user_quests')
+                ->where('player_id', $this->id)
+                ->whereNotNull('completion_photo')
+                ->pluck('completion_photo');
+
+            foreach ($userQuests as $photoId) {
+                $photo = \System\Models\File::find($photoId);
+                if ($photo) {
+                    $photo->delete();
+                }
+            }
+
+            // 4. If parent, delete children's avatars and hard delete children
+            if ($this->isParent()) {
+                $children = $this->children;
+                foreach ($children as $child) {
+                    if ($child->avatar) {
+                        $child->avatar->delete();
+                    }
+                    // Skip family check for children (parent is being deleted)
+                    $child->hardDelete(true);
+                }
+            }
+
+            // 5. Handle family deletion
+            if ($this->family) {
+                $family = $this->family;
+
+                // If primary parent and sole member, delete family
+                if ($this->isPrimaryParent() && $family->members()->count() <= 1) {
+                    $family->forceDelete(); // Permanent deletion
+                    \Log::info("Family deleted", ['family_id' => $family->id]);
+                } else {
+                    // Just remove from family
+                    $this->family_id = null;
+                    $this->parent_id = null;
+                    $this->save();
+                }
+            }
+
+            // 6. Force delete user (bypasses soft delete, triggers cascade deletes)
+            // Cascade will handle:
+            // - user_quests, user_rewards, user_achievements
+            // - device_auth_sessions, family_invitations
+            // - user_parents pivot, consent_audit
+            $this->forceDelete();
+
+            \DB::commit();
+
+            \Log::warning("User hard deleted successfully", [
+                'user_id' => $this->id,
+                'email' => $this->email,
+            ]);
+
+            // Fire audit event
+            Event::fire('golem15.user.hard_deleted', [$this->id, $this->email]);
+
+        } catch (\Exception $e) {
+            \DB::rollBack();
+            \Log::error("Failed to hard delete user", [
+                'user_id' => $this->id,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+            throw $e;
+        }
+    }
+
+    /**
+     * Check if user is primary parent of their family
+     *
+     * @return bool
+     */
+    public function isPrimaryParent()
+    {
+        if (!$this->family) {
+            return false;
+        }
+        return $this->family->primary_parent_id === $this->id;
+    }
+
+    /**
+     * Export user's personal data (GDPR Articles 15 & 20)
+     *
+     * @return array
+     */
+    public function exportPersonalData()
+    {
+        \Log::info("Data export requested", ['user_id' => $this->id]);
+
+        $data = [
+            'export_date' => now()->toIso8601String(),
+            'export_version' => config('gdpr.export_version', '1.0'),
+
+            'user' => [
+                'id' => $this->id,
+                'name' => $this->name,
+                'surname' => $this->surname,
+                'email' => $this->email,
+                'username' => $this->username,
+                'created_at' => $this->created_at ? $this->created_at->toIso8601String() : null,
+                'last_login' => $this->last_login ? $this->last_login->toIso8601String() : null,
+                'preferred_locale' => $this->preferred_locale,
+                'role' => $this->role ? $this->role->name : null,
+            ],
+
+            'consent' => [
+                'terms_accepted_at' => $this->terms_accepted_at ? $this->terms_accepted_at->toIso8601String() : null,
+                'terms_version' => $this->terms_version,
+                'privacy_accepted_at' => $this->privacy_accepted_at ? $this->privacy_accepted_at->toIso8601String() : null,
+                'privacy_version' => $this->privacy_version,
+                'marketing_consent' => $this->marketing_consent,
+                'consent_ip_address' => $this->consent_ip_address,
+                'consent_history' => $this->consentAudits->map(function($audit) {
+                    return [
+                        'type' => $audit->consent_type,
+                        'action' => $audit->action,
+                        'version' => $audit->policy_version,
+                        'date' => $audit->created_at->toIso8601String(),
+                    ];
+                }),
+            ],
+
+            'family' => $this->family ? [
+                'id' => $this->family->id,
+                'name' => $this->family->name,
+                'role' => $this->isParent() ? 'parent' : 'child',
+                'is_primary_parent' => $this->isPrimaryParent(),
+            ] : null,
+
+            'children' => $this->isParent() ? $this->children->map(function($child) {
+                return [
+                    'id' => $child->id,
+                    'name' => $child->name,
+                    'level' => $child->level,
+                    'experience' => $child->experience,
+                    'coins' => $child->coins,
+                ];
+            }) : [],
+
+            'quests' => $this->quests()->withPivot(['status', 'completed_at', 'approved_at', 'experience_earned', 'coins_earned'])->get()->map(function($quest) {
+                return [
+                    'title' => $quest->title,
+                    'description' => $quest->description,
+                    'status' => $quest->pivot->status,
+                    'assigned_at' => $quest->pivot->created_at ? $quest->pivot->created_at->toIso8601String() : null,
+                    'completed_at' => $quest->pivot->completed_at ? $quest->pivot->completed_at->toIso8601String() : null,
+                    'experience_earned' => $quest->pivot->experience_earned,
+                    'coins_earned' => $quest->pivot->coins_earned,
+                ];
+            }),
+
+            'rewards' => $this->rewards()->withPivot(['purchased_at'])->get()->map(function($reward) {
+                return [
+                    'name' => $reward->name,
+                    'cost' => $reward->cost,
+                    'purchased_at' => $reward->pivot->purchased_at ? $reward->pivot->purchased_at->toIso8601String() : null,
+                ];
+            }),
+
+            'achievements' => $this->achievements()->withPivot(['unlocked_at', 'progress'])->get()->map(function($achievement) {
+                return [
+                    'name' => $achievement->name,
+                    'description' => $achievement->description,
+                    'unlocked_at' => $achievement->pivot->unlocked_at ? $achievement->pivot->unlocked_at->toIso8601String() : null,
+                    'progress' => $achievement->pivot->progress,
+                ];
+            }),
+
+            'statistics' => [
+                'level' => $this->level,
+                'experience' => $this->experience,
+                'coins' => $this->coins,
+                'total_quests_completed' => $this->quests()->wherePivot('status', 'completed')->count(),
+                'total_rewards_purchased' => $this->rewards()->count(),
+                'total_achievements_unlocked' => $this->achievements()->wherePivotNotNull('unlocked_at')->count(),
+            ],
+        ];
+
+        Event::fire('golem15.user.data_exported', [$this]);
+
+        return $data;
     }
 }

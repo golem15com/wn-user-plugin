@@ -109,3 +109,12 @@
 "2.4.0":
     - "Add OAuth/social login support (Google, Facebook, etc.)."
     - v2.4.0/add_oauth_fields_to_users.php
+"2.5.0":
+    - "Add GDPR consent tracking fields to users table."
+    - v2.5.0/add_gdpr_consent_fields_to_users.php
+"2.5.1":
+    - "Create consent audit table for GDPR compliance."
+    - v2.5.1/create_user_consent_audit_table.php
+"2.5.2":
+    - "Add cascade delete foreign keys for GDPR Article 17 (Right to Erasure)."
+    - v2.5.2/add_cascade_delete_foreign_keys.php

@@ -332,6 +332,24 @@ class Account extends ComponentBase
             }
 
             /*
+             * GDPR Consent Validation
+             */
+            $termsAccepted = (bool) post('terms_accepted', false);
+            $privacyAccepted = (bool) post('privacy_accepted', false);
+
+            if (!$termsAccepted) {
+                throw new ValidationException([
+                    'terms_accepted' => Lang::get('golem15.user::lang.gdpr.terms_required')
+                ]);
+            }
+
+            if (!$privacyAccepted) {
+                throw new ValidationException([
+                    'privacy_accepted' => Lang::get('golem15.user::lang.gdpr.privacy_required')
+                ]);
+            }
+
+            /*
              * Validate input
              */
             $data = post();
@@ -368,6 +386,32 @@ class Account extends ComponentBase
             $userActivation = UserSettings::get('activate_mode') == UserSettings::ACTIVATE_USER;
             $adminActivation = UserSettings::get('activate_mode') == UserSettings::ACTIVATE_ADMIN;
             $user = Auth::register($data, $automaticActivation);
+
+            /*
+             * Record GDPR Consent with audit trail
+             */
+            $currentPolicyVersion = config('gdpr.current_privacy_version', '2024-12-17');
+            $user->recordConsent(
+                $currentPolicyVersion,
+                $currentPolicyVersion,
+                $ipAddress,
+                Request::userAgent()
+            );
+
+            // Record optional marketing consent
+            if ((bool) post('marketing_consent', false)) {
+                $user->marketing_consent = true;
+                $user->marketing_consent_at = now();
+                $user->save();
+
+                \Golem15\User\Models\ConsentAudit::create([
+                    'user_id' => $user->id,
+                    'consent_type' => \Golem15\User\Models\ConsentAudit::CONSENT_TYPE_MARKETING,
+                    'action' => \Golem15\User\Models\ConsentAudit::ACTION_GRANTED,
+                    'ip_address' => $ipAddress,
+                    'user_agent' => Request::userAgent(),
+                ]);
+            }
 
             Event::fire('golem15.user.register', [$user, $data]);
 

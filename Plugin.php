@@ -44,6 +44,9 @@ class Plugin extends PluginBase
     public function boot()
     {
         $this->enableAuth();
+
+        // Load GDPR configuration
+        \Config::set('gdpr', require __DIR__ . '/config/gdpr.php');
     }
 
     public function register()
@@ -116,6 +119,11 @@ class Plugin extends PluginBase
             ],
             'config'
         );
+
+        /*
+         * Register console commands
+         */
+        $this->registerConsoleCommand('user:process-scheduled-deletions', \Golem15\User\Commands\ProcessScheduledDeletions::class);
     }
 
     public function registerComponents()

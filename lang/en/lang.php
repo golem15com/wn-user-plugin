@@ -205,6 +205,37 @@ return [
         'no_avatar' => 'Your account has no display picture to remove.',
         'avatar_removed' => 'Your display picture has been successfully removed.',
     ],
+    'gdpr' => [
+        // Consent validation
+        'terms_required' => 'You must accept the Terms of Use to register.',
+        'privacy_required' => 'You must accept the Privacy Policy to register.',
+        'parental_consent_notice' => 'By creating an account, you confirm that you are at least 18 years old and have authority to create profiles for your children.',
+
+        // Consent management
+        'consent_recorded' => 'Your consent has been recorded successfully.',
+        'marketing_consent_withdrawn' => 'You have unsubscribed from marketing emails.',
+        'cannot_withdraw_essential' => 'Essential service consent cannot be withdrawn while using the service.',
+
+        // Data export
+        'export_data' => 'Export Your Data',
+        'export_success' => 'Your data has been exported successfully.',
+        'export_failed' => 'Failed to export data. Please try again or contact support.',
+
+        // Account deletion
+        'request_deletion' => 'Request Account Deletion',
+        'deletion_requested' => 'Your account has been marked for deletion. You have 30 days to change your mind before permanent deletion.',
+        'deletion_scheduled' => 'Your account is scheduled for deletion on :date',
+        'deletion_cancelled' => 'Your account deletion request has been cancelled.',
+        'deletion_request_failed' => 'Failed to process deletion request. Please try again.',
+        'cannot_delete_primary_parent' => 'Cannot delete account. You are the primary parent with family members. Please transfer ownership or remove all members first.',
+
+        // Rights
+        'your_rights' => 'Your GDPR Rights',
+        'right_to_access' => 'Right to Access',
+        'right_to_rectification' => 'Right to Rectification',
+        'right_to_erasure' => 'Right to Erasure',
+        'right_to_portability' => 'Right to Data Portability',
+    ],
     'reset_password' => [
         'reset_password' => 'Reset Password',
         'reset_password_desc' => 'Forgotten password form.',
