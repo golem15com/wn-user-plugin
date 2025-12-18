@@ -210,6 +210,11 @@ return [
         'terms_required' => 'You must accept the Terms of Use to register.',
         'privacy_required' => 'You must accept the Privacy Policy to register.',
         'parental_consent_notice' => 'By creating an account, you confirm that you are at least 18 years old and have authority to create profiles for your children.',
+        'parental_authority_required' => 'You must confirm parental authority to register.',
+        'parental_authority_declaration' => 'Parental Authority Declaration',
+        'parental_authority_text' => 'I confirm that I am at least 18 years old and have legal parental authority to create and manage profiles for my children. I consent to data processing on behalf of my children under 16 years old (GDPR Article 8).',
+        'parental_authority_important' => 'By registering, you declare that you are a parent or legal guardian. False declarations may result in account termination.',
+        'report_abuse' => 'Report abuse',
 
         // Consent management
         'consent_recorded' => 'Your consent has been recorded successfully.',

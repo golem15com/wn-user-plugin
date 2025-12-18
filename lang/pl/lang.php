@@ -223,4 +223,40 @@ return [
         'logout' => 'Wylogowałeś się poprawnie!',
         'stop_impersonate_success' => 'Nie wcielasz się już w użytkownika.',
     ],
+    'gdpr' => [
+        // Walidacja zgody
+        'terms_required' => 'Musisz zaakceptować Regulamin, aby się zarejestrować.',
+        'privacy_required' => 'Musisz zaakceptować Politykę Prywatności, aby się zarejestrować.',
+        'parental_consent_notice' => 'Tworząc konto, potwierdzasz, że masz co najmniej 18 lat i posiadasz uprawnienia do tworzenia profili dla swoich dzieci.',
+        'parental_authority_required' => 'Musisz potwierdzić władzę rodzicielską, aby się zarejestrować.',
+        'parental_authority_declaration' => 'Deklaracja władzy rodzicielskiej',
+        'parental_authority_text' => 'Potwierdzam, że mam co najmniej 18 lat i posiadam prawną władzę rodzicielską do tworzenia profili swoich dzieci i zarządzania nimi. Wyrażam zgodę na przetwarzanie danych w imieniu moich dzieci poniżej 16 roku życia (Art. 8 RODO).',
+        'parental_authority_important' => 'Rejestrując się, deklarujesz, że jesteś rodzicem lub opiekunem prawnym. Fałszywe deklaracje mogą skutkować zamknięciem konta.',
+        'report_abuse' => 'Zgłoś nadużycie',
+
+        // Zarządzanie zgodą
+        'consent_recorded' => 'Twoja zgoda została pomyślnie zarejestrowana.',
+        'marketing_consent_withdrawn' => 'Zrezygnowałeś z subskrypcji e-maili marketingowych.',
+        'cannot_withdraw_essential' => 'Zgody niezbędnej do korzystania z usługi nie można wycofać podczas korzystania z usługi.',
+
+        // Eksport danych
+        'export_data' => 'Eksportuj swoje dane',
+        'export_success' => 'Twoje dane zostały pomyślnie wyeksportowane.',
+        'export_failed' => 'Nie udało się wyeksportować danych. Spróbuj ponownie lub skontaktuj się z pomocą techniczną.',
+
+        // Usunięcie konta
+        'request_deletion' => 'Poproś o usunięcie konta',
+        'deletion_requested' => 'Twoje konto zostało oznaczone do usunięcia. Masz 30 dni na zmianę zdania przed trwałym usunięciem.',
+        'deletion_scheduled' => 'Twoje konto zostanie usunięte :date',
+        'deletion_cancelled' => 'Prośba o usunięcie konta została anulowana.',
+        'deletion_request_failed' => 'Nie udało się przetworzyć prośby o usunięcie. Spróbuj ponownie.',
+        'cannot_delete_primary_parent' => 'Nie można usunąć konta. Jesteś głównym rodzicem z członkami rodziny. Najpierw przenieś własność lub usuń wszystkich członków.',
+
+        // Prawa
+        'your_rights' => 'Twoje prawa RODO',
+        'right_to_access' => 'Prawo dostępu',
+        'right_to_rectification' => 'Prawo do sprostowania',
+        'right_to_erasure' => 'Prawo do usunięcia',
+        'right_to_portability' => 'Prawo do przenoszenia danych',
+    ],
 ];

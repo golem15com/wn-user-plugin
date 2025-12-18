@@ -122,3 +122,6 @@
     - "Add cookie consent tracking with future-proof category support."
     - v2.6.0/add_cookie_consent_to_users.php
     - v2.6.0/backfill_cookie_consent.php
+"2.7.0":
+    - "GDPR Article 8: Add parental authority declaration tracking for RODO compliance."
+    - v2.7.0/add_parental_authority_to_users.php

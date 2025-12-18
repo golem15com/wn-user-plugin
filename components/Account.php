@@ -354,6 +354,14 @@ class Account extends ComponentBase
                 ]);
             }
 
+            // Parental authority declaration (GDPR Article 8 / RODO compliance)
+            $parentalAuthorityAccepted = (bool) post('parental_authority', false);
+            if (!$parentalAuthorityAccepted) {
+                throw new ValidationException([
+                    'parental_authority' => Lang::get('golem15.user::lang.gdpr.parental_authority_required')
+                ]);
+            }
+
             /*
              * Validate input
              */
@@ -415,6 +423,19 @@ class Account extends ComponentBase
                     'action' => \Golem15\User\Models\ConsentAudit::ACTION_GRANTED,
                     'ip_address' => $ipAddress,
                     'user_agent' => Request::userAgent(),
+                ]);
+            }
+
+            // Record parental authority declaration (GDPR Article 8)
+            if ($parentalAuthorityAccepted) {
+                $user->parental_authority_confirmed = true;
+                $user->parental_authority_confirmed_at = now();
+                $user->save();
+
+                Log::info('Parental authority declaration confirmed', [
+                    'user_id' => $user->id,
+                    'email' => $user->email,
+                    'ip_address' => $ipAddress,
                 ]);
             }
 
