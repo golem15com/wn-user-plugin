@@ -118,3 +118,7 @@
 "2.5.2":
     - "Add cascade delete foreign keys for GDPR Article 17 (Right to Erasure)."
     - v2.5.2/add_cascade_delete_foreign_keys.php
+"2.6.0":
+    - "Add cookie consent tracking with future-proof category support."
+    - v2.6.0/add_cookie_consent_to_users.php
+    - v2.6.0/backfill_cookie_consent.php

@@ -19,6 +19,42 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Cookie Consent Settings
+    |--------------------------------------------------------------------------
+    |
+    | Configuration for cookie consent banner and tracking.
+    | Version should match privacy policy version for consistency.
+    |
+    */
+
+    'cookie_consent' => [
+        'current_version' => '2024-12-17', // Matches privacy policy version
+
+        // Available cookie categories (future-proof)
+        'categories' => [
+            'essential' => [
+                'name' => 'Essential Cookies',
+                'description' => 'Required for site functionality (login, session, security)',
+                'required' => true,
+                'cookies' => ['winter_session', 'session_token', 'csrf_token', 'device_auth'],
+            ],
+            'analytics' => [
+                'name' => 'Analytics Cookies',
+                'description' => 'Help us understand how visitors use the site',
+                'required' => false,
+                'cookies' => [], // Future: Google Analytics, Plausible, etc.
+            ],
+            'marketing' => [
+                'name' => 'Marketing Cookies',
+                'description' => 'Used for targeted advertising and remarketing',
+                'required' => false,
+                'cookies' => [], // Future: Facebook Pixel, Google Ads, etc.
+            ],
+        ],
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Account Deletion Grace Period
     |--------------------------------------------------------------------------
     |

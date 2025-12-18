@@ -236,6 +236,38 @@ return [
         'right_to_erasure' => 'Right to Erasure',
         'right_to_portability' => 'Right to Data Portability',
     ],
+    'cookie_consent' => [
+        // Banner text
+        'banner_title' => 'We value your privacy',
+        'banner_message' => 'We use essential cookies to keep you logged in and secure. No tracking or analytics cookies are used.',
+        'learn_more' => 'Learn more',
+
+        // Button labels
+        'accept_all' => 'Accept All',
+        'essential_only' => 'Essential Only',
+        'customize' => 'Customize',
+        'save_preferences' => 'Save Preferences',
+        'cancel' => 'Cancel',
+
+        // Headers
+        'cookie_preferences' => 'Cookie Preferences',
+        'required' => 'Required',
+        'cookies' => 'Cookies',
+
+        // Category names (alternative to config, can use either)
+        'essential_name' => 'Essential Cookies',
+        'analytics_name' => 'Analytics Cookies',
+        'marketing_name' => 'Marketing Cookies',
+
+        // Category descriptions (alternative to config)
+        'essential_desc' => 'Required for site functionality (login, session, security)',
+        'analytics_desc' => 'Help us understand how visitors use the site',
+        'marketing_desc' => 'Used for targeted advertising and remarketing',
+
+        // Success messages
+        'preferences_saved' => 'Your cookie preferences have been saved.',
+        'preferences_updated' => 'Cookie preferences updated successfully.',
+    ],
     'reset_password' => [
         'reset_password' => 'Reset Password',
         'reset_password_desc' => 'Forgotten password form.',

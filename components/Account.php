@@ -293,6 +293,11 @@ class Account extends ComponentBase
             }
 
             /*
+             * Migrate cookie consent from localStorage to database (if exists)
+             */
+            $this->migrateCookieConsentFromLocalStorage($user);
+
+            /*
              * Redirect
              */
             if ($redirect = $this->makeRedirection(true)) {
@@ -760,5 +765,52 @@ class Account extends ComponentBase
         }
 
         return !empty($config['client_id']) && !empty($config['client_secret']);
+    }
+
+    /**
+     * Migrate cookie consent from localStorage to database
+     *
+     * When anonymous users accept cookies, it's stored in localStorage.
+     * On login, we migrate that consent to the database for authenticated tracking.
+     *
+     * @param User $user
+     * @return void
+     */
+    protected function migrateCookieConsentFromLocalStorage($user)
+    {
+        // JavaScript sends localStorage data via post if migration flag exists
+        $localStorageConsent = post('cookie_consent_migration');
+
+        if (!$localStorageConsent) {
+            return;
+        }
+
+        try {
+            $consent = json_decode($localStorageConsent, true);
+
+            if (!$consent || !isset($consent['version'])) {
+                return;
+            }
+
+            // Only migrate if user doesn't have newer consent
+            if (!$user->cookie_consent_at || $user->cookie_consent_version !== $consent['version']) {
+                $preferences = [
+                    'essential' => $consent['essential'] ?? true,
+                    'analytics' => $consent['analytics'] ?? false,
+                    'marketing' => $consent['marketing'] ?? false,
+                ];
+
+                $user->updateCookiePreferences($preferences);
+
+                \Log::info('Migrated cookie consent from localStorage to database', [
+                    'user_id' => $user->id,
+                    'version' => $consent['version'],
+                ]);
+            }
+        } catch (\Exception $e) {
+            \Log::error('Failed to migrate cookie consent from localStorage', [
+                'error' => $e->getMessage(),
+            ]);
+        }
     }
 }

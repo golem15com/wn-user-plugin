@@ -953,6 +953,72 @@ class User extends UserBase implements JWTSubject
     }
 
     /**
+     * Check if user has accepted current cookie policy version
+     *
+     * @return bool
+     */
+    public function hasCurrentCookieConsent()
+    {
+        $currentVersion = \Config::get('golem15.user::gdpr.cookie_consent.current_version');
+
+        return $this->cookie_consent_at
+            && $this->cookie_consent_version === $currentVersion;
+    }
+
+    /**
+     * Get user's cookie preference for a specific category
+     *
+     * @param string $category Category name (essential, analytics, marketing)
+     * @return bool
+     */
+    public function getCookiePreference($category)
+    {
+        if (!$this->cookie_preferences) {
+            // Default: only essential cookies accepted
+            return $category === 'essential';
+        }
+
+        return $this->cookie_preferences[$category] ?? false;
+    }
+
+    /**
+     * Update cookie preferences with audit trail
+     *
+     * @param array $preferences Array of preferences (essential, analytics, marketing)
+     * @return void
+     */
+    public function updateCookiePreferences($preferences)
+    {
+        $currentVersion = \Config::get('golem15.user::gdpr.cookie_consent.current_version');
+
+        $this->cookie_preferences = array_merge($preferences, [
+            'accepted_at' => now()->toIso8601String(),
+            'version' => $currentVersion,
+        ]);
+        $this->cookie_consent_at = now();
+        $this->cookie_consent_version = $currentVersion;
+        $this->save();
+
+        // Create audit trail
+        ConsentAudit::create([
+            'user_id' => $this->id,
+            'consent_type' => ConsentAudit::CONSENT_TYPE_COOKIES,
+            'action' => ConsentAudit::ACTION_GRANTED,
+            'policy_version' => $currentVersion,
+            'ip_address' => request()->ip(),
+            'user_agent' => request()->userAgent(),
+            'metadata' => ['preferences' => $preferences],
+        ]);
+
+        \Log::info("Cookie preferences updated", [
+            'user_id' => $this->id,
+            'email' => $this->email,
+            'preferences' => $preferences,
+            'version' => $currentVersion,
+        ]);
+    }
+
+    /**
      * Request account deletion with grace period (GDPR Article 17)
      *
      * @param string|null $reason Optional reason for deletion

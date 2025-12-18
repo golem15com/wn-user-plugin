@@ -62,7 +62,7 @@ class ConsentAudit extends Model
      */
     public $rules = [
         'user_id' => 'required|integer|exists:users,id',
-        'consent_type' => 'required|in:terms,privacy,marketing',
+        'consent_type' => 'required|in:terms,privacy,marketing,cookies',
         'action' => 'required|in:granted,withdrawn,updated',
         'policy_version' => 'nullable|string|max:20',
         'ip_address' => 'nullable|string|max:45',
@@ -82,6 +82,7 @@ class ConsentAudit extends Model
     const CONSENT_TYPE_TERMS = 'terms';
     const CONSENT_TYPE_PRIVACY = 'privacy';
     const CONSENT_TYPE_MARKETING = 'marketing';
+    const CONSENT_TYPE_COOKIES = 'cookies';
 
     /**
      * Actions
@@ -101,6 +102,7 @@ class ConsentAudit extends Model
             self::CONSENT_TYPE_TERMS => 'Terms of Use',
             self::CONSENT_TYPE_PRIVACY => 'Privacy Policy',
             self::CONSENT_TYPE_MARKETING => 'Marketing Communications',
+            self::CONSENT_TYPE_COOKIES => 'Cookie Preferences',
         ];
 
         return $types[$this->consent_type] ?? $this->consent_type;

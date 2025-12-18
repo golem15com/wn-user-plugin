@@ -134,6 +134,7 @@ class Plugin extends PluginBase
             \Golem15\User\Components\ResetPassword::class => 'resetPassword',
             \Golem15\User\Components\DeviceAuth::class => 'deviceAuth',
             \Golem15\User\Components\SocialAuth::class => 'socialAuth',
+            \Golem15\User\Components\CookieConsent::class => 'cookieConsent',
         ];
     }
 
