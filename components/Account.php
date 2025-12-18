@@ -1,6 +1,7 @@
 <?php namespace Golem15\User\Components;
 
 use Lang;
+use Log;
 use Auth;
 use Mail;
 use Event;
@@ -390,6 +391,16 @@ class Account extends ComponentBase
             }
 
             /*
+             * Convert checkbox values to boolean for database
+             * HTML checkboxes submit 'on' as string, but DB expects 0/1
+             */
+            $data['terms_accepted'] = (bool) ($data['terms_accepted'] ?? false);
+            $data['privacy_accepted'] = (bool) ($data['privacy_accepted'] ?? false);
+            if (isset($data['marketing_consent'])) {
+                $data['marketing_consent'] = (bool) $data['marketing_consent'];
+            }
+
+            /*
              * Register user
              */
             Event::fire('golem15.user.beforeRegister', [&$data]);
@@ -502,12 +513,12 @@ class Account extends ComponentBase
             if (!strlen(trim($userId)) || !strlen(trim($code))) {
                 throw new ValidationException($errorFields);
             }
-            
+
 
             if (!$user = Auth::findUserById($userId)) {
                 throw new ValidationException($errorFields);
             }
-         
+
             if (!$user->attemptActivation($code)) {
 
                 throw new ValidationException($errorFields);

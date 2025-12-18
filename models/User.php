@@ -103,6 +103,7 @@ class User extends UserBase implements JWTSubject
         'terms_accepted_at',
         'privacy_accepted_at',
         'marketing_consent_at',
+        'cookie_consent_at',
         'deletion_requested_at',
         'deletion_scheduled_for',
     ];
@@ -110,6 +111,7 @@ class User extends UserBase implements JWTSubject
     protected $casts = [
         'is_onboarded' => 'boolean',
         'oauth_profile_data' => 'array',
+        'cookie_preferences' => 'array',
         // GDPR consent booleans
         'terms_accepted' => 'boolean',
         'privacy_accepted' => 'boolean',
