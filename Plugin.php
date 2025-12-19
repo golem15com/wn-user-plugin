@@ -5,6 +5,8 @@ use Auth;
 use Event;
 use Backend;
 use Golem15\QuestStream\Models\Team;
+use Golem15\User\Contracts\UserRepository;
+use Golem15\User\Repositories\UserEloquentRepository;
 use Illuminate\Auth\AuthManager;
 use Illuminate\Contracts\Auth\Factory;
 use PHPOpenSourceSaver\JWTAuth\Facades\JWTAuth;
@@ -44,7 +46,7 @@ class Plugin extends PluginBase
     public function boot()
     {
         $this->enableAuth();
-
+        $this->bootRepositories();
         // Load GDPR configuration
         \Config::set('gdpr', require __DIR__ . '/config/gdpr.php');
     }
@@ -317,5 +319,10 @@ class Plugin extends PluginBase
                 );
             }
         );
+    }
+
+    private function bootRepositories()
+    {
+        $this->app->bind(UserRepository::class, UserEloquentRepository::class);
     }
 }

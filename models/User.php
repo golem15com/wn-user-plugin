@@ -1,5 +1,7 @@
 <?php namespace Golem15\User\Models;
 
+use Golem15\User\Contracts\UserRepository;
+use Illuminate\Support\Facades\Cache;
 use PHPOpenSourceSaver\JWTAuth\Contracts\JWTSubject;
 use Str;
 use Auth;
@@ -119,6 +121,11 @@ class User extends UserBase implements JWTSubject
     ];
 
     public static $loginAttribute = null;
+
+    public function afterSave()
+    {
+        Cache::forget(UserRepository::CACHE_KEY_PREFIX . $this->id);
+    }
 
     /**
      * Sends the confirmation email to a user, after activating.

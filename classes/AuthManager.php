@@ -46,7 +46,7 @@ class AuthManager extends StormAuthManager implements Auth
      */
     public function extendUserQuery($query)
     {
-        $query->withTrashed()->with('groups');;
+        $query->withTrashed()->with(['groups', 'avatar']);
     }
 
     /**
