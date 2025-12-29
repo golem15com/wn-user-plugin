@@ -391,8 +391,9 @@ class SocialAuth extends ComponentBase
         $user->is_activated = true;
         $user->activated_at = \Carbon\Carbon::now();
 
-        // Save user
-        $user->save();
+        // Save user (use forceSave to skip validation since password_confirmation is purgeable)
+        // This prevents "password confirmation does not match" error during OAuth registration
+        $user->forceSave();
 
         // Link OAuth provider
         $user->linkOAuthProvider(
