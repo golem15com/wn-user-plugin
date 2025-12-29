@@ -62,6 +62,39 @@ class SocialAuth extends ComponentBase
     }
 
     /**
+     * Store OAuth consent in session before redirecting to provider
+     * AJAX handler called from registration form
+     */
+    public function onStoreOAuthConsent()
+    {
+        $termsAccepted = (bool) post('terms_accepted', false);
+        $privacyAccepted = (bool) post('privacy_accepted', false);
+        $parentalAuthority = (bool) post('parental_authority', false);
+        $marketingConsent = (bool) post('marketing_consent', false);
+        $betaKey = post('beta_key', '');
+
+        // Store consent in session
+        session([
+            'oauth_consent' => [
+                'terms_accepted' => $termsAccepted,
+                'privacy_accepted' => $privacyAccepted,
+                'parental_authority' => $parentalAuthority,
+                'marketing_consent' => $marketingConsent,
+                'beta_key' => $betaKey,
+                'timestamp' => now()->timestamp
+            ]
+        ]);
+
+        \Log::info('OAuth consent stored in session', [
+            'terms' => $termsAccepted,
+            'privacy' => $privacyAccepted,
+            'parental' => $parentalAuthority
+        ]);
+
+        return ['success' => true];
+    }
+
+    /**
      * Redirect to OAuth provider
      * Called when user clicks "Sign in with Google" button
      */
@@ -290,6 +323,58 @@ class SocialAuth extends ComponentBase
             throw new ApplicationException(Lang::get('golem15.user::lang.account.registration_throttled'));
         }
 
+        // Validate GDPR consent from session
+        $consentData = session('oauth_consent');
+
+        if (!$consentData || !is_array($consentData)) {
+            \Log::error('OAuth registration attempted without consent in session', [
+                'provider' => $provider,
+                'email' => $socialiteUser->getEmail()
+            ]);
+            Flash::error(Lang::get('golem15.user::lang.gdpr.consent_required'));
+            return Redirect::to('/register');
+        }
+
+        // Validate consent timestamp (prevent stale consent, max 10 minutes old)
+        if (!isset($consentData['timestamp']) || (now()->timestamp - $consentData['timestamp']) > 600) {
+            \Log::warning('OAuth registration with expired consent', [
+                'provider' => $provider,
+                'consent_age' => isset($consentData['timestamp']) ? (now()->timestamp - $consentData['timestamp']) : 'unknown'
+            ]);
+            session()->forget('oauth_consent');
+            Flash::error(Lang::get('golem15.user::lang.gdpr.consent_expired'));
+            return Redirect::to('/register');
+        }
+
+        // Validate required consents
+        if (empty($consentData['terms_accepted']) || empty($consentData['privacy_accepted']) || empty($consentData['parental_authority'])) {
+            \Log::error('OAuth registration with incomplete consent', [
+                'provider' => $provider,
+                'consent' => $consentData
+            ]);
+            session()->forget('oauth_consent');
+            Flash::error(Lang::get('golem15.user::lang.gdpr.consent_required'));
+            return Redirect::to('/register');
+        }
+
+        // Validate beta key if required
+        if (UserSettings::get('require_beta_key', false)) {
+            $betaKey = $consentData['beta_key'] ?? '';
+            if (!$this->validateBetaKey($betaKey)) {
+                \Log::warning('OAuth registration with invalid beta key', [
+                    'provider' => $provider
+                ]);
+                session()->forget('oauth_consent');
+                Flash::error(Lang::get('golem15.user::lang.account.beta_key_invalid'));
+                return Redirect::to('/register');
+            }
+        }
+
+        \Log::info('OAuth consent validated successfully', [
+            'provider' => $provider,
+            'email' => $socialiteUser->getEmail()
+        ]);
+
         // Create new user
         $user = new UserModel();
         $user->email = $socialiteUser->getEmail();
@@ -335,8 +420,8 @@ class SocialAuth extends ComponentBase
         }
 
         /*
-         * Record GDPR consent for OAuth users (implicit consent)
-         * OAuth users accept terms and privacy by using OAuth registration
+         * Record GDPR consent for OAuth users
+         * Consent was validated and stored in session before OAuth redirect
          */
         $currentPolicyVersion = config('gdpr.current_privacy_version', '2024-12-17');
         $user->recordConsent(
@@ -346,24 +431,31 @@ class SocialAuth extends ComponentBase
             Request::userAgent()
         );
 
-        // OAuth users implicitly consent to marketing (they can withdraw later)
-        $user->marketing_consent = true;
-        $user->marketing_consent_at = now();
-        $user->save();
+        // Record marketing consent if user opted in
+        $marketingConsent = $consentData['marketing_consent'] ?? false;
+        if ($marketingConsent) {
+            $user->marketing_consent = true;
+            $user->marketing_consent_at = now();
+            $user->save();
 
-        \Golem15\User\Models\ConsentAudit::create([
-            'user_id' => $user->id,
-            'consent_type' => \Golem15\User\Models\ConsentAudit::CONSENT_TYPE_MARKETING,
-            'action' => \Golem15\User\Models\ConsentAudit::ACTION_GRANTED,
-            'ip_address' => Request::ip(),
-            'user_agent' => Request::userAgent(),
-            'metadata' => json_encode(['oauth_provider' => $provider]),
-        ]);
+            \Golem15\User\Models\ConsentAudit::create([
+                'user_id' => $user->id,
+                'consent_type' => \Golem15\User\Models\ConsentAudit::CONSENT_TYPE_MARKETING,
+                'action' => \Golem15\User\Models\ConsentAudit::ACTION_GRANTED,
+                'ip_address' => Request::ip(),
+                'user_agent' => Request::userAgent(),
+                'metadata' => json_encode(['oauth_provider' => $provider]),
+            ]);
+        }
 
         \Log::info("OAuth registration consent recorded", [
             'user_id' => $user->id,
             'provider' => $provider,
+            'marketing_consent' => $marketingConsent
         ]);
+
+        // Clean up consent from session
+        session()->forget('oauth_consent');
 
         // Fire registration event (triggers Family creation in QuestStream)
         Event::fire('golem15.user.register', [$user, []]);
