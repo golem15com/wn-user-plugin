@@ -596,6 +596,27 @@ class SocialAuth extends ComponentBase
     }
 
     /**
+     * Validate beta tester key
+     */
+    protected function validateBetaKey($inputKey)
+    {
+        $expectedKey = env('BETATESTER_KEY', '');
+
+        // If no beta key is configured, validation passes
+        if (empty($expectedKey)) {
+            return true;
+        }
+
+        // If no input key provided, validation fails
+        if (empty($inputKey)) {
+            return false;
+        }
+
+        // Use hash_equals for constant-time comparison to prevent timing attacks
+        return hash_equals($expectedKey, $inputKey);
+    }
+
+    /**
      * Generate unique username from OAuth data
      */
     protected function generateUsername(SocialiteUser $socialiteUser)

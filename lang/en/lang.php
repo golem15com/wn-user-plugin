@@ -215,6 +215,8 @@ return [
         'parental_authority_text' => 'I confirm that I am at least 18 years old and have legal parental authority to create and manage profiles for my children. I consent to data processing on behalf of my children under 16 years old (GDPR Article 8).',
         'parental_authority_important' => 'By registering, you declare that you are a parent or legal guardian. False declarations may result in account termination.',
         'report_abuse' => 'Report abuse',
+        'consent_required' => 'You must accept the required terms and policies before continuing with registration.',
+        'consent_expired' => 'Your consent session has expired. Please review and accept the terms again.',
 
         // Consent management
         'consent_recorded' => 'Your consent has been recorded successfully.',
