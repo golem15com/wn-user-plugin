@@ -295,6 +295,7 @@ return [
         'redirect_desc' => 'Page name to redirect if access is denied.',
         'logout' => 'You have been successfully logged out!',
         'stop_impersonate_success' => 'You are no longer impersonating a user.',
+        'access_denied' => 'Access denied. You do not have permission to access this page.',
     ],
     'socialauth' => [
         'component_name' => 'Social Authentication',

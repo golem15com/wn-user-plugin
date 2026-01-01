@@ -77,8 +77,19 @@ class Session extends ComponentBase
      */
     public function init()
     {
+        // Don't block AJAX requests during authentication
+        // (e.g., onSignin, onRegister) - let them complete and redirect afterward
         if (Request::ajax() && !$this->checkUserSecurity()) {
-            abort(403, 'Access denied');
+            // Only block AJAX requests that aren't authentication-related
+            $handler = Request::input('_handler');
+            $authHandlers = ['onSignin', 'onRegister', 'onActivate'];
+
+            if (!in_array($handler, $authHandlers)) {
+                // Return AJAX-friendly error response
+                throw new ValidationException([
+                    'security' => Lang::get('golem15.user::lang.session.access_denied')
+                ]);
+            }
         }
     }
 
