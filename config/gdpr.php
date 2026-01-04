@@ -36,7 +36,7 @@ return [
                 'name' => 'Essential Cookies',
                 'description' => 'Required for site functionality (login, session, security)',
                 'required' => true,
-                'cookies' => ['winter_session', 'session_token', 'csrf_token', 'device_auth'],
+                'cookies' => ['winter_session', 'session_token', 'csrf_token', 'device_auth', 'locale_manually_set'],
             ],
             'analytics' => [
                 'name' => 'Analytics Cookies',
