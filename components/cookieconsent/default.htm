@@ -12,7 +12,7 @@
     x-data="cookieConsentBanner({{ mode == 'always' ? 'true' : 'false' }}, '{{ currentVersion }}', {{ isAuthenticated ? 'true' : 'false' }})"
     x-show="showBanner"
     x-cloak
-    class="fixed {{ position == 'top' ? 'top-0' : 'bottom-0' }} left-0 right-0 z-[9998] bg-white dark:bg-gray-800 shadow-2xl border-{{ position == 'top' ? 'b' : 't' }} border-gray-200 dark:border-gray-700"
+    class="fixed {{ position == 'top' ? 'top-0' : 'bottom-0' }} left-0 right-0 z-[10000] bg-white dark:bg-gray-800 shadow-2xl border-{{ position == 'top' ? 'b' : 't' }} border-gray-200 dark:border-gray-700"
     x-transition:enter="transform transition-transform duration-300"
     x-transition:enter-start="{{ position == 'top' ? '-translate-y-full' : 'translate-y-full' }}"
     x-transition:enter-end="translate-y-0"
