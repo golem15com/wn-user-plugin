@@ -75,6 +75,7 @@ class ResetPassword extends ComponentBase
 
         $user = UserModel::findByEmail(post('email'));
         if (!$user || $user->is_guest) {
+            \Log::info('Password reset requested for non-existent e-mail ' . post('email'));
             return;
         }
 
@@ -92,6 +93,7 @@ class ResetPassword extends ComponentBase
         Mail::queue('golem15.user::mail.restore', $data, function($message) use ($user) {
             $message->to($user->email, $user->full_name);
         });
+        \Log::info('Reset e-mail sent to ' . $user->email);
     }
 
     /**
