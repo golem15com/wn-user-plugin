@@ -101,6 +101,9 @@ class User extends UserBase implements JWTSubject
         'last_login',
         'oauth_token_expires_at',
         'oauth_linked_at',
+        // PIN system timestamps
+        'pin_locked_until',
+        'pin_recovery_expires_at',
         // GDPR consent timestamps
         'terms_accepted_at',
         'privacy_accepted_at',
