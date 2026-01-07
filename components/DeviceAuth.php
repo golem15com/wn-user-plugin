@@ -159,20 +159,7 @@ class DeviceAuth extends ComponentBase
             throw new ApplicationException('Too many authorization requests from this IP. Please wait and try again.');
         }
 
-        // Create temporary auth session without user
-        // Use reflection to call protected methods
-        $authSession = DeviceAuthSession::create([
-            'token' => \Illuminate\Support\Str::random(64),
-            'short_code' => null, // Will be generated on save
-            'user_id' => null, // Will be set when parent scans
-            'status' => 'pending',
-            'expires_at' => now()->addMinutes(5),
-            'device_ip' => request()->ip(),
-            'device_user_agent' => $deviceInfo['user_agent'] ?? request()->userAgent(),
-            'device_name' => $deviceInfo['device_name'] ?? null,
-        ]);
-
-        // Generate unique short code after creation
+        // Generate unique short code before creation (to avoid second save() which corrupts expires_at)
         do {
             $characters = '23456789ABCDEFGHJKMNPQRSTUVWXYZ';
             $code = '';
@@ -182,8 +169,17 @@ class DeviceAuth extends ComponentBase
             $shortCode = substr($code, 0, 4) . '-' . substr($code, 4, 4);
         } while (DeviceAuthSession::where('short_code', $shortCode)->exists());
 
-        $authSession->short_code = $shortCode;
-        $authSession->save();
+        // Create temporary auth session without user (with all data including short_code)
+        $authSession = DeviceAuthSession::create([
+            'token' => \Illuminate\Support\Str::random(64),
+            'short_code' => $shortCode,
+            'user_id' => null, // Will be set when parent scans
+            'status' => 'pending',
+            'expires_at' => now()->addMinutes(5),
+            'device_ip' => request()->ip(),
+            'device_user_agent' => $deviceInfo['user_agent'] ?? request()->userAgent(),
+            'device_name' => $deviceInfo['device_name'] ?? null,
+        ]);
 
         // Generate QR code (SVG format)
         $renderer = new ImageRenderer(
@@ -233,6 +229,7 @@ class DeviceAuth extends ComponentBase
         if ($authSession->expires_at < now()) {
             $authSession->status = 'expired';
             $authSession->save();
+\Log::info('Apparently expired' . print_r($authSession->toArray(), true));
             return ['status' => 'expired', 'message' => 'Authorization token has expired'];
         }
 

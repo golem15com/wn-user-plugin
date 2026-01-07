@@ -125,3 +125,6 @@
 "2.7.0":
     - "GDPR Article 8: Add parental authority declaration tracking for RODO compliance."
     - v2.7.0/add_parental_authority_to_users.php
+"2.7.1":
+    - "Fix device auth expires_at column auto-update issue."
+    - v2.7.1/fix_device_auth_expires_at_column.php
