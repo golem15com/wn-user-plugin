@@ -1,53 +1,484 @@
-<h3>Profile</h3>
+{{ form_ajax('onUpdate', { flash: 1, files: 1 }) }}
 
-{{ form_ajax('onUpdate', { flash: 1 }) }}
-
-    <div class="form-group">
-        <label for="accountName">Full Name</label>
-        <input name="name" type="text" class="form-control" id="accountName" value="{{ user.name }}">
-    </div>
-
-    <div class="form-group">
-        <label for="accountEmail">Email</label>
-        <input name="email" type="email" class="form-control" id="accountEmail" value="{{ user.email }}">
-    </div>
-
-    <div class="form-group">
-        <label for="accountPassword">New Password</label>
-        <input name="password" type="password" class="form-control" id="accountPassword">
-    </div>
-
-    <div class="form-group">
-        <label for="accountPasswordConfirm">Confirm New Password</label>
-        <input name="password_confirmation" type="password" class="form-control" id="accountPasswordConfirm">
-    </div>
-
-    <div class="form-group">
-        <label for="accountAvatar">Display Picture</label>
-        <input
-            name="avatar"
-            type="file"
-            class="form-control"
-            id="accountAvatar"
-            accept="image/jpg, image/jpeg, image/png, image/gif, image/webp"
-            capture="user"
-        >
-
-        {% if user.avatar %}
-            <a href="javascript:;" data-request="onRemoveAvatar" data-request-flash class="remove-avatar">
-                Remove current display picture
-            </a>
-        {% endif %}
-    </div>
-
-    {% if updateRequiresPassword %}
-        <p>To change these details, please confirm your current password.</p>
-        <div class="form-group">
-            <label for="accountPasswordCurrent">Current Password <small class="text-danger">* required</small></label>
-            <input name="password_current" type="password" class="form-control" id="accountPasswordCurrent">
+    <!-- Profile Information Section -->
+    <div class="account-section">
+        <div class="account-section-header">
+            <h3 class="account-section-title">{{ 'Profile Information'|_ }}</h3>
+            <p class="account-section-description">{{ 'Update your personal details and profile picture.'|_ }}</p>
         </div>
-    {% endif %}
 
-    <button type="submit" class="btn btn-default">Save</button>
+        <div class="account-section-content">
+            <!-- Avatar Upload -->
+            <div class="form-group avatar-upload-group">
+                <label class="form-label">{{ 'Profile Picture'|_ }}</label>
+                <div class="avatar-upload">
+                    <div class="avatar-preview">
+                        {% if user.avatar %}
+                            <img src="{{ user.avatar.thumb(96, 96, 'crop') }}" alt="{{ user.name }}" id="avatarPreview">
+                        {% else %}
+                            <div class="avatar-placeholder" id="avatarPlaceholder">
+                                {{ user.name|first|upper }}
+                            </div>
+                        {% endif %}
+                    </div>
+                    <div class="avatar-actions">
+                        <label class="btn btn-outline btn-sm avatar-upload-btn">
+                            <svg class="btn-icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                <polyline points="17 8 12 3 7 8"></polyline>
+                                <line x1="12" y1="3" x2="12" y2="15"></line>
+                            </svg>
+                            {{ 'Upload Photo'|_ }}
+                            <input
+                                name="avatar"
+                                type="file"
+                                id="accountAvatar"
+                                accept="image/jpg, image/jpeg, image/png, image/gif, image/webp"
+                                class="avatar-input"
+                                onchange="window.Quotify && window.Quotify.previewAvatar && window.Quotify.previewAvatar(this)"
+                            >
+                        </label>
+                        {% if user.avatar %}
+                            <button type="button" class="btn btn-text btn-sm btn-danger-text" data-request="onRemoveAvatar" data-request-flash>
+                                <svg class="btn-icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <polyline points="3 6 5 6 21 6"></polyline>
+                                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                                </svg>
+                                {{ 'Remove'|_ }}
+                            </button>
+                        {% endif %}
+                    </div>
+                </div>
+                <p class="form-hint">{{ 'JPG, PNG, GIF or WebP. Max 2MB.'|_ }}</p>
+            </div>
+
+            <!-- Name -->
+            <div class="form-group">
+                <label for="accountName" class="form-label">{{ 'Full Name'|_ }}</label>
+                <input name="name" type="text" class="form-control" id="accountName" value="{{ user.name }}" required>
+            </div>
+
+            <!-- Email -->
+            <div class="form-group">
+                <label for="accountEmail" class="form-label">{{ 'Email Address'|_ }}</label>
+                <input name="email" type="email" class="form-control" id="accountEmail" value="{{ user.email }}" required>
+            </div>
+        </div>
+    </div>
+
+    <!-- Change Password Section -->
+    <div class="account-section">
+        <div class="account-section-header">
+            <h3 class="account-section-title">{{ 'Change Password'|_ }}</h3>
+            <p class="account-section-description">{{ 'Leave blank to keep your current password.'|_ }}</p>
+        </div>
+
+        <div class="account-section-content">
+            {% if updateRequiresPassword %}
+            <div class="form-group">
+                <label for="accountPasswordCurrent" class="form-label">
+                    {{ 'Current Password'|_ }}
+                    <span class="form-required">*</span>
+                </label>
+                <input name="password_current" type="password" class="form-control" id="accountPasswordCurrent" autocomplete="current-password">
+                <p class="form-hint">{{ 'Required to make any changes to your account.'|_ }}</p>
+            </div>
+            {% endif %}
+
+            <div class="form-group">
+                <label for="accountPassword" class="form-label">{{ 'New Password'|_ }}</label>
+                <input name="password" type="password" class="form-control" id="accountPassword" autocomplete="new-password">
+            </div>
+
+            <div class="form-group">
+                <label for="accountPasswordConfirm" class="form-label">{{ 'Confirm New Password'|_ }}</label>
+                <input name="password_confirmation" type="password" class="form-control" id="accountPasswordConfirm" autocomplete="new-password">
+            </div>
+        </div>
+    </div>
+
+    <!-- Danger Zone Section -->
+    <div class="account-section account-section-danger">
+        <div class="account-section-header">
+            <h3 class="account-section-title">{{ 'Danger Zone'|_ }}</h3>
+            <p class="account-section-description">{{ 'Irreversible and destructive actions.'|_ }}</p>
+        </div>
+
+        <div class="account-section-content">
+            <div class="danger-zone-item">
+                <div class="danger-zone-info">
+                    <h4 class="danger-zone-title">{{ 'Delete Account'|_ }}</h4>
+                    <p class="danger-zone-description">{{ 'Once you delete your account, all of your data will be permanently removed. This action cannot be undone.'|_ }}</p>
+                </div>
+                <button type="button" class="btn btn-outline btn-danger btn-sm" data-deactivate-toggle>
+                    {{ 'Delete Account'|_ }}
+                </button>
+            </div>
+
+            <!-- Deactivation Confirmation (Hidden by default) -->
+            <div class="deactivation-confirm" id="deactivationConfirm" style="display: none;">
+                <div class="alert alert-warning">
+                    <svg class="alert-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+                        <line x1="12" y1="9" x2="12" y2="13"></line>
+                        <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                    </svg>
+                    <div class="alert-content">
+                        <strong>{{ 'Are you absolutely sure?'|_ }}</strong>
+                        <p>{{ 'This will permanently delete your account and all associated data. You will not be able to recover your account.'|_ }}</p>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="deactivatePassword" class="form-label">{{ 'Enter your password to confirm'|_ }}</label>
+                    <input type="password" class="form-control" id="deactivatePassword" name="deactivate_password" autocomplete="current-password">
+                </div>
+                <div class="deactivation-actions">
+                    <button type="button" class="btn btn-outline btn-sm" data-deactivate-cancel>{{ 'Cancel'|_ }}</button>
+                    <button type="button" class="btn btn-danger btn-sm" data-request="onDeactivate" data-request-data="password: document.getElementById('deactivatePassword').value" data-request-flash data-request-confirm="{{ 'Are you sure you want to delete your account? This cannot be undone.'|_ }}">
+                        {{ 'Yes, Delete My Account'|_ }}
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Save Button -->
+    <div class="account-actions">
+        <button type="submit" class="btn btn-primary">
+            <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+                <polyline points="17 21 17 13 7 13 7 21"></polyline>
+                <polyline points="7 3 7 8 15 8"></polyline>
+            </svg>
+            {{ 'Save Changes'|_ }}
+        </button>
+    </div>
 
 {{ form_close() }}
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Deactivation toggle
+    var toggleBtn = document.querySelector('[data-deactivate-toggle]');
+    var cancelBtn = document.querySelector('[data-deactivate-cancel]');
+    var confirmSection = document.getElementById('deactivationConfirm');
+
+    if (toggleBtn && confirmSection) {
+        toggleBtn.addEventListener('click', function() {
+            confirmSection.style.display = 'block';
+            toggleBtn.style.display = 'none';
+        });
+    }
+
+    if (cancelBtn && confirmSection && toggleBtn) {
+        cancelBtn.addEventListener('click', function() {
+            confirmSection.style.display = 'none';
+            toggleBtn.style.display = 'inline-flex';
+        });
+    }
+
+    // Avatar preview
+    window.Quotify = window.Quotify || {};
+    window.Quotify.previewAvatar = function(input) {
+        if (input.files && input.files[0]) {
+            var reader = new FileReader();
+            reader.onload = function(e) {
+                var preview = document.getElementById('avatarPreview');
+                var placeholder = document.getElementById('avatarPlaceholder');
+
+                if (preview) {
+                    preview.src = e.target.result;
+                } else if (placeholder) {
+                    var img = document.createElement('img');
+                    img.id = 'avatarPreview';
+                    img.src = e.target.result;
+                    img.alt = 'Avatar preview';
+                    placeholder.parentNode.replaceChild(img, placeholder);
+                }
+            };
+            reader.readAsDataURL(input.files[0]);
+        }
+    };
+});
+</script>
+
+<style>
+/* Account Update Styles */
+.account-section {
+    background-color: var(--color-white);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-sm);
+    margin-bottom: var(--space-6);
+    overflow: hidden;
+}
+
+.account-section-header {
+    padding: var(--space-4) var(--space-6);
+    border-bottom: 1px solid var(--color-gray-100);
+}
+
+.account-section-title {
+    font-size: var(--text-lg);
+    font-weight: 600;
+    color: var(--color-gray-900);
+    margin: 0 0 var(--space-1);
+}
+
+.account-section-description {
+    font-size: var(--text-sm);
+    color: var(--color-gray-500);
+    margin: 0;
+}
+
+.account-section-content {
+    padding: var(--space-6);
+}
+
+/* Avatar Upload */
+.avatar-upload {
+    display: flex;
+    align-items: center;
+    gap: var(--space-4);
+}
+
+.avatar-preview {
+    flex-shrink: 0;
+}
+
+.avatar-preview img {
+    width: 96px;
+    height: 96px;
+    border-radius: 50%;
+    object-fit: cover;
+}
+
+.avatar-placeholder {
+    width: 96px;
+    height: 96px;
+    border-radius: 50%;
+    background-color: var(--color-primary);
+    color: var(--color-white);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: var(--text-3xl);
+    font-weight: 600;
+}
+
+.avatar-actions {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+}
+
+.avatar-upload-btn {
+    cursor: pointer;
+}
+
+.avatar-input {
+    display: none;
+}
+
+.btn-icon-sm {
+    width: 16px;
+    height: 16px;
+    margin-right: var(--space-2);
+}
+
+.btn-text {
+    background: none;
+    border: none;
+    padding: var(--space-2);
+    color: var(--color-gray-600);
+}
+
+.btn-text:hover {
+    color: var(--color-gray-900);
+}
+
+.btn-danger-text:hover {
+    color: var(--color-error);
+}
+
+.btn-sm {
+    padding: var(--space-2) var(--space-4);
+    font-size: var(--text-sm);
+}
+
+/* Form Elements */
+.form-group {
+    margin-bottom: var(--space-5);
+}
+
+.form-group:last-child {
+    margin-bottom: 0;
+}
+
+.form-label {
+    display: block;
+    font-weight: 500;
+    color: var(--color-gray-700);
+    margin-bottom: var(--space-2);
+}
+
+.form-required {
+    color: var(--color-error);
+}
+
+.form-control {
+    width: 100%;
+    padding: var(--space-3) var(--space-4);
+    font-size: var(--text-base);
+    border: 1px solid var(--color-gray-300);
+    border-radius: var(--radius-md);
+    background-color: var(--color-white);
+    transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.form-control:focus {
+    outline: none;
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px rgba(0, 102, 102, 0.1);
+}
+
+.form-hint {
+    font-size: var(--text-sm);
+    color: var(--color-gray-500);
+    margin-top: var(--space-2);
+    margin-bottom: 0;
+}
+
+/* Danger Zone */
+.account-section-danger .account-section-header {
+    border-bottom-color: var(--color-error);
+}
+
+.account-section-danger .account-section-title {
+    color: var(--color-error);
+}
+
+.danger-zone-item {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: var(--space-4);
+}
+
+.danger-zone-info {
+    flex: 1;
+}
+
+.danger-zone-title {
+    font-size: var(--text-base);
+    font-weight: 600;
+    color: var(--color-gray-900);
+    margin: 0 0 var(--space-1);
+}
+
+.danger-zone-description {
+    font-size: var(--text-sm);
+    color: var(--color-gray-600);
+    margin: 0;
+}
+
+.btn-danger {
+    background-color: var(--color-error);
+    color: var(--color-white);
+    border-color: var(--color-error);
+}
+
+.btn-danger:hover {
+    background-color: #B91C1C;
+    border-color: #B91C1C;
+}
+
+.btn-outline.btn-danger {
+    background-color: transparent;
+    color: var(--color-error);
+    border-color: var(--color-error);
+}
+
+.btn-outline.btn-danger:hover {
+    background-color: var(--color-error);
+    color: var(--color-white);
+}
+
+/* Deactivation Confirmation */
+.deactivation-confirm {
+    margin-top: var(--space-6);
+    padding-top: var(--space-6);
+    border-top: 1px solid var(--color-gray-200);
+}
+
+.alert {
+    display: flex;
+    gap: var(--space-3);
+    padding: var(--space-4);
+    border-radius: var(--radius-md);
+    margin-bottom: var(--space-4);
+}
+
+.alert-warning {
+    background-color: #FFFBEB;
+    border: 1px solid #FCD34D;
+}
+
+.alert-icon {
+    width: 24px;
+    height: 24px;
+    flex-shrink: 0;
+    color: var(--color-warning);
+}
+
+.alert-content {
+    flex: 1;
+}
+
+.alert-content strong {
+    display: block;
+    color: var(--color-gray-900);
+    margin-bottom: var(--space-1);
+}
+
+.alert-content p {
+    font-size: var(--text-sm);
+    color: var(--color-gray-600);
+    margin: 0;
+}
+
+.deactivation-actions {
+    display: flex;
+    gap: var(--space-3);
+    justify-content: flex-end;
+}
+
+/* Account Actions (Save Button) */
+.account-actions {
+    margin-top: var(--space-6);
+}
+
+.btn-icon {
+    width: 20px;
+    height: 20px;
+    margin-right: var(--space-2);
+}
+
+@media (max-width: 480px) {
+    .avatar-upload {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .danger-zone-item {
+        flex-direction: column;
+    }
+
+    .deactivation-actions {
+        flex-direction: column;
+    }
+
+    .deactivation-actions .btn {
+        width: 100%;
+    }
+}
+</style>
