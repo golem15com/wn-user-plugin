@@ -113,10 +113,13 @@
     <div id="registerFlash" class="form-flash"></div>
 </form>
 
+{% put scripts %}
 <script>
-document.addEventListener('DOMContentLoaded', function() {
+(function() {
     var form = document.getElementById('registerForm');
     var flashEl = document.getElementById('registerFlash');
+
+    if (!form) return;
 
     form.addEventListener('submit', function(e) {
         e.preventDefault();
@@ -142,8 +145,9 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     });
-});
+})();
 </script>
+{% endput %}
 {% else %}
 <div class="registration-disabled">
     <p>{{ 'Registration is currently disabled. Please check back later.'|_ }}</p>

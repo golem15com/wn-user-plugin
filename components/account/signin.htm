@@ -78,10 +78,13 @@
 </div>
 {% endif %}
 
+{% put scripts %}
 <script>
-document.addEventListener('DOMContentLoaded', function() {
+(function() {
     var form = document.getElementById('signinForm');
     var flashEl = document.getElementById('signinFlash');
+
+    if (!form) return;
 
     form.addEventListener('submit', function(e) {
         e.preventDefault();
@@ -107,5 +110,6 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     });
-});
+})();
 </script>
+{% endput %}

@@ -66,6 +66,34 @@
         </div>
     </div>
 
+    <!-- Account Type Section -->
+    <div class="account-section">
+        <div class="account-section-header">
+            <h3 class="account-section-title">{{ 'Account Type'|_ }}</h3>
+            <p class="account-section-description">{{ 'Select how you want to use Quotify.pro'|_ }}</p>
+        </div>
+
+        <div class="account-section-content">
+            <div class="account-type-options">
+                <label class="account-type-option">
+                    <input type="hidden" name="is_homeowner" value="0">
+                    <input type="checkbox" name="is_homeowner" value="1" {% if user.is_homeowner %}checked{% endif %}>
+                    <div class="account-type-card">
+                        <svg class="account-type-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+                            <polyline points="9 22 9 12 15 12 15 22"></polyline>
+                        </svg>
+                        <div class="account-type-info">
+                            <span class="account-type-title">{{ 'Homeowner'|_ }}</span>
+                            <span class="account-type-desc">{{ 'Post jobs and receive quotes from professionals'|_ }}</span>
+                        </div>
+                    </div>
+                </label>
+            </div>
+            <p class="form-hint">{{ 'Check this box if you want to post jobs and request quotes.'|_ }}</p>
+        </div>
+    </div>
+
     <!-- Change Password Section -->
     <div class="account-section">
         <div class="account-section-header">
@@ -480,5 +508,72 @@ document.addEventListener('DOMContentLoaded', function() {
     .deactivation-actions .btn {
         width: 100%;
     }
+}
+
+/* Account Type Options */
+.account-type-options {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+}
+
+.account-type-option {
+    cursor: pointer;
+}
+
+.account-type-option input[type="checkbox"] {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.account-type-card {
+    display: flex;
+    align-items: center;
+    gap: var(--space-4);
+    padding: var(--space-4);
+    border: 2px solid var(--color-gray-200);
+    border-radius: var(--radius-lg);
+    transition: all var(--transition-fast);
+}
+
+.account-type-option input:checked + .account-type-card {
+    border-color: var(--color-primary);
+    background-color: rgba(0, 102, 102, 0.04);
+}
+
+.account-type-option:hover .account-type-card {
+    border-color: var(--color-gray-400);
+}
+
+.account-type-option input:checked + .account-type-card:hover {
+    border-color: var(--color-primary);
+}
+
+.account-type-icon {
+    width: 40px;
+    height: 40px;
+    color: var(--color-gray-400);
+    flex-shrink: 0;
+}
+
+.account-type-option input:checked + .account-type-card .account-type-icon {
+    color: var(--color-primary);
+}
+
+.account-type-info {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+}
+
+.account-type-title {
+    font-weight: 600;
+    color: var(--color-gray-900);
+}
+
+.account-type-desc {
+    font-size: var(--text-sm);
+    color: var(--color-gray-500);
 }
 </style>
