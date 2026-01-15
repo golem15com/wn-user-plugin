@@ -1,59 +1,64 @@
 {% if canRegister %}
-<form id="registerForm">
+<form id="registerForm" aria-label="{{ 'Create account form'|_ }}">
     <input type="hidden" name="_token" value="{{ this.session.get('_token') }}">
     <input type="hidden" name="_handler" value="account::onRegister">
 
     {% if requiresBetaKey %}
     <div class="form-group">
-        <label class="form-label" for="registerBetaKey">{{ 'Beta Key'|_ }} <span class="required">*</span></label>
+        <label class="form-label" for="registerBetaKey">{{ 'Beta Key'|_ }} <span class="required" aria-hidden="true">*</span></label>
         <input
             name="beta_key"
             type="text"
             class="form-control"
             id="registerBetaKey"
             placeholder="{{ 'Enter your beta access key'|_ }}"
+            aria-required="true"
+            aria-describedby="betaKeyHint"
             required/>
-        <small class="form-hint">{{ 'Required for early access registration'|_ }}</small>
+        <small id="betaKeyHint" class="form-hint">{{ 'Required for early access registration'|_ }}</small>
     </div>
     {% endif %}
 
     <div class="form-group">
-        <label class="form-label" for="registerName">{{ 'Full Name'|_ }} <span class="required">*</span></label>
+        <label class="form-label" for="registerName">{{ 'Full Name'|_ }} <span class="required" aria-hidden="true">*</span></label>
         <input
             name="name"
             type="text"
             class="form-control"
             id="registerName"
             placeholder="{{ 'Enter your full name'|_ }}"
+            aria-required="true"
             required/>
     </div>
 
     <div class="form-group">
-        <label class="form-label" for="registerEmail">{{ 'Email'|_ }} <span class="required">*</span></label>
+        <label class="form-label" for="registerEmail">{{ 'Email'|_ }} <span class="required" aria-hidden="true">*</span></label>
         <input
             name="email"
             type="email"
             class="form-control"
             id="registerEmail"
             placeholder="{{ 'Enter your email'|_ }}"
+            aria-required="true"
             required/>
     </div>
 
     {% if loginAttribute == "username" %}
     <div class="form-group">
-        <label class="form-label" for="registerUsername">{{ 'Username'|_ }} <span class="required">*</span></label>
+        <label class="form-label" for="registerUsername">{{ 'Username'|_ }} <span class="required" aria-hidden="true">*</span></label>
         <input
             name="username"
             type="text"
             class="form-control"
             id="registerUsername"
             placeholder="{{ 'Choose a username'|_ }}"
+            aria-required="true"
             required/>
     </div>
     {% endif %}
 
     <div class="form-group">
-        <label class="form-label" for="registerPassword">{{ 'Password'|_ }} <span class="required">*</span></label>
+        <label class="form-label" for="registerPassword">{{ 'Password'|_ }} <span class="required" aria-hidden="true">*</span></label>
         <input
             name="password"
             type="password"
@@ -61,11 +66,12 @@
             id="registerPassword"
             placeholder="{{ 'Choose a password'|_ }}"
             autocomplete="new-password"
+            aria-required="true"
             required/>
     </div>
 
     <div class="form-group">
-        <label class="form-label" for="registerPasswordConfirm">{{ 'Confirm Password'|_ }} <span class="required">*</span></label>
+        <label class="form-label" for="registerPasswordConfirm">{{ 'Confirm Password'|_ }} <span class="required" aria-hidden="true">*</span></label>
         <input
             name="password_confirmation"
             type="password"
@@ -73,30 +79,31 @@
             id="registerPasswordConfirm"
             placeholder="{{ 'Confirm your password'|_ }}"
             autocomplete="new-password"
+            aria-required="true"
             required/>
     </div>
 
-    <div class="form-group gdpr-consents">
-        <p class="gdpr-intro">{{ 'To create your account, please agree to the following:'|_ }}</p>
+    <fieldset class="form-group gdpr-consents">
+        <legend class="gdpr-intro">{{ 'To create your account, please agree to the following:'|_ }}</legend>
 
         <label class="form-checkbox">
-            <input name="terms_accepted" type="checkbox" value="1" required>
+            <input name="terms_accepted" type="checkbox" value="1" aria-required="true" required>
             <span class="checkbox-label">
-                {{ 'I accept the'|_ }} <a href="{{ 'terms'|page }}" target="_blank">{{ 'Terms of Service'|_ }}</a> <span class="required">*</span>
+                {{ 'I accept the'|_ }} <a href="{{ 'terms'|page }}" target="_blank">{{ 'Terms of Service'|_ }}</a> <span class="required" aria-hidden="true">*</span>
             </span>
         </label>
 
         <label class="form-checkbox">
-            <input name="privacy_accepted" type="checkbox" value="1" required>
+            <input name="privacy_accepted" type="checkbox" value="1" aria-required="true" required>
             <span class="checkbox-label">
-                {{ 'I accept the'|_ }} <a href="{{ 'privacy'|page }}" target="_blank">{{ 'Privacy Policy'|_ }}</a> <span class="required">*</span>
+                {{ 'I accept the'|_ }} <a href="{{ 'privacy'|page }}" target="_blank">{{ 'Privacy Policy'|_ }}</a> <span class="required" aria-hidden="true">*</span>
             </span>
         </label>
 
         <label class="form-checkbox">
-            <input name="parental_authority" type="checkbox" value="1" required>
+            <input name="parental_authority" type="checkbox" value="1" aria-required="true" required>
             <span class="checkbox-label">
-                {{ 'I confirm I am at least 16 years old, or have parental consent'|_ }} <span class="required">*</span>
+                {{ 'I confirm I am at least 16 years old, or have parental consent'|_ }} <span class="required" aria-hidden="true">*</span>
             </span>
         </label>
 
@@ -106,11 +113,11 @@
                 {{ 'I would like to receive marketing communications (optional)'|_ }}
             </span>
         </label>
-    </div>
+    </fieldset>
 
     <button type="submit" class="btn btn-primary btn-full">{{ 'Create Account'|_ }}</button>
 
-    <div id="registerFlash" class="form-flash"></div>
+    <div id="registerFlash" class="form-flash" role="alert" aria-live="polite"></div>
 </form>
 
 {% put scripts %}

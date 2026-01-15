@@ -1,4 +1,4 @@
-<form id="signinForm">
+<form id="signinForm" aria-label="{{ 'Sign in form'|_ }}">
     <input type="hidden" name="_token" value="{{ this.session.get('_token') }}">
     <input type="hidden" name="_handler" value="account::onSignin">
 
@@ -11,6 +11,7 @@
             id="userSigninLogin"
             placeholder="{{ 'Enter your %s'|_|format(loginAttributeLabel|lower) }}"
             autocomplete="username"
+            aria-required="true"
             required/>
     </div>
 
@@ -23,6 +24,7 @@
             id="userSigninPassword"
             placeholder="{{ 'Enter your password'|_ }}"
             autocomplete="current-password"
+            aria-required="true"
             required/>
     </div>
 
@@ -37,7 +39,7 @@
 
     <button type="submit" class="btn btn-primary btn-full">{{ 'Sign In'|_ }}</button>
 
-    <div id="signinFlash" class="form-flash"></div>
+    <div id="signinFlash" class="form-flash" role="alert" aria-live="polite"></div>
 </form>
 
 {% if googleOAuthEnabled or facebookOAuthEnabled or githubOAuthEnabled %}
