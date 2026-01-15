@@ -1,14 +1,58 @@
-<p class="lead">
-    <strong>Lost your password?</strong> No problem! Enter your email address to verify your account.
+<p class="reset-intro">
+    {{ 'Enter your email address and we\'ll send you a link to reset your password.'|_ }}
 </p>
 
-<form
-    data-request="{{ __SELF__ }}::onRestorePassword"
-    data-request-update="'{{ __SELF__ }}::reset': '#partialUserResetForm'">
+<form id="restorePasswordForm">
+    <input type="hidden" name="_token" value="{{ this.session.get('_token') }}">
+    <input type="hidden" name="_handler" value="resetPassword::onRestorePassword">
+
     <div class="form-group">
-        <label for="userRestoreEmail">Email</label>
-        <input name="email" type="email" class="form-control" id="userRestoreEmail" placeholder="Enter your email">
+        <label class="form-label" for="userRestoreEmail">{{ 'Email'|_ }}</label>
+        <input
+            name="email"
+            type="email"
+            class="form-control"
+            id="userRestoreEmail"
+            placeholder="{{ 'Enter your email address'|_ }}"
+            required/>
     </div>
 
-    <button type="submit" class="btn btn-default">Restore password</button>
+    <button type="submit" class="btn btn-primary btn-full">{{ 'Send Reset Link'|_ }}</button>
+
+    <div id="restoreFlash" class="form-flash"></div>
 </form>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    var form = document.getElementById('restorePasswordForm');
+    var flashEl = document.getElementById('restoreFlash');
+
+    if (!form) return;
+
+    form.addEventListener('submit', function(e) {
+        e.preventDefault();
+        flashEl.innerHTML = '';
+        flashEl.className = 'form-flash';
+
+        Snowboard.request(form, 'resetPassword::onRestorePassword', {
+            flash: true,
+            update: { 'resetPassword::reset': '#partialUserResetForm' },
+            loading: function(el) {
+                el.classList.add('loading');
+            },
+            success: function(data) {
+                form.classList.remove('loading');
+                flashEl.innerHTML = '{{ "If an account exists with that email, you will receive a reset link shortly."|_ }}';
+                flashEl.classList.add('form-flash-success');
+            },
+            error: function(data) {
+                form.classList.remove('loading');
+                if (data.message) {
+                    flashEl.innerHTML = data.message;
+                    flashEl.classList.add('form-flash-error');
+                }
+            }
+        });
+    });
+});
+</script>
