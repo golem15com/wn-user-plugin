@@ -67,6 +67,17 @@ Route::group(
                 return (new \Golem15\User\Controllers\ApiController())->update($request);
             }
         );
+
+        /*
+         * PIN Login - for children to authenticate with their 4-digit PIN
+         * This is a public endpoint (no auth required) since it initiates authentication
+         */
+        Route::post(
+            'pin-login',
+            static function (Request $request) {
+                return (new \Golem15\User\Controllers\ApiController())->pinLogin($request);
+            }
+        );
     });
 
 /*

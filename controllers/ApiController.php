@@ -259,6 +259,123 @@ class ApiController
 
     }
 
+    /**
+     * PIN login for children
+     *
+     * Allows children to authenticate using their PIN code instead of password.
+     * Returns a JWT token on success.
+     *
+     * @param Request $request
+     * @return JsonResponse
+     */
+    public function pinLogin(Request $request): JsonResponse
+    {
+        $validator = Validator::make($request->all(), [
+            'user_id' => 'required|integer|exists:users,id',
+            'pin' => 'required|string|size:4',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'error' => [
+                    'message' => 'Validation failed',
+                    'code' => 'VALIDATION_ERROR',
+                    'details' => $validator->errors(),
+                ],
+            ], 422);
+        }
+
+        $user = UserModel::find($request->get('user_id'));
+
+        if (!$user) {
+            return response()->json([
+                'success' => false,
+                'error' => ['message' => 'User not found'],
+            ], 404);
+        }
+
+        // Verify user is a child (has parent_id set)
+        if (!$user->hasParent()) {
+            return response()->json([
+                'success' => false,
+                'error' => ['message' => 'PIN login is only available for children'],
+            ], 403);
+        }
+
+        // Check if user has a PIN set
+        if (!$user->pin) {
+            return response()->json([
+                'success' => false,
+                'error' => ['message' => 'No PIN has been set for this account'],
+            ], 400);
+        }
+
+        // Check if PIN is locked
+        if ($user->isPinLocked()) {
+            $minutesLeft = abs($user->getPinLockoutMinutes());
+            return response()->json([
+                'success' => false,
+                'error' => [
+                    'message' => "Too many failed attempts. Please try again in {$minutesLeft} minutes.",
+                    'code' => 'PIN_LOCKED',
+                    'details' => ['minutes_remaining' => $minutesLeft],
+                ],
+            ], 429);
+        }
+
+        // Verify PIN
+        if (!$user->verifyPin($request->get('pin'))) {
+            // Check again if now locked after failed attempt
+            if ($user->isPinLocked()) {
+                $minutesLeft = abs($user->getPinLockoutMinutes());
+                return response()->json([
+                    'success' => false,
+                    'error' => [
+                        'message' => "Too many failed attempts. Please try again in {$minutesLeft} minutes.",
+                        'code' => 'PIN_LOCKED',
+                        'details' => ['minutes_remaining' => $minutesLeft],
+                    ],
+                ], 429);
+            }
+
+            return response()->json([
+                'success' => false,
+                'error' => ['message' => 'Invalid PIN'],
+            ], 401);
+        }
+
+        // Generate JWT token
+        try {
+            $token = JWTAuth::fromUser($user);
+            JWTAuth::setToken($token);
+
+            event('golem15.user.login', [$user]);
+
+            \Log::info('PIN login successful', [
+                'user_id' => $user->id,
+                'user_name' => $user->name,
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'token' => $token,
+                    'user' => $user->getApiArray(),
+                ],
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('PIN login JWT generation failed', [
+                'user_id' => $user->id,
+                'error' => $e->getMessage(),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'error' => ['message' => 'Failed to generate authentication token'],
+            ], 500);
+        }
+    }
 
     /**
      * @param Request $request
