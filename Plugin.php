@@ -307,13 +307,19 @@ class Plugin extends PluginBase
                     'getApiArray',
                     static function () use ($model) {
                         return [
+                            'id' => $model->id,
                             'name' => $model->name,
                             'surname' => $model->surname,
                             'email' => $model->email,
                             'is_activated' => $model->is_activated,
                             'permissions' => $model->permissions,
                             'avatar' => $model->getAvatarThumb(),
-                            'groups' => $model->groups->pluck('name', 'id')->toArray()
+                            'avatar_url' => $model->getAvatarThumb(128),
+                            'groups' => $model->groups->pluck('name', 'id')->toArray(),
+                            'role' => $model->role ? $model->role->slug : null,
+                            'is_parent' => $model->isParent(),
+                            'is_child' => $model->isChild(),
+                            'family_id' => $model->family_id,
                         ];
                     }
                 );

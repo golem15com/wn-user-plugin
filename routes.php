@@ -78,6 +78,29 @@ Route::group(
                 return (new \Golem15\User\Controllers\ApiController())->pinLogin($request);
             }
         );
+
+        /*
+         * Verify PIN - for authenticated users to verify their own PIN
+         * Used by parents on user picker to confirm their identity
+         */
+        Route::post(
+            'verify-pin',
+            static function (Request $request) {
+                return (new \Golem15\User\Controllers\ApiController())->verifyPin($request);
+            }
+        );
+
+        /*
+         * Verify Family Member PIN - verify PIN for any family member
+         * Used by user picker to verify parent/child PINs before switching profiles
+         * Requires authenticated user (must be in same family)
+         */
+        Route::post(
+            'verify-family-member-pin',
+            static function (Request $request) {
+                return (new \Golem15\User\Controllers\ApiController())->verifyFamilyMemberPin($request);
+            }
+        );
     });
 
 /*

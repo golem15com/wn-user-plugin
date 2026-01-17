@@ -217,7 +217,13 @@ class ApiController
              * Automatically activated or not required, log the user in
              */
             if ($automaticActivation || !$requireActivation) {
-                $token = JWTAuth::attempt($data);
+                // Use only login credentials for JWTAuth::attempt (same pattern as login method)
+                // Passing all $data causes SQL error with non-column fields like password_confirmation, GDPR fields
+                $credentials = [
+                    $this->loginAttribute() => $data['email'],
+                    'password' => $data['password']
+                ];
+                $token = JWTAuth::attempt($credentials);
                 JWTAuth::setToken($token);
                 $userModel = JWTAuth::toUser();
                 event('golem15.user.login', [$userModel]);
@@ -272,7 +278,7 @@ class ApiController
     {
         $validator = Validator::make($request->all(), [
             'user_id' => 'required|integer|exists:users,id',
-            'pin' => 'required|string|size:4',
+            'pin' => 'nullable|string|size:4',
         ]);
 
         if ($validator->fails()) {
@@ -304,11 +310,25 @@ class ApiController
         }
 
         // Check if user has a PIN set
-        if (!$user->pin) {
+        $userHasPin = !empty($user->pin);
+        $providedPin = $request->get('pin');
+
+        // If user has PIN, require it
+        if ($userHasPin && !$providedPin) {
             return response()->json([
                 'success' => false,
-                'error' => ['message' => 'No PIN has been set for this account'],
+                'error' => ['message' => 'PIN is required for this account'],
             ], 400);
+        }
+
+        // If user doesn't have PIN, allow direct access
+        if (!$userHasPin) {
+            // Generate JWT for the child
+            $token = JWTAuth::fromUser($user);
+            return response()->json([
+                'token' => $token,
+                'user' => $user->getApiArray()
+            ]);
         }
 
         // Check if PIN is locked
@@ -378,12 +398,196 @@ class ApiController
     }
 
     /**
+     * Verify PIN for authenticated user
+     *
+     * Allows parents to verify their own PIN on the user picker.
+     * Does not issue a new token - just confirms the PIN is correct.
+     *
+     * @param Request $request
+     * @return JsonResponse
+     */
+    public function verifyPin(Request $request): JsonResponse
+    {
+        try {
+            $user = $this->authorize($request);
+        } catch (AuthenticationException|TokenBlacklistedException $e) {
+            return response()->json([
+                'success' => false,
+                'error' => ['message' => 'Unauthorized'],
+            ], 401);
+        }
+
+        $validator = Validator::make($request->all(), [
+            'pin' => 'required|string|size:4',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'error' => [
+                    'message' => 'Validation failed',
+                    'details' => $validator->errors(),
+                ],
+            ], 422);
+        }
+
+        // Check if user has a PIN set
+        if (empty($user->pin)) {
+            return response()->json([
+                'success' => false,
+                'error' => ['message' => 'No PIN set for this account'],
+            ], 400);
+        }
+
+        // Check if PIN is locked
+        if ($user->isPinLocked()) {
+            $minutesLeft = abs($user->getPinLockoutMinutes());
+            return response()->json([
+                'success' => false,
+                'error' => [
+                    'message' => "Too many failed attempts. Please try again in {$minutesLeft} minutes.",
+                    'code' => 'PIN_LOCKED',
+                    'details' => ['minutes_remaining' => $minutesLeft],
+                ],
+            ], 429);
+        }
+
+        // Verify PIN
+        if (!$user->verifyPin($request->get('pin'))) {
+            // Check again if now locked after failed attempt
+            if ($user->isPinLocked()) {
+                $minutesLeft = abs($user->getPinLockoutMinutes());
+                return response()->json([
+                    'success' => false,
+                    'error' => [
+                        'message' => "Too many failed attempts. Please try again in {$minutesLeft} minutes.",
+                        'code' => 'PIN_LOCKED',
+                        'details' => ['minutes_remaining' => $minutesLeft],
+                    ],
+                ], 429);
+            }
+
+            return response()->json([
+                'success' => false,
+                'error' => ['message' => 'Invalid PIN'],
+            ], 401);
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'PIN verified',
+        ]);
+    }
+
+    /**
+     * Verify PIN for any family member
+     *
+     * Used by user picker to verify parent/child PINs before switching profiles.
+     * Caller must be authenticated and in the same family.
+     *
+     * @param Request $request
+     * @return JsonResponse
+     */
+    public function verifyFamilyMemberPin(Request $request): JsonResponse
+    {
+        try {
+            $currentUser = $this->authorize($request);
+        } catch (AuthenticationException|TokenBlacklistedException $e) {
+            return response()->json([
+                'success' => false,
+                'error' => ['message' => 'Unauthorized'],
+            ], 401);
+        }
+
+        $validator = Validator::make($request->all(), [
+            'user_id' => 'required|integer|exists:users,id',
+            'pin' => 'required|string|size:4',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'error' => [
+                    'message' => 'Validation failed',
+                    'details' => $validator->errors(),
+                ],
+            ], 422);
+        }
+
+        $targetUser = UserModel::find($request->get('user_id'));
+
+        if (!$targetUser) {
+            return response()->json([
+                'success' => false,
+                'error' => ['message' => 'User not found'],
+            ], 404);
+        }
+
+        // Verify same family
+        if ($targetUser->family_id !== $currentUser->family_id) {
+            return response()->json([
+                'success' => false,
+                'error' => ['message' => 'User is not in your family'],
+            ], 403);
+        }
+
+        // Check if target user has a PIN set
+        if (empty($targetUser->pin)) {
+            return response()->json([
+                'success' => false,
+                'error' => ['message' => 'No PIN set for this account'],
+            ], 400);
+        }
+
+        // Check if PIN is locked
+        if ($targetUser->isPinLocked()) {
+            $minutesLeft = abs($targetUser->getPinLockoutMinutes());
+            return response()->json([
+                'success' => false,
+                'error' => [
+                    'message' => "Too many failed attempts. Please try again in {$minutesLeft} minutes.",
+                    'code' => 'PIN_LOCKED',
+                    'details' => ['minutes_remaining' => $minutesLeft],
+                ],
+            ], 429);
+        }
+
+        // Verify PIN
+        if (!$targetUser->verifyPin($request->get('pin'))) {
+            // Check again if now locked after failed attempt
+            if ($targetUser->isPinLocked()) {
+                $minutesLeft = abs($targetUser->getPinLockoutMinutes());
+                return response()->json([
+                    'success' => false,
+                    'error' => [
+                        'message' => "Too many failed attempts. Please try again in {$minutesLeft} minutes.",
+                        'code' => 'PIN_LOCKED',
+                        'details' => ['minutes_remaining' => $minutesLeft],
+                    ],
+                ], 429);
+            }
+
+            return response()->json([
+                'success' => false,
+                'error' => ['message' => 'Invalid PIN'],
+            ], 401);
+        }
+
+        // Return success with target user data
+        return response()->json([
+            'success' => true,
+            'message' => 'PIN verified',
+            'user' => $targetUser->getApiArray(),
+        ]);
+    }
+
+    /**
      * @param Request $request
      * @return mixed
      * @throws AuthenticationException
      * @throws TokenBlacklistedException
      */
-    public function authorize(Request $request): User
+    public function authorize(Request $request): UserModel
     {
         $token = TokenExtractor::fromRequest($request);
         if ($token) {
