@@ -266,7 +266,7 @@ class ApiController
      * @throws AuthenticationException
      * @throws TokenBlacklistedException
      */
-    public function authorize(Request $request): User
+    public function authorize(Request $request): UserModel
     {
         $token = TokenExtractor::fromRequest($request);
         if ($token) {
