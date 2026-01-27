@@ -1189,6 +1189,23 @@ class User extends UserBase implements JWTSubject
     }
 
     /**
+     * Override this method to check if user is a parent in a family
+     * @return bool
+     */
+    public function isParent() {
+        if (!$this->family) {
+            return false;
+        }
+        return $this->family->parents->contains($this);
+    }
+
+    public function isChild() {
+        if (!$this->family) {
+            return false;
+        }
+        return $this->family->children->contains($this);
+    }
+    /**
      * Check if user is primary parent of their family
      *
      * @return bool
