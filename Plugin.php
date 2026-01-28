@@ -317,7 +317,7 @@ class Plugin extends PluginBase
                             'avatar_url' => $model->getAvatarThumb(128),
                             'groups' => $model->groups->pluck('name', 'id')->toArray(),
                             'role' => $model->role ? $model->role->slug : null,
-                            'is_parent' => $model->isParent(),
+                            'is_parent' => $model->isParent() ?? false,
                             'is_child' => $model->isChild(),
                             'family_id' => $model->family_id,
                             'is_onboarded' => (bool) $model->is_onboarded,
