@@ -143,7 +143,7 @@ class DeviceAuthSession extends Model
     {
         // Use only uppercase letters and numbers, exclude confusing characters
         // Excluded: 0, O, 1, I, L to avoid confusion
-        $characters = '234567 89ABCDEFGHJKMNPQRSTUVWXYZ';
+        $characters = '23456789ABCDEFGHJKMNPQRSTUVWXYZ';
 
         do {
             // Generate 8 random characters
