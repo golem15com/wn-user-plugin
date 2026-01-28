@@ -128,3 +128,41 @@ Route::group(['prefix' => 'oauth', 'middleware' => ['web', 'throttle:20,1']], fu
     })->where('provider', 'google|facebook|github');
 
 });
+
+/*
+|--------------------------------------------------------------------------
+| Batch User Info Endpoint
+|--------------------------------------------------------------------------
+|
+| Returns minimal user info (id, name, avatar_url) for multiple users.
+| Used by presence system to display real user names.
+|
+*/
+
+Route::middleware('jwt.auth')->get(
+    '/api/user/batch',
+    static function (Request $request) {
+        // Parse comma-separated IDs, convert to integers, filter empty/invalid
+        $idsParam = $request->get('ids', '');
+        $ids = array_filter(
+            array_map('intval', explode(',', $idsParam)),
+            fn($id) => $id > 0
+        );
+
+        // Empty input = empty result (not error)
+        if (empty($ids)) {
+            return response()->json(['data' => []]);
+        }
+
+        // Query users (non-existent IDs silently skipped via whereIn)
+        $users = \Golem15\User\Models\User::whereIn('id', $ids)
+            ->get()
+            ->map(fn($user) => [
+                'id' => $user->id,
+                'name' => $user->name,
+                'avatar_url' => $user->getAvatarThumb(128),
+            ]);
+
+        return response()->json(['data' => $users]);
+    }
+);
