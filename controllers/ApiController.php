@@ -5,6 +5,7 @@ namespace Golem15\User\Controllers;
 use Golem15\User\Classes\AuthManager;
 use Golem15\User\Classes\TokenExtractor;
 use Golem15\User\Facades\Auth;
+use Golem15\User\Models\DeviceAuthSession;
 use Golem15\User\Models\Settings as UserSettings;
 use Golem15\User\Models\User as UserModel;
 use Illuminate\Auth\AuthenticationException;
@@ -579,6 +580,230 @@ class ApiController
             'message' => 'PIN verified',
             'user' => $targetUser->getApiArray(),
         ]);
+    }
+
+    /**
+     * Get enabled OAuth providers
+     *
+     * Returns a list of OAuth providers that are configured and available for login.
+     * A provider is considered enabled if both client_id and client_secret are set.
+     *
+     * @return JsonResponse
+     */
+    public function oauthProviders(): JsonResponse
+    {
+        $providers = ['google', 'facebook', 'github'];
+        $enabled = [];
+
+        foreach ($providers as $provider) {
+            $clientId = config("services.{$provider}.client_id");
+            $clientSecret = config("services.{$provider}.client_secret");
+
+            if (!empty($clientId) && !empty($clientSecret)) {
+                $enabled[] = $provider;
+            }
+        }
+
+        return response()->json([
+            'success' => true,
+            'providers' => $enabled,
+        ]);
+    }
+
+    /**
+     * GET /devices
+     * List authorized devices for current user
+     */
+    public function listDevices(Request $request): JsonResponse
+    {
+        try {
+            $user = $this->authorize($request);
+        } catch (\Exception $e) {
+            return response()->json(['error' => 'Unauthorized'], 401);
+        }
+
+        $devices = DeviceAuthSession::where('user_id', $user->id)
+            ->whereIn('status', [DeviceAuthSession::STATUS_CONFIRMED, DeviceAuthSession::STATUS_USED])
+            ->orderBy('last_activity_at', 'desc')
+            ->get();
+
+        $currentSessionId = session()->getId();
+
+        $result = $devices->map(function ($device) use ($currentSessionId) {
+            return [
+                'id' => $device->id,
+                'device_name' => $device->device_name_attribute,
+                'device_ip' => $device->device_ip,
+                'authorized_at' => $device->confirmed_at?->toIso8601String(),
+                'last_activity' => $device->last_activity_at?->toIso8601String(),
+                'is_current' => $device->session_id === $currentSessionId,
+            ];
+        });
+
+        return response()->json(['success' => true, 'devices' => $result]);
+    }
+
+    /**
+     * DELETE /devices/{id}
+     * Revoke a device authorization
+     */
+    public function revokeDevice(Request $request, int $id): JsonResponse
+    {
+        try {
+            $user = $this->authorize($request);
+        } catch (\Exception $e) {
+            return response()->json(['error' => 'Unauthorized'], 401);
+        }
+
+        $device = DeviceAuthSession::where('id', $id)
+            ->where('user_id', $user->id)
+            ->first();
+
+        if (!$device) {
+            return response()->json(['error' => 'Device not found'], 404);
+        }
+
+        $device->revoke();
+
+        return response()->json(['success' => true, 'message' => 'Device revoked successfully']);
+    }
+
+    /**
+     * POST /devices/authorize
+     * Authorize a device using short code (XXXX-XXXX format) or token (from QR code)
+     */
+    public function authorizeDevice(Request $request): JsonResponse
+    {
+        try {
+            $user = $this->authorize($request);
+        } catch (\Exception $e) {
+            return response()->json(['error' => 'Unauthorized'], 401);
+        }
+
+        $session = null;
+
+        // Try short code first
+        if ($request->has('short_code')) {
+            $code = str_replace('-', '', $request->input('short_code', ''));
+
+            if (strlen($code) !== 8) {
+                return response()->json(['error' => 'Please enter a valid 8-character code'], 422);
+            }
+
+            $session = DeviceAuthSession::findValidShortCode($code);
+        }
+        // Try token (from QR code scan)
+        elseif ($request->has('token')) {
+            $session = DeviceAuthSession::findValidToken($request->input('token'));
+        }
+
+        if (!$session) {
+            return response()->json(['error' => 'Invalid or expired code'], 400);
+        }
+
+        // Link to user if not already linked
+        if (!$session->user_id) {
+            $session->user_id = $user->id;
+        }
+
+        $session->confirm($request->ip());
+
+        return response()->json(['success' => true, 'message' => 'Device authorized successfully']);
+    }
+
+    /**
+     * POST /devices/initiate
+     * Initiate a new device authorization session (called by new/unauthorized device)
+     * Returns QR code data and short code for display
+     */
+    public function initiateDeviceAuth(Request $request): JsonResponse
+    {
+        // This endpoint can be called without auth (new device doesn't have token yet)
+        // But we need to associate it with a user later when parent confirms
+
+        $deviceInfo = [
+            'ip' => $request->ip(),
+            'user_agent' => $request->userAgent(),
+            'name' => $request->input('device_name'),
+        ];
+
+        // Create session without user_id - will be linked when parent confirms
+        $session = DeviceAuthSession::create([
+            'token' => \Illuminate\Support\Str::random(64),
+            'short_code' => $this->generateUniqueShortCode(),
+            'user_id' => null,
+            'status' => DeviceAuthSession::STATUS_PENDING,
+            'expires_at' => \Carbon\Carbon::now()->addMinutes(5),
+            'device_ip' => $deviceInfo['ip'],
+            'device_user_agent' => $deviceInfo['user_agent'],
+            'device_name' => $deviceInfo['name'],
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'token' => $session->token,
+                'short_code' => $session->short_code,
+                'auth_url' => $session->getAuthUrl(),
+                'expires_at' => $session->expires_at->toIso8601String(),
+            ],
+        ]);
+    }
+
+    /**
+     * GET /devices/status/{token}
+     * Check authorization status (polled by new device waiting for confirmation)
+     */
+    public function deviceAuthStatus(Request $request, string $token): JsonResponse
+    {
+        $session = DeviceAuthSession::where('token', $token)->first();
+
+        if (!$session) {
+            return response()->json(['error' => 'Session not found'], 404);
+        }
+
+        // Check if expired
+        if ($session->isExpired()) {
+            $session->markAsExpired();
+            return response()->json([
+                'success' => true,
+                'status' => 'expired',
+                'message' => 'Authorization session has expired',
+            ]);
+        }
+
+        $data = [
+            'status' => $session->status,
+        ];
+
+        // If confirmed, include user info so device can complete login
+        if ($session->status === DeviceAuthSession::STATUS_CONFIRMED && $session->user_id) {
+            $data['user_id'] = $session->user_id;
+            $data['message'] = 'Device authorized - complete login';
+        }
+
+        return response()->json([
+            'success' => true,
+            'data' => $data,
+        ]);
+    }
+
+    /**
+     * Generate a unique 8-character short code
+     */
+    private function generateUniqueShortCode(): string
+    {
+        $characters = '23456789ABCDEFGHJKMNPQRSTUVWXYZ';
+
+        do {
+            $code = '';
+            for ($i = 0; $i < 8; $i++) {
+                $code .= $characters[random_int(0, strlen($characters) - 1)];
+            }
+            $shortCode = substr($code, 0, 4) . '-' . substr($code, 4, 4);
+        } while (DeviceAuthSession::where('short_code', $shortCode)->exists());
+
+        return $shortCode;
     }
 
     /**
