@@ -229,7 +229,6 @@ class DeviceAuth extends ComponentBase
         if ($authSession->expires_at < now()) {
             $authSession->status = 'expired';
             $authSession->save();
-\Log::info('Apparently expired' . print_r($authSession->toArray(), true));
             return ['status' => 'expired', 'message' => 'Authorization token has expired'];
         }
 

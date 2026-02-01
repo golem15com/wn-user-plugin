@@ -101,6 +101,57 @@ Route::group(
                 return (new \Golem15\User\Controllers\ApiController())->verifyFamilyMemberPin($request);
             }
         );
+
+        /*
+         * OAuth Providers - get list of enabled OAuth providers
+         * Returns which social login options are configured (Google, Facebook, GitHub)
+         */
+        Route::get(
+            'oauth-providers',
+            static function () {
+                return (new \Golem15\User\Controllers\ApiController())->oauthProviders();
+            }
+        );
+
+        /*
+         * Device Management - requires JWT authentication
+         * List, revoke, and authorize devices
+         */
+        Route::get(
+            'devices',
+            static function (Request $request) {
+                return (new \Golem15\User\Controllers\ApiController())->listDevices($request);
+            }
+        );
+        Route::delete(
+            'devices/{id}',
+            static function (Request $request, $id) {
+                return (new \Golem15\User\Controllers\ApiController())->revokeDevice($request, (int)$id);
+            }
+        )->where('id', '[0-9]+');
+        Route::post(
+            'devices/authorize',
+            static function (Request $request) {
+                return (new \Golem15\User\Controllers\ApiController())->authorizeDevice($request);
+            }
+        );
+
+        /*
+         * Device Authorization Flow - for new devices to get QR/code and poll status
+         * These can be called without auth (new device doesn't have token yet)
+         */
+        Route::post(
+            'devices/initiate',
+            static function (Request $request) {
+                return (new \Golem15\User\Controllers\ApiController())->initiateDeviceAuth($request);
+            }
+        );
+        Route::get(
+            'devices/status/{token}',
+            static function (Request $request, $token) {
+                return (new \Golem15\User\Controllers\ApiController())->deviceAuthStatus($request, $token);
+            }
+        );
     });
 
 /*

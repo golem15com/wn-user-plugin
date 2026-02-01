@@ -320,6 +320,7 @@ class Plugin extends PluginBase
                             'is_parent' => $model->isParent() ?? false,
                             'is_child' => $model->isChild(),
                             'family_id' => $model->family_id,
+                            'is_onboarded' => (bool) $model->is_onboarded,
                         ];
                     }
                 );

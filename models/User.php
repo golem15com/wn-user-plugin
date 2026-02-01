@@ -1196,14 +1196,14 @@ class User extends UserBase implements JWTSubject
         if (!$this->family) {
             return false;
         }
-        return $this->family->parents->contains($this);
+        return $this->family->parents()->get()->contains($this);
     }
 
     public function isChild() {
         if (!$this->family) {
             return false;
         }
-        return $this->family->children->contains($this);
+        return $this->family->children()->get()->contains($this);
     }
     /**
      * Check if user is primary parent of their family
