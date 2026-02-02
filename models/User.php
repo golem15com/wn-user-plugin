@@ -35,6 +35,13 @@ class User extends UserBase implements JWTSubject
     ];
 
     /**
+     * Custom validation messages for user-friendly errors
+     */
+    public $customMessages = [
+        'password.confirmed' => 'Password confirmation is required.',
+    ];
+
+    /**
      * @var array Relations
      */
     public $belongsToMany = [
@@ -59,6 +66,7 @@ class User extends UserBase implements JWTSubject
         'username',
         'email',
         'password',
+        'password_confirmation', // Required for validation, purged before save
         'pin',
         'created_ip_address',
         'last_ip_address',

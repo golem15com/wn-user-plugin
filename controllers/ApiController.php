@@ -168,11 +168,12 @@ class ApiController
 
             /*
              * Validate input
+             * Use $request->all() to support both JSON and form-urlencoded data
              */
-            $data = post();
+            $data = $request->all();
 
             if (!array_key_exists('password_confirmation', $data)) {
-                $data['password_confirmation'] = post('password');
+                $data['password_confirmation'] = $data['password'] ?? null;
             }
 
             $rules = (new UserModel)->rules;
