@@ -1,10 +1,15 @@
 <?php
 
-
+use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\RateLimiter;
+
+RateLimiter::for('qs-api', function (Request $request) {
+    return Limit::perMinute(120)->by($request->user()?->id ?: $request->ip());
+});
 
 Route::group(
-    ['prefix' => '/_user/api/v1', 'middleware' => ['api']],
+    ['prefix' => '/_user/api/v1', 'middleware' => ['throttle:qs-api', 'bindings']],
     static function () {
         Route::options(
             '{level1?}/{level2?}/{level3?}',
