@@ -234,9 +234,16 @@ class ApiController
 
 
         }
+        catch (ValidationException $ex) {
+            return response()->json([
+                'error' => $ex->validator->errors()->first(),
+                'errors' => $ex->validator->errors()->toArray(),
+            ], 422);
+        }
         catch (Exception $ex) {
-            if (Request::ajax()) throw $ex;
-            else Flash::error($ex->getMessage());
+            return response()->json([
+                'error' => $ex->getMessage(),
+            ], 422);
         }
     }
 
