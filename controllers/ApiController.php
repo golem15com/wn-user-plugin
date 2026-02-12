@@ -163,7 +163,7 @@ class ApiController
             }
 
             if ($this->isRegisterThrottled()) {
-       //         throw new ApplicationException(Lang::get(/*Registration is throttled. Please try again later.*/'golem15.user::lang.account.registration_throttled'));
+                throw new ApplicationException(Lang::get(/*Registration is throttled. Please try again later.*/'golem15.user::lang.account.registration_throttled'));
             }
 
             /*
@@ -286,7 +286,7 @@ class ApiController
     public function pinLogin(Request $request): JsonResponse
     {
         $validator = Validator::make($request->all(), [
-            'user_id' => 'required|integer|exists:users,id',
+            'user_id' => 'required|integer',
             'pin' => 'nullable|string|size:4',
         ]);
 
@@ -303,19 +303,12 @@ class ApiController
 
         $user = UserModel::find($request->get('user_id'));
 
-        if (!$user) {
+        // Generic error for user-not-found or not-a-child (prevents enumeration)
+        if (!$user || !$user->hasParent()) {
             return response()->json([
                 'success' => false,
-                'error' => ['message' => 'User not found'],
-            ], 404);
-        }
-
-        // Verify user is a child (has parent_id set)
-        if (!$user->hasParent()) {
-            return response()->json([
-                'success' => false,
-                'error' => ['message' => 'PIN login is only available for children'],
-            ], 403);
+                'error' => ['message' => 'Invalid credentials'],
+            ], 401);
         }
 
         // Check if user has a PIN set
@@ -330,10 +323,19 @@ class ApiController
             ], 400);
         }
 
-        // If user doesn't have PIN, allow direct access
+        // PIN-less children: require authenticated parent in same family
         if (!$userHasPin) {
+            $parent = $this->getAuthenticatedParent();
+            if (!$parent || $parent->family_id !== $user->family_id) {
+                return response()->json([
+                    'success' => false,
+                    'error' => ['message' => 'Invalid credentials'],
+                ], 401);
+            }
+
             // Generate JWT for the child
             $token = JWTAuth::fromUser($user);
+            event('golem15.user.login', [$user]);
             return response()->json([
                 'token' => $token,
                 'user' => $user->getApiArray()
@@ -370,7 +372,7 @@ class ApiController
 
             return response()->json([
                 'success' => false,
-                'error' => ['message' => 'Invalid PIN'],
+                'error' => ['message' => 'Invalid credentials'],
             ], 401);
         }
 
@@ -380,11 +382,6 @@ class ApiController
             JWTAuth::setToken($token);
 
             event('golem15.user.login', [$user]);
-
-            \Log::info('PIN login successful', [
-                'user_id' => $user->id,
-                'user_name' => $user->name,
-            ]);
 
             return response()->json([
                 'success' => true,
@@ -812,6 +809,24 @@ class ApiController
         } while (DeviceAuthSession::where('short_code', $shortCode)->exists());
 
         return $shortCode;
+    }
+
+    /**
+     * Extract authenticated parent from JWT header (if present).
+     * Returns null if no valid token, token is invalid, or user is not a parent.
+     */
+    private function getAuthenticatedParent(): ?UserModel
+    {
+        try {
+            $token = TokenExtractor::fromRequest(request());
+            if (!$token) {
+                return null;
+            }
+            $user = JWTAuth::setToken($token)->toUser();
+            return ($user && !$user->hasParent()) ? $user : null;
+        } catch (\Exception $e) {
+            return null;
+        }
     }
 
     /**

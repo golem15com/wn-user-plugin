@@ -4,12 +4,16 @@ use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\RateLimiter;
 
-RateLimiter::for('qs-api', function (Request $request) {
+RateLimiter::for('user-api', function (Request $request) {
     return Limit::perMinute(120)->by($request->user()?->id ?: $request->ip());
 });
 
+RateLimiter::for('pin-login', function (Request $request) {
+    return Limit::perMinute(10)->by($request->ip());
+});
+
 Route::group(
-    ['prefix' => '/_user/api/v1', 'middleware' => ['throttle:qs-api', 'bindings']],
+    ['prefix' => '/_user/api/v1', 'middleware' => ['throttle:user-api', 'bindings']],
     static function () {
         Route::options(
             '{level1?}/{level2?}/{level3?}',
@@ -82,7 +86,7 @@ Route::group(
             static function (Request $request) {
                 return (new \Golem15\User\Controllers\ApiController())->pinLogin($request);
             }
-        );
+        )->middleware('throttle:pin-login');
 
         /*
          * Verify PIN - for authenticated users to verify their own PIN
