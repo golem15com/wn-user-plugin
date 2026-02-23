@@ -46,7 +46,7 @@ return [
     | RS256, RS384 & RS512 / ES256, ES384 & ES512 will use the keys below.
     |
     */
-    'user' => env('JWT_USER_CLASS', 'PixelPixel\User\Models\User'),
+    'user' => env('JWT_USER_CLASS', 'Golem15\User\Models\User'),
 
     'keys' => [
 
@@ -293,7 +293,7 @@ return [
         */
 
         'auth' => 'user.auth',
-        //'auth' => env('JWT_PROVIDERS_AUTH', 'PixelPixel\User\Classes\Providers\Illuminate'),
+        //'auth' => env('JWT_PROVIDERS_AUTH', 'Golem15\User\Classes\Providers\Illuminate'),
         /*
         |--------------------------------------------------------------------------
         | Storage Provider

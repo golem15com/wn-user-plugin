@@ -20,6 +20,9 @@ class JwtAuthenticate extends Authenticate
             return response()->json(['error' => true, 'message' => 'Authentication error'], 500);
         }
 
+        // Set the default guard to 'api' so auth()->id() resolves the JWT user
+        auth()->shouldUse('api');
+
         return $next($request);
     }
 }

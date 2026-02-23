@@ -59,7 +59,7 @@ return [
     'providers' => [
         'users' => [
             'driver' => 'eloquent',
-            'model' => PixelPixel\User\Models\User::class,
+            'model' => Golem15\User\Models\User::class,
         ],
     ],
     /*

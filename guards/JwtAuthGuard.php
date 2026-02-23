@@ -218,7 +218,7 @@ class JwtAuthGuard implements Guard
     /**
      * Set the token.
      *
-     * @param \PixelPixel\User\Guards\Token|string $token
+     * @param \Golem15\User\Guards\Token|string $token
      *
      * @return self
      */
