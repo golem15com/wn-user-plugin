@@ -507,7 +507,7 @@ class ApiController
 
         $validator = Validator::make($request->all(), [
             'user_id' => 'required|integer|exists:users,id',
-            'pin' => 'required|string|size:4',
+            'pin' => 'nullable|string|size:4',
         ]);
 
         if ($validator->fails()) {
@@ -537,12 +537,17 @@ class ApiController
             ], 403);
         }
 
-        // Check if target user has a PIN set
+        // If target user has no PIN, allow switching (return token for parents)
         if (empty($targetUser->pin)) {
-            return response()->json([
-                'success' => false,
-                'error' => ['message' => 'No PIN set for this account'],
-            ], 400);
+            $responseData = [
+                'success' => true,
+                'message' => 'No PIN required',
+                'user' => $targetUser->getApiArray(),
+            ];
+            if ($targetUser->isParent()) {
+                $responseData['token'] = JWTAuth::fromUser($targetUser);
+            }
+            return response()->json($responseData);
         }
 
         // Check if PIN is locked
@@ -579,12 +584,16 @@ class ApiController
             ], 401);
         }
 
-        // Return success with target user data
-        return response()->json([
+        // Return success with target user data (include JWT for parents)
+        $responseData = [
             'success' => true,
             'message' => 'PIN verified',
             'user' => $targetUser->getApiArray(),
-        ]);
+        ];
+        if ($targetUser->isParent()) {
+            $responseData['token'] = JWTAuth::fromUser($targetUser);
+        }
+        return response()->json($responseData);
     }
 
     /**
