@@ -126,6 +126,14 @@ class Plugin extends PluginBase
          * Register console commands
          */
         $this->registerConsoleCommand('user:process-scheduled-deletions', \Golem15\User\Commands\ProcessScheduledDeletions::class);
+        $this->registerConsoleCommand('user:import-permissions', \Golem15\User\Commands\ImportPermissions::class);
+    }
+
+    public function registerFormWidgets()
+    {
+        return [
+            \Golem15\User\FormWidgets\FrontendPermissionEditor::class => 'frontendpermissioneditor',
+        ];
     }
 
     public function registerComponents()

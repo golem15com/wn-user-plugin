@@ -128,3 +128,7 @@
 "2.7.1":
     - "Fix device auth expires_at column auto-update issue."
     - v2.7.1/fix_device_auth_expires_at_column.php
+"2.8.0":
+    - "Add frontend permissions system with group-based resolution and permission registry."
+    - v2.8.0/create_frontend_permissions_table.php
+    - v2.8.0/add_permissions_to_user_groups.php
