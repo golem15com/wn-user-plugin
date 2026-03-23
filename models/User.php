@@ -124,6 +124,7 @@ class User extends UserBase implements JWTSubject
         'is_onboarded' => 'boolean',
         'oauth_profile_data' => 'array',
         'cookie_preferences' => 'array',
+        'ui_preferences' => 'array',
         // GDPR consent booleans
         'terms_accepted' => 'boolean',
         'privacy_accepted' => 'boolean',

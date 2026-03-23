@@ -132,3 +132,6 @@
     - "Add frontend permissions system with group-based resolution and permission registry."
     - v2.8.0/create_frontend_permissions_table.php
     - v2.8.0/add_permissions_to_user_groups.php
+"2.9.0":
+    - "Add ui_preferences JSON column for persistent UI settings (board view mode, etc.)."
+    - v2.9.0/add_ui_preferences_to_users.php
