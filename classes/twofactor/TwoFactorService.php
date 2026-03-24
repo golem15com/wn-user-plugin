@@ -298,7 +298,7 @@ class TwoFactorService
      */
     public function getWebAuthnRegistrationOptions(User $user): array
     {
-        $passwordlessEnabled = Settings::get('two_factor_passwordless_login', false);
+        $passwordlessEnabled = UserSettings::get('two_factor_passwordless_login', false);
         return $this->webAuthnMethod->getRegistrationOptions($user, $passwordlessEnabled);
     }
 
