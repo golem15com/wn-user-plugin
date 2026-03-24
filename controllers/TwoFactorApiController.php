@@ -61,14 +61,14 @@ class TwoFactorApiController
             ], 401);
         }
 
-        return response()->json($result);
+        return response()->json($this->withTrustedDevice($request, $result));
     }
 
     /**
      * Use a recovery code to bypass 2FA.
      *
      * POST /_user/api/v1/2fa/recovery
-     * Body: { challenge_token, code: "XXXXX-XXXXX" }
+     * Body: { challenge_token, code: "XXXXX-XXXXX", trust_device? }
      */
     public function recovery(Request $request): JsonResponse
     {
@@ -97,7 +97,7 @@ class TwoFactorApiController
             ], 401);
         }
 
-        return response()->json($result);
+        return response()->json($this->withTrustedDevice($request, $result));
     }
 
     /**
@@ -213,7 +213,7 @@ class TwoFactorApiController
             ], 401);
         }
 
-        return response()->json($result);
+        return response()->json($this->withTrustedDevice($request, $result));
     }
 
     // ========================================================================
@@ -383,9 +383,6 @@ class TwoFactorApiController
 
             $options = $this->service->getWebAuthnRegistrationOptions($user);
 
-            // Store challenge in session for verification
-            session(['webauthn_register_challenge' => $options['challenge']]);
-
             return response()->json($options);
         } catch (AuthenticationException|TokenBlacklistedException $e) {
             return response()->json(['error' => 'Unauthorized'], 401);
@@ -407,6 +404,7 @@ class TwoFactorApiController
                 'attestation' => 'required|array',
                 'attestation.clientDataJSON' => 'required|string',
                 'attestation.attestationObject' => 'required|string',
+                'challenge' => 'required|string',
                 'name' => 'nullable|string|max:255',
             ]);
 
@@ -417,19 +415,12 @@ class TwoFactorApiController
                 ], 422);
             }
 
-            $challenge = session('webauthn_register_challenge');
-            if (!$challenge) {
-                return response()->json(['error' => 'No registration challenge found. Request options first.'], 422);
-            }
-
             $credential = $this->service->registerWebAuthn(
                 $user,
                 $request->get('attestation'),
-                $challenge,
+                $request->get('challenge'),
                 $request->get('name')
             );
-
-            session()->forget('webauthn_register_challenge');
 
             return response()->json([
                 'message' => 'Security key registered successfully.',
@@ -528,8 +519,72 @@ class TwoFactorApiController
     }
 
     // ========================================================================
+    // Trusted Device Management Endpoints
+    // ========================================================================
+
+    /**
+     * Revoke a single trusted device.
+     *
+     * DELETE /_user/api/v1/2fa/trusted-devices/{id}
+     */
+    public function trustedDeviceRevoke(Request $request, int $id): JsonResponse
+    {
+        try {
+            $user = $this->authorize($request);
+            $revoked = $this->service->revokeTrustedDevice($id, $user);
+
+            if (!$revoked) {
+                return response()->json(['error' => 'Device not found.'], 404);
+            }
+
+            return response()->json([
+                'message' => 'Device revoked.',
+                'status' => $this->service->getStatus($user),
+            ]);
+        } catch (AuthenticationException|TokenBlacklistedException $e) {
+            return response()->json(['error' => 'Unauthorized'], 401);
+        }
+    }
+
+    /**
+     * Revoke all trusted devices.
+     *
+     * DELETE /_user/api/v1/2fa/trusted-devices
+     */
+    public function trustedDeviceRevokeAll(Request $request): JsonResponse
+    {
+        try {
+            $user = $this->authorize($request);
+            $this->service->revokeAllTrustedDevices($user);
+
+            return response()->json([
+                'message' => 'All trusted devices revoked.',
+                'status' => $this->service->getStatus($user),
+            ]);
+        } catch (AuthenticationException|TokenBlacklistedException $e) {
+            return response()->json(['error' => 'Unauthorized'], 401);
+        }
+    }
+
+    // ========================================================================
     // Helpers
     // ========================================================================
+
+    /**
+     * If trust_device is requested and trusted devices are enabled,
+     * create a trusted device token and add it to the result.
+     */
+    protected function withTrustedDevice(Request $request, array $result): array
+    {
+        if ($request->get('trust_device') && $this->service->isTrustedDeviceEnabled()) {
+            $user = UserModel::find($result['user']['id'] ?? null);
+            if ($user) {
+                $result['trusted_device_token'] = $this->service->createTrustedDeviceToken($user);
+            }
+        }
+
+        return $result;
+    }
 
     /**
      * Authorize the request via JWT and return the user.

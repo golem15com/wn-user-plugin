@@ -44,9 +44,18 @@ class ApiController
             JWTAuth::setToken($token);
             $userModel = JWTAuth::toUser();
 
-            // 2FA check: if enabled, invalidate JWT and return challenge
+            // 2FA check: if enabled, check for trusted device token or return challenge
             $twoFactorService = app(TwoFactorService::class);
             if ($twoFactorService->isEnabledForUser($userModel)) {
+                // Check if a valid trusted device token was provided
+                $trustedDeviceToken = $request->get('trusted_device_token');
+                if ($trustedDeviceToken && $twoFactorService->isTrustedDeviceEnabled()
+                    && $twoFactorService->checkTrustedDeviceToken($userModel->id, $trustedDeviceToken)) {
+                    // Trusted device is valid, skip 2FA
+                    event('golem15.user.login', [$userModel]);
+                    return response()->json(['token' => $token, 'user' => $userModel->getApiArray()]);
+                }
+
                 JWTAuth::invalidate($token);
                 $challenge = $twoFactorService->createChallenge(
                     $userModel, $request->ip(), $request->userAgent()

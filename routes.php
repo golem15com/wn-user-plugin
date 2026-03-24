@@ -348,5 +348,17 @@ Route::group(
                 return (new \Golem15\User\Controllers\TwoFactorApiController())->regenerateRecoveryCodes($request);
             }
         );
+        Route::delete(
+            'trusted-devices/{id}',
+            static function (Request $request, $id) {
+                return (new \Golem15\User\Controllers\TwoFactorApiController())->trustedDeviceRevoke($request, (int)$id);
+            }
+        )->where('id', '[0-9]+');
+        Route::delete(
+            'trusted-devices',
+            static function (Request $request) {
+                return (new \Golem15\User\Controllers\TwoFactorApiController())->trustedDeviceRevokeAll($request);
+            }
+        );
     }
 );

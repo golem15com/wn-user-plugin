@@ -478,6 +478,39 @@ class TwoFactorService
     }
 
     /**
+     * Create a trusted device record and return the token (for API/SPA use without cookies).
+     */
+    public function createTrustedDeviceToken(User $user): string
+    {
+        $ttlDays = $this->getTrustedDeviceTtlDays();
+        $device = TrustedDevice::createForUser(
+            $user,
+            $ttlDays,
+            request()->userAgent(),
+            request()->ip()
+        );
+
+        return $device->token;
+    }
+
+    /**
+     * Validate a trusted device token for a user (token-based, no cookie).
+     */
+    public function checkTrustedDeviceToken(int $userId, string $token): bool
+    {
+        $device = TrustedDevice::findValidToken($token);
+        if (!$device || $device->user_id !== $userId) {
+            return false;
+        }
+
+        $device->last_used_at = now();
+        $device->ip_address = request()->ip();
+        $device->save();
+
+        return true;
+    }
+
+    /**
      * Revoke a single trusted device.
      */
     public function revokeTrustedDevice(int $deviceId, User $user): bool
