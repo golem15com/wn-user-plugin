@@ -67,6 +67,8 @@ class Plugin extends PluginBase
         );
         $this->app->bind(Factory::class, AuthManager::class);
 
+        $this->app->singleton(\Golem15\User\Classes\TwoFactor\TwoFactorService::class);
+
         App::singleton('redirect', function ($app) {
             // overrides with our own extended version of Redirector to support
             // seperate url.intended session variable for frontend
@@ -145,6 +147,7 @@ class Plugin extends PluginBase
             \Golem15\User\Components\DeviceAuth::class => 'deviceAuth',
             \Golem15\User\Components\SocialAuth::class => 'socialAuth',
             \Golem15\User\Components\CookieConsent::class => 'cookieConsent',
+            \Golem15\User\Components\TwoFactor::class => 'twoFactor',
         ];
     }
 
@@ -223,6 +226,7 @@ class Plugin extends PluginBase
             'golem15.user::mail.new_user',
             'golem15.user::mail.reactivate',
             'golem15.user::mail.invite',
+            'golem15.user::mail.two_factor_code',
         ];
     }
 
@@ -314,6 +318,7 @@ class Plugin extends PluginBase
                 $model->addDynamicMethod(
                     'getApiArray',
                     static function () use ($model) {
+                        $twoFactorService = app(\Golem15\User\Classes\TwoFactor\TwoFactorService::class);
                         return [
                             'id' => $model->id,
                             'name' => $model->name,
@@ -329,6 +334,8 @@ class Plugin extends PluginBase
                             'is_child' => $model->isChild(),
                             'family_id' => $model->family_id,
                             'is_onboarded' => (bool) $model->is_onboarded,
+                            'two_factor_enabled' => $twoFactorService->isEnabledForUser($model),
+                            'two_factor_methods' => $twoFactorService->getEnabledMethods($model),
                         ];
                     }
                 );

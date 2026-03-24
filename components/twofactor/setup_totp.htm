@@ -1,0 +1,41 @@
+<div id="totp-setup" class="totp-setup">
+    <h4>{{ 'Set up Authenticator App'|_ }}</h4>
+
+    {% if totpSetupData %}
+        <p>{{ 'Scan this QR code with your authenticator app (Google Authenticator, Microsoft Authenticator, 1Password, etc.).'|_ }}</p>
+
+        <div class="totp-qr-code">
+            {{ totpSetupData.qr_code_svg|raw }}
+        </div>
+
+        <p class="text-muted">{{ "Can't scan? Enter this code manually:"|_ }}</p>
+        <code class="totp-secret">{{ totpSetupData.secret }}</code>
+
+        <input type="hidden" name="totp_secret" value="{{ totpSetupData.secret }}" />
+
+        <div class="form-group" style="margin-top: 15px;">
+            <label>{{ 'Enter the 6-digit code from your app to confirm'|_ }}</label>
+            <input
+                type="text"
+                name="totp_code"
+                class="form-control"
+                maxlength="6"
+                inputmode="numeric"
+                pattern="[0-9]*"
+                autocomplete="one-time-code"
+                autofocus
+                placeholder="000000"
+            />
+        </div>
+
+        <button
+            type="button"
+            class="btn btn-primary"
+            data-request="onConfirmTotp"
+        >
+            {{ 'Confirm & Enable'|_ }}
+        </button>
+    {% else %}
+        <p class="text-danger">{{ 'Failed to generate setup data. Please try again.'|_ }}</p>
+    {% endif %}
+</div>

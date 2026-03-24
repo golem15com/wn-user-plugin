@@ -1,0 +1,15 @@
+<div class="recovery-codes">
+    {% if recoveryCodes is not empty %}
+        <div class="alert alert-warning">
+            <strong>{{ 'Save these codes!'|_ }}</strong>
+            {{ 'These recovery codes will not be shown again. Store them in a safe place.'|_ }}
+        </div>
+        <div class="recovery-codes-list">
+            {% for code in recoveryCodes %}
+                <code class="recovery-code">{{ code }}</code>
+            {% endfor %}
+        </div>
+    {% else %}
+        <p class="text-muted">{{ 'No recovery codes to display.'|_ }}</p>
+    {% endif %}
+</div>

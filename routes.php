@@ -12,6 +12,10 @@ RateLimiter::for('pin-login', function (Request $request) {
     return Limit::perMinute(10)->by($request->ip());
 });
 
+RateLimiter::for('2fa-verify', function (Request $request) {
+    return Limit::perMinute(10)->by($request->ip());
+});
+
 Route::group(
     ['prefix' => '/_user/api/v1', 'middleware' => ['throttle:user-api', 'bindings']],
     static function () {
@@ -224,5 +228,125 @@ Route::middleware('jwt.auth')->get(
             ]);
 
         return response()->json(['data' => $users]);
+    }
+);
+
+/*
+|--------------------------------------------------------------------------
+| Two-Factor Authentication Routes
+|--------------------------------------------------------------------------
+|
+| Challenge routes (unauthenticated, during login flow) and
+| management routes (authenticated via JWT).
+|
+*/
+
+// 2FA Challenge Routes (unauthenticated - during login flow)
+Route::group(
+    ['prefix' => '/_user/api/v1/2fa', 'middleware' => ['throttle:2fa-verify', 'bindings']],
+    static function () {
+        Route::post(
+            'verify',
+            static function (Request $request) {
+                return (new \Golem15\User\Controllers\TwoFactorApiController())->verify($request);
+            }
+        );
+        Route::post(
+            'recovery',
+            static function (Request $request) {
+                return (new \Golem15\User\Controllers\TwoFactorApiController())->recovery($request);
+            }
+        );
+        Route::post(
+            'email/send',
+            static function (Request $request) {
+                return (new \Golem15\User\Controllers\TwoFactorApiController())->sendEmailCode($request);
+            }
+        );
+        Route::post(
+            'webauthn/options',
+            static function (Request $request) {
+                return (new \Golem15\User\Controllers\TwoFactorApiController())->webauthnOptions($request);
+            }
+        );
+        Route::post(
+            'webauthn/verify',
+            static function (Request $request) {
+                return (new \Golem15\User\Controllers\TwoFactorApiController())->webauthnVerify($request);
+            }
+        );
+    }
+);
+
+// 2FA Management Routes (authenticated via JWT)
+Route::group(
+    ['prefix' => '/_user/api/v1/2fa', 'middleware' => ['jwt.auth', 'bindings']],
+    static function () {
+        Route::get(
+            'status',
+            static function (Request $request) {
+                return (new \Golem15\User\Controllers\TwoFactorApiController())->status($request);
+            }
+        );
+        Route::post(
+            'totp/setup',
+            static function (Request $request) {
+                return (new \Golem15\User\Controllers\TwoFactorApiController())->totpSetup($request);
+            }
+        );
+        Route::post(
+            'totp/confirm',
+            static function (Request $request) {
+                return (new \Golem15\User\Controllers\TwoFactorApiController())->totpConfirm($request);
+            }
+        );
+        Route::delete(
+            'totp',
+            static function (Request $request) {
+                return (new \Golem15\User\Controllers\TwoFactorApiController())->totpDisable($request);
+            }
+        );
+        Route::post(
+            'email/enable',
+            static function (Request $request) {
+                return (new \Golem15\User\Controllers\TwoFactorApiController())->emailEnable($request);
+            }
+        );
+        Route::delete(
+            'email',
+            static function (Request $request) {
+                return (new \Golem15\User\Controllers\TwoFactorApiController())->emailDisable($request);
+            }
+        );
+        Route::post(
+            'webauthn/register/options',
+            static function (Request $request) {
+                return (new \Golem15\User\Controllers\TwoFactorApiController())->webauthnRegisterOptions($request);
+            }
+        );
+        Route::post(
+            'webauthn/register',
+            static function (Request $request) {
+                return (new \Golem15\User\Controllers\TwoFactorApiController())->webauthnRegister($request);
+            }
+        );
+        Route::delete(
+            'webauthn/{id}',
+            static function (Request $request, $id) {
+                return (new \Golem15\User\Controllers\TwoFactorApiController())->webauthnRemove($request, (int)$id);
+            }
+        )->where('id', '[0-9]+');
+        Route::get(
+            'recovery-codes',
+            static function (Request $request) {
+                return (new \Golem15\User\Controllers\TwoFactorApiController())->recoveryCodes($request);
+            }
+        );
+        Route::post(
+            'recovery-codes/regenerate',
+            static function (Request $request) {
+                return (new \Golem15\User\Controllers\TwoFactorApiController())->regenerateRecoveryCodes($request);
+            }
+        );
     }
 );

@@ -26,6 +26,10 @@ class Settings extends Model
     const REMEMBER_NEVER = 'never';
     const REMEMBER_ASK = 'ask';
 
+    const TWO_FACTOR_DISABLED = 'disabled';
+    const TWO_FACTOR_OPTIONAL = 'optional';
+    const TWO_FACTOR_ENFORCED = 'enforced';
+
     public function initSettingsData()
     {
         $this->require_activation = config('golem15.user::requireActivation', true);
@@ -36,6 +40,11 @@ class Settings extends Model
         $this->login_attribute = config('golem15.user::loginAttribute', self::LOGIN_EMAIL);
         $this->remember_login = config('golem15.user::rememberLogin', self::REMEMBER_ALWAYS);
         $this->use_register_throttle = config('golem15.user::useRegisterThrottle', true);
+        $this->two_factor_mode = config('golem15.user::twoFactorMode', self::TWO_FACTOR_DISABLED);
+        $this->two_factor_available_methods = config('golem15.user::twoFactorAvailableMethods', ['totp', 'email']);
+        $this->two_factor_email_code_ttl = config('golem15.user::twoFactorEmailCodeTtl', 10);
+        $this->two_factor_challenge_ttl = config('golem15.user::twoFactorChallengeTtl', 5);
+        $this->two_factor_enforce_groups = config('golem15.user::twoFactorEnforceGroups', []);
     }
 
     public function getActivateModeOptions()
@@ -92,6 +101,47 @@ class Settings extends Model
     {
         if (!$value) {
             return self::REMEMBER_ALWAYS;
+        }
+
+        return $value;
+    }
+
+    public function getTwoFactorModeOptions()
+    {
+        return [
+            self::TWO_FACTOR_DISABLED => [
+                'golem15.user::lang.settings.two_factor_mode_disabled',
+                'golem15.user::lang.settings.two_factor_mode_disabled_comment',
+            ],
+            self::TWO_FACTOR_OPTIONAL => [
+                'golem15.user::lang.settings.two_factor_mode_optional',
+                'golem15.user::lang.settings.two_factor_mode_optional_comment',
+            ],
+            self::TWO_FACTOR_ENFORCED => [
+                'golem15.user::lang.settings.two_factor_mode_enforced',
+                'golem15.user::lang.settings.two_factor_mode_enforced_comment',
+            ],
+        ];
+    }
+
+    public function getTwoFactorAvailableMethodsOptions()
+    {
+        return [
+            'totp' => 'golem15.user::lang.settings.two_factor_method_totp',
+            'webauthn' => 'golem15.user::lang.settings.two_factor_method_webauthn',
+            'email' => 'golem15.user::lang.settings.two_factor_method_email',
+        ];
+    }
+
+    public function getTwoFactorEnforceGroupsOptions()
+    {
+        return \Golem15\User\Models\UserGroup::lists('name', 'code');
+    }
+
+    public function getTwoFactorModeAttribute($value)
+    {
+        if (!$value) {
+            return self::TWO_FACTOR_DISABLED;
         }
 
         return $value;

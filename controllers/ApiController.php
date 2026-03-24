@@ -19,6 +19,7 @@ use Illuminate\Validation\ValidationException;
 use PHPOpenSourceSaver\JWTAuth\Contracts\JWTSubject;
 use PHPOpenSourceSaver\JWTAuth\Exceptions\TokenBlacklistedException;
 use PHPOpenSourceSaver\JWTAuth\Facades\JWTAuth;
+use Golem15\User\Classes\TwoFactor\TwoFactorService;
 use Winter\Storm\Exception\ApplicationException;
 use Winter\Storm\Support\Facades\Event;
 
@@ -42,6 +43,22 @@ class ApiController
             }
             JWTAuth::setToken($token);
             $userModel = JWTAuth::toUser();
+
+            // 2FA check: if enabled, invalidate JWT and return challenge
+            $twoFactorService = app(TwoFactorService::class);
+            if ($twoFactorService->isEnabledForUser($userModel)) {
+                JWTAuth::invalidate($token);
+                $challenge = $twoFactorService->createChallenge(
+                    $userModel, $request->ip(), $request->userAgent()
+                );
+                return response()->json([
+                    'two_factor_required' => true,
+                    'challenge_token' => $challenge->token,
+                    'available_methods' => $twoFactorService->getEnabledMethods($userModel),
+                    'expires_at' => $challenge->expires_at->toIso8601String(),
+                ]);
+            }
+
             event('golem15.user.login', [$userModel]);
             return response()->json(['token' => $token, 'user' => $userModel->getApiArray()]);
         } catch (AuthException $e) {

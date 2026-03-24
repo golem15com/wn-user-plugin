@@ -135,3 +135,9 @@
 "2.9.0":
     - "Add ui_preferences JSON column for persistent UI settings (board view mode, etc.)."
     - v2.9.0/add_ui_preferences_to_users.php
+"3.0.0":
+    - "Add two-factor authentication (TOTP, WebAuthn/FIDO2, Email 2FA, recovery codes)."
+    - v3.0.0/create_two_factor_methods_table.php
+    - v3.0.0/create_webauthn_credentials_table.php
+    - v3.0.0/create_two_factor_recovery_codes_table.php
+    - v3.0.0/create_two_factor_challenges_table.php

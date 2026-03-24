@@ -15,6 +15,7 @@ use ApplicationException;
 use Winter\Storm\Auth\AuthException;
 use Cms\Classes\Page;
 use Cms\Classes\ComponentBase;
+use Golem15\User\Classes\TwoFactor\TwoFactorService;
 use Golem15\User\Models\User as UserModel;
 use Golem15\User\Models\Settings as UserSettings;
 use Exception;
@@ -281,6 +282,21 @@ class Account extends ComponentBase
             Event::fire('golem15.user.beforeAuthenticate', [$this, $credentials]);
 
             $user = Auth::authenticate($credentials, $remember);
+
+            // 2FA check: if enabled, log out and show 2FA verification form
+            $twoFactorService = app(TwoFactorService::class);
+            if ($twoFactorService->isEnabledForUser($user)) {
+                Auth::logout();
+                $challenge = $twoFactorService->createChallenge(
+                    $user, Request::ip(), Request::userAgent()
+                );
+                session(['2fa_challenge_token' => $challenge->token]);
+                session(['2fa_remember' => $remember]);
+                $this->page['challengeToken'] = $challenge->token;
+                $this->page['availableMethods'] = $twoFactorService->getEnabledMethods($user);
+                return ['#account-form' => $this->renderPartial('account/two_factor')];
+            }
+
             if ($user->isBanned()) {
                 Auth::logout();
                 throw new AuthException(/*Sorry, this user is currently not activated. Please contact us for further assistance.*/'golem15.user::lang.account.banned');

@@ -67,3 +67,49 @@ tabs:
             label: golem15.user::lang.settings.activate_mode
             type: radio
             tab: golem15.user::lang.settings.activation_tab
+
+        # Two-Factor Authentication Mode
+        two_factor_mode:
+            span: left
+            label: golem15.user::lang.settings.two_factor_mode
+            commentAbove: golem15.user::lang.settings.two_factor_mode_comment
+            type: radio
+            tab: golem15.user::lang.settings.two_factor_tab
+
+        # Available 2FA Methods
+        two_factor_available_methods:
+            span: right
+            label: golem15.user::lang.settings.two_factor_available_methods
+            comment: golem15.user::lang.settings.two_factor_available_methods_comment
+            type: checkboxlist
+            tab: golem15.user::lang.settings.two_factor_tab
+
+        # Email Code TTL
+        two_factor_email_code_ttl:
+            span: left
+            label: golem15.user::lang.settings.two_factor_email_code_ttl
+            comment: golem15.user::lang.settings.two_factor_email_code_ttl_comment
+            type: number
+            default: 10
+            tab: golem15.user::lang.settings.two_factor_tab
+
+        # Challenge TTL
+        two_factor_challenge_ttl:
+            span: right
+            label: golem15.user::lang.settings.two_factor_challenge_ttl
+            comment: golem15.user::lang.settings.two_factor_challenge_ttl_comment
+            type: number
+            default: 5
+            tab: golem15.user::lang.settings.two_factor_tab
+
+        # Enforce for Groups
+        two_factor_enforce_groups:
+            span: full
+            label: golem15.user::lang.settings.two_factor_enforce_groups
+            comment: golem15.user::lang.settings.two_factor_enforce_groups_comment
+            type: checkboxlist
+            tab: golem15.user::lang.settings.two_factor_tab
+            trigger:
+                action: show
+                field: two_factor_mode
+                condition: value[enforced]

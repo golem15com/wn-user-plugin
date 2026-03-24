@@ -1,0 +1,193 @@
+<div id="two-factor-manage" class="two-factor-manage">
+    {% if user %}
+        <h3>{{ 'Two-Factor Authentication'|_ }}</h3>
+
+        {% if twoFactorStatus.enabled %}
+            <p class="text-success">{{ 'Two-factor authentication is enabled.'|_ }}</p>
+        {% else %}
+            <p>{{ 'Add an extra layer of security to your account.'|_ }}</p>
+        {% endif %}
+
+        {% set availableMethods = twoFactorStatus.available_methods %}
+        {% set enabledMethods = twoFactorStatus.methods %}
+
+        {% if 'totp' in availableMethods %}
+        <div class="two-factor-section">
+            <h4>{{ 'Authenticator App'|_ }}</h4>
+            <p>{{ 'Use an app like Google Authenticator or 1Password to generate verification codes.'|_ }}</p>
+            {% if 'totp' in enabledMethods %}
+                <span class="label label-success">{{ 'Enabled'|_ }}</span>
+                <button
+                    type="button"
+                    class="btn btn-danger btn-sm"
+                    data-request="onDisableMethod"
+                    data-request-data="method: 'totp'"
+                    data-request-confirm="{{ 'Are you sure you want to disable the authenticator app?'|_ }}"
+                >
+                    {{ 'Disable'|_ }}
+                </button>
+            {% else %}
+                <button
+                    type="button"
+                    class="btn btn-primary btn-sm"
+                    data-request="onSetupTotp"
+                >
+                    {{ 'Set up'|_ }}
+                </button>
+            {% endif %}
+        </div>
+        {% endif %}
+
+        {% if 'email' in availableMethods %}
+        <div class="two-factor-section">
+            <h4>{{ 'Email Verification'|_ }}</h4>
+            <p>{{ 'Receive a verification code via email.'|_ }}</p>
+            {% if 'email' in enabledMethods %}
+                <span class="label label-success">{{ 'Enabled'|_ }}</span>
+                <button
+                    type="button"
+                    class="btn btn-danger btn-sm"
+                    data-request="onDisableMethod"
+                    data-request-data="method: 'email'"
+                    data-request-confirm="{{ 'Are you sure you want to disable email verification?'|_ }}"
+                >
+                    {{ 'Disable'|_ }}
+                </button>
+            {% else %}
+                <button
+                    type="button"
+                    class="btn btn-primary btn-sm"
+                    data-request="onEnableEmailTwoFactor"
+                >
+                    {{ 'Enable'|_ }}
+                </button>
+            {% endif %}
+        </div>
+        {% endif %}
+
+        {% if 'webauthn' in availableMethods %}
+        <div class="two-factor-section">
+            <h4>{{ 'Security Keys'|_ }}</h4>
+            <p>{{ 'Use a physical security key like YubiKey or a passkey from 1Password.'|_ }}</p>
+
+            {% if twoFactorStatus.webauthn_credentials is not empty %}
+            <ul class="webauthn-credentials">
+                {% for credential in twoFactorStatus.webauthn_credentials %}
+                <li>
+                    <strong>{{ credential.name }}</strong>
+                    <span class="text-muted">{{ 'Added'|_ }} {{ credential.created_at|date('M d, Y') }}</span>
+                    <button
+                        type="button"
+                        class="btn btn-danger btn-xs"
+                        data-request="onRemoveWebAuthn"
+                        data-request-data="credential_id: {{ credential.id }}"
+                        data-request-confirm="{{ 'Remove this security key?'|_ }}"
+                    >
+                        {{ 'Remove'|_ }}
+                    </button>
+                </li>
+                {% endfor %}
+            </ul>
+            {% endif %}
+
+            <button
+                type="button"
+                class="btn btn-primary btn-sm"
+                id="webauthn-register-btn"
+                onclick="startWebAuthnRegistration()"
+            >
+                {{ 'Add Security Key'|_ }}
+            </button>
+            <div class="form-group" style="margin-top: 5px;">
+                <input type="text" name="key_name" class="form-control" placeholder="{{ 'Key name (e.g., YubiKey 5)'|_ }}" id="webauthn-key-name" />
+            </div>
+        </div>
+        {% endif %}
+
+        {% if twoFactorStatus.enabled %}
+        <div class="two-factor-section">
+            <h4>{{ 'Recovery Codes'|_ }}</h4>
+            <p>{{ 'Recovery codes let you access your account if you lose your device.'|_ }}</p>
+            <p>{{ 'Remaining codes:'|_ }} <strong>{{ twoFactorStatus.recovery_codes_remaining }}</strong></p>
+            <div id="recovery-codes-container"></div>
+            <div class="form-group">
+                <input type="password" name="password" class="form-control" placeholder="{{ 'Enter your password to regenerate'|_ }}" />
+            </div>
+            <button
+                type="button"
+                class="btn btn-default btn-sm"
+                data-request="onRegenerateRecoveryCodes"
+                data-request-confirm="{{ 'This will invalidate all existing recovery codes. Continue?'|_ }}"
+            >
+                {{ 'Regenerate Recovery Codes'|_ }}
+            </button>
+        </div>
+        {% endif %}
+
+        <div id="two-factor-setup"></div>
+    {% else %}
+        <p>{{ 'You must be logged in to manage two-factor authentication.'|_ }}</p>
+    {% endif %}
+</div>
+
+<script>
+function startWebAuthnRegistration() {
+    var btn = document.getElementById('webauthn-register-btn');
+    var keyName = document.getElementById('webauthn-key-name').value || 'Security Key';
+    btn.disabled = true;
+    btn.textContent = '{{ "Waiting for security key..."|_ }}';
+
+    oc.request('#two-factor-manage', 'onRegisterWebAuthnOptions', {
+        success: function(data) {
+            var options = data.options;
+
+            // Decode challenge and user.id
+            options.publicKey.challenge = base64UrlDecode(options.publicKey.challenge);
+            options.publicKey.user.id = base64UrlDecode(options.publicKey.user.id);
+            if (options.publicKey.excludeCredentials) {
+                options.publicKey.excludeCredentials.forEach(function(cred) {
+                    cred.id = base64UrlDecode(cred.id);
+                });
+            }
+
+            navigator.credentials.create(options).then(function(credential) {
+                var attestationData = {
+                    clientDataJSON: base64UrlEncode(credential.response.clientDataJSON),
+                    attestationObject: base64UrlEncode(credential.response.attestationObject)
+                };
+
+                if (credential.response.getTransports) {
+                    attestationData.transports = credential.response.getTransports();
+                }
+
+                oc.request('#two-factor-manage', 'onRegisterWebAuthn', {
+                    data: {
+                        attestation: JSON.stringify(attestationData),
+                        key_name: keyName
+                    }
+                });
+            }).catch(function(err) {
+                btn.disabled = false;
+                btn.textContent = '{{ "Add Security Key"|_ }}';
+                console.error('WebAuthn registration error:', err);
+            });
+        }
+    });
+}
+
+function base64UrlDecode(str) {
+    str = str.replace(/-/g, '+').replace(/_/g, '/');
+    while (str.length % 4) str += '=';
+    var bin = atob(str);
+    var arr = new Uint8Array(bin.length);
+    for (var i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
+    return arr.buffer;
+}
+
+function base64UrlEncode(buffer) {
+    var bytes = new Uint8Array(buffer);
+    var str = '';
+    for (var i = 0; i < bytes.length; i++) str += String.fromCharCode(bytes[i]);
+    return btoa(str).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+</script>

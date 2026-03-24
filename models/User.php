@@ -49,7 +49,10 @@ class User extends UserBase implements JWTSubject
     ];
 
     public $hasMany = [
-        'consentAudits' => [ConsentAudit::class, 'key' => 'user_id']
+        'consentAudits' => [ConsentAudit::class, 'key' => 'user_id'],
+        'twoFactorMethods' => [TwoFactorMethod::class, 'key' => 'user_id'],
+        'webauthnCredentials' => [WebAuthnCredential::class, 'key' => 'user_id'],
+        'twoFactorRecoveryCodes' => [TwoFactorRecoveryCode::class, 'key' => 'user_id'],
     ];
 
     public $attachOne = [
@@ -1356,6 +1359,24 @@ class User extends UserBase implements JWTSubject
                 'total_quests_completed' => $this->quests()->wherePivot('status', 'completed')->count(),
                 'total_rewards_purchased' => $this->rewards()->count(),
                 'total_achievements_unlocked' => $this->achievements()->wherePivotNotNull('unlocked_at')->count(),
+            ],
+
+            'two_factor_authentication' => [
+                'methods' => $this->twoFactorMethods()->where('is_enabled', true)->get()->map(function ($method) {
+                    return [
+                        'method' => $method->method,
+                        'enabled_at' => $method->created_at?->toIso8601String(),
+                        'last_used_at' => $method->last_used_at?->toIso8601String(),
+                    ];
+                }),
+                'webauthn_credentials' => $this->webauthnCredentials()->where('is_enabled', true)->get()->map(function ($cred) {
+                    return [
+                        'name' => $cred->name,
+                        'registered_at' => $cred->created_at?->toIso8601String(),
+                        'last_used_at' => $cred->last_used_at?->toIso8601String(),
+                    ];
+                }),
+                'recovery_codes_remaining' => $this->twoFactorRecoveryCodes()->whereNull('used_at')->count(),
             ],
         ];
 

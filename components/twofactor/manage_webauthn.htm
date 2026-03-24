@@ -1,0 +1,38 @@
+<div id="webauthn-manage" class="webauthn-manage">
+    <h4>{{ 'Security Keys'|_ }}</h4>
+
+    {% if twoFactorStatus.webauthn_credentials is not empty %}
+    <table class="table">
+        <thead>
+            <tr>
+                <th>{{ 'Name'|_ }}</th>
+                <th>{{ 'Added'|_ }}</th>
+                <th>{{ 'Last Used'|_ }}</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for credential in twoFactorStatus.webauthn_credentials %}
+            <tr>
+                <td>{{ credential.name }}</td>
+                <td>{{ credential.created_at|date('M d, Y') }}</td>
+                <td>{{ credential.last_used_at ? credential.last_used_at|date('M d, Y') : 'Never'|_ }}</td>
+                <td>
+                    <button
+                        type="button"
+                        class="btn btn-danger btn-xs"
+                        data-request="onRemoveWebAuthn"
+                        data-request-data="credential_id: {{ credential.id }}"
+                        data-request-confirm="{{ 'Remove this security key?'|_ }}"
+                    >
+                        {{ 'Remove'|_ }}
+                    </button>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+        <p class="text-muted">{{ 'No security keys registered.'|_ }}</p>
+    {% endif %}
+</div>

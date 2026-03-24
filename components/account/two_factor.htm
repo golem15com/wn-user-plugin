@@ -1,0 +1,168 @@
+<div id="two-factor-verify" class="two-factor-verify">
+    <h3>{{ 'Two-Factor Authentication'|_ }}</h3>
+    <p>{{ 'Enter your verification code to complete sign in.'|_ }}</p>
+
+    <input type="hidden" name="challenge_token" value="{{ challengeToken }}" />
+
+    {% if 'totp' in availableMethods %}
+    <div class="two-factor-method" data-method="totp">
+        <h4>{{ 'Authenticator App'|_ }}</h4>
+        <div class="form-group">
+            <label for="totp-code">{{ 'Enter code from your authenticator app'|_ }}</label>
+            <input
+                type="text"
+                id="totp-code"
+                name="code"
+                class="form-control"
+                maxlength="6"
+                inputmode="numeric"
+                pattern="[0-9]*"
+                autocomplete="one-time-code"
+                autofocus
+                placeholder="000000"
+            />
+        </div>
+        <button
+            type="button"
+            class="btn btn-primary"
+            data-request="twoFactor::onVerifyTwoFactor"
+            data-request-data="method: 'totp'"
+        >
+            {{ 'Verify'|_ }}
+        </button>
+    </div>
+    {% endif %}
+
+    {% if 'email' in availableMethods %}
+    <div class="two-factor-method" data-method="email">
+        <h4>{{ 'Email Verification'|_ }}</h4>
+        <button
+            type="button"
+            class="btn btn-default"
+            data-request="twoFactor::onSendEmailCode"
+        >
+            {{ 'Send code to my email'|_ }}
+        </button>
+        <div class="form-group" style="margin-top: 10px;">
+            <label for="email-code">{{ 'Enter code from your email'|_ }}</label>
+            <input
+                type="text"
+                id="email-code"
+                name="code"
+                class="form-control"
+                maxlength="6"
+                inputmode="numeric"
+                pattern="[0-9]*"
+                autocomplete="one-time-code"
+                placeholder="000000"
+            />
+        </div>
+        <button
+            type="button"
+            class="btn btn-primary"
+            data-request="twoFactor::onVerifyTwoFactor"
+            data-request-data="method: 'email'"
+        >
+            {{ 'Verify'|_ }}
+        </button>
+    </div>
+    {% endif %}
+
+    {% if 'webauthn' in availableMethods %}
+    <div class="two-factor-method" data-method="webauthn">
+        <h4>{{ 'Security Key'|_ }}</h4>
+        <p>{{ 'Insert your security key and press the button when it lights up.'|_ }}</p>
+        <button
+            type="button"
+            class="btn btn-primary"
+            id="webauthn-verify-btn"
+            onclick="startWebAuthnVerification('{{ challengeToken }}')"
+        >
+            {{ 'Use Security Key'|_ }}
+        </button>
+    </div>
+    {% endif %}
+
+    <hr />
+
+    <div class="two-factor-recovery">
+        <h4>{{ 'Recovery Code'|_ }}</h4>
+        <p>{{ "Can't access your authenticator? Use a recovery code."|_ }}</p>
+        <div class="form-group">
+            <input
+                type="text"
+                name="recovery_code"
+                class="form-control"
+                placeholder="XXXXX-XXXXX"
+            />
+        </div>
+        <button
+            type="button"
+            class="btn btn-default"
+            data-request="twoFactor::onUseRecoveryCode"
+        >
+            {{ 'Use Recovery Code'|_ }}
+        </button>
+    </div>
+</div>
+
+<script>
+function startWebAuthnVerification(challengeToken) {
+    var btn = document.getElementById('webauthn-verify-btn');
+    btn.disabled = true;
+    btn.textContent = '{{ "Waiting for security key..."|_ }}';
+
+    oc.request('#two-factor-verify', 'twoFactor::onGetWebAuthnOptions', {
+        data: { challenge_token: challengeToken },
+        success: function(data) {
+            var options = data.options;
+
+            // Decode challenge
+            options.publicKey.challenge = base64UrlDecode(options.publicKey.challenge);
+            if (options.publicKey.allowCredentials) {
+                options.publicKey.allowCredentials.forEach(function(cred) {
+                    cred.id = base64UrlDecode(cred.id);
+                });
+            }
+
+            navigator.credentials.get(options).then(function(assertion) {
+                var assertionData = {
+                    id: base64UrlEncode(assertion.rawId),
+                    response: {
+                        clientDataJSON: base64UrlEncode(assertion.response.clientDataJSON),
+                        authenticatorData: base64UrlEncode(assertion.response.authenticatorData),
+                        signature: base64UrlEncode(assertion.response.signature)
+                    }
+                };
+
+                oc.request('#two-factor-verify', 'twoFactor::onVerifyWebAuthn', {
+                    data: {
+                        challenge_token: challengeToken,
+                        assertion: JSON.stringify(assertionData)
+                    }
+                });
+            }).catch(function(err) {
+                btn.disabled = false;
+                btn.textContent = '{{ "Use Security Key"|_ }}';
+                alert('{{ "Security key verification failed. Please try again."|_ }}');
+            });
+        }
+    });
+}
+
+function base64UrlDecode(str) {
+    str = str.replace(/-/g, '+').replace(/_/g, '/');
+    while (str.length % 4) str += '=';
+    var bin = atob(str);
+    var arr = new Uint8Array(bin.length);
+    for (var i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
+    return arr.buffer;
+}
+
+function base64UrlEncode(buffer) {
+    var bytes = new Uint8Array(buffer);
+    var str = '';
+    for (var i = 0; i < bytes.length; i++) str += String.fromCharCode(bytes[i]);
+    return btoa(str).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+</script>

@@ -1,0 +1,56 @@
+<div id="two-factor-verify-page" class="two-factor-verify">
+    <h3>{{ 'Two-Factor Authentication'|_ }}</h3>
+    <p>{{ 'Enter your verification code to complete sign in.'|_ }}</p>
+
+    {% set challengeToken = challengeToken|default(this.param.challenge_token) %}
+
+    {% if not challengeToken %}
+        <p class="text-danger">{{ 'No active verification challenge. Please log in again.'|_ }}</p>
+    {% else %}
+        <input type="hidden" name="challenge_token" value="{{ challengeToken }}" />
+
+        <div class="form-group">
+            <label>{{ 'Verification Code'|_ }}</label>
+            <input
+                type="text"
+                name="code"
+                class="form-control"
+                maxlength="6"
+                inputmode="numeric"
+                pattern="[0-9]*"
+                autocomplete="one-time-code"
+                autofocus
+                placeholder="000000"
+            />
+        </div>
+
+        <div class="form-group">
+            <button
+                type="button"
+                class="btn btn-primary"
+                data-request="onVerifyTwoFactor"
+                data-request-data="method: 'totp'"
+            >
+                {{ 'Verify'|_ }}
+            </button>
+        </div>
+
+        <hr />
+        <p class="text-muted">
+            {{ "Can't access your authenticator?"| _ }}
+            <a href="javascript:;" data-request="onSendEmailCode">{{ 'Send code via email'|_ }}</a>
+            {{ 'or use a'|_ }}
+            <a href="javascript:;" onclick="document.getElementById('recovery-section').style.display='block'">{{ 'recovery code'|_ }}</a>.
+        </p>
+
+        <div id="recovery-section" style="display: none;">
+            <div class="form-group">
+                <label>{{ 'Recovery Code'|_ }}</label>
+                <input type="text" name="recovery_code" class="form-control" placeholder="XXXXX-XXXXX" />
+            </div>
+            <button type="button" class="btn btn-default" data-request="onUseRecoveryCode">
+                {{ 'Use Recovery Code'|_ }}
+            </button>
+        </div>
+    {% endif %}
+</div>
