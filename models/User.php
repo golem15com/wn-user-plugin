@@ -53,6 +53,7 @@ class User extends UserBase implements JWTSubject
         'twoFactorMethods' => [TwoFactorMethod::class, 'key' => 'user_id'],
         'webauthnCredentials' => [WebAuthnCredential::class, 'key' => 'user_id'],
         'twoFactorRecoveryCodes' => [TwoFactorRecoveryCode::class, 'key' => 'user_id'],
+        'trustedDevices' => [TrustedDevice::class, 'key' => 'user_id'],
     ];
 
     public $attachOne = [

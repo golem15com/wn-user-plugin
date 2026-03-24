@@ -112,7 +112,7 @@ class WebAuthnMethod implements TwoFactorMethodInterface
      *
      * @return array{options: mixed, challenge: string}
      */
-    public function getRegistrationOptions(User $user): array
+    public function getRegistrationOptions(User $user, bool $discoverable = false): array
     {
         // Get existing credential IDs to exclude
         $existingCredentials = WebAuthnCredential::where('user_id', $user->id)
@@ -128,7 +128,7 @@ class WebAuthnMethod implements TwoFactorMethodInterface
             $user->name ?? $user->email,
             $user->email,
             60,
-            false,      // requireResidentKey
+            $discoverable ? 'preferred' : false,  // requireResidentKey
             false,      // requireUserVerification
             $existingCredentials ?: null
         );
@@ -169,7 +169,7 @@ class WebAuthnMethod implements TwoFactorMethodInterface
 
         $credential = WebAuthnCredential::create([
             'user_id' => $user->id,
-            'credential_id' => base64_encode($data->credentialId->getBinaryString()),
+            'credential_id' => base64_encode($data->credentialId instanceof ByteBuffer ? $data->credentialId->getBinaryString() : $data->credentialId),
             'public_key' => base64_encode($data->credentialPublicKey),
             'attestation_type' => $data->attestationFormat ?? 'none',
             'transports' => $response['transports'] ?? null,
@@ -225,6 +225,89 @@ class WebAuthnMethod implements TwoFactorMethodInterface
         return WebAuthnCredential::where('user_id', $user->id)
             ->where('is_enabled', true)
             ->exists();
+    }
+
+    /**
+     * Get assertion options for passwordless login (no user specified, empty allowCredentials).
+     *
+     * @return array{options: mixed, challenge: string}
+     */
+    public function getPasswordlessAuthenticationOptions(): array
+    {
+        $getArgs = $this->webAuthn->getGetArgs(
+            [],     // empty allowCredentials — browser discovers passkeys
+            60,
+            false   // requireUserVerification
+        );
+
+        $challenge = base64_encode($this->webAuthn->getChallenge()->getBinaryString());
+
+        return [
+            'options' => $getArgs,
+            'challenge' => $challenge,
+        ];
+    }
+
+    /**
+     * Verify a passwordless assertion and return the matching user.
+     *
+     * @param string $assertionJson JSON-encoded client assertion data
+     * @param string $challenge Base64-encoded challenge
+     * @return User|null
+     */
+    public function verifyPasswordlessAssertion(string $assertionJson, string $challenge): ?User
+    {
+        try {
+            $clientData = json_decode($assertionJson, true);
+            if (!$clientData) {
+                return null;
+            }
+
+            $credentialId = $clientData['id'] ?? '';
+            $clientDataJSON = $clientData['response']['clientDataJSON'] ?? '';
+            $authenticatorData = $clientData['response']['authenticatorData'] ?? '';
+            $signature = $clientData['response']['signature'] ?? '';
+
+            // Find the credential across all users
+            $credential = WebAuthnCredential::where('is_enabled', true)
+                ->get()
+                ->first(function ($cred) use ($credentialId) {
+                    return $cred->credential_id === $credentialId;
+                });
+
+            if (!$credential) {
+                return null;
+            }
+
+            $challengeBuffer = new ByteBuffer(base64_decode($challenge));
+            $credentialPublicKey = base64_decode($credential->public_key);
+
+            $this->webAuthn->processGet(
+                base64_decode($clientDataJSON),
+                base64_decode($authenticatorData),
+                base64_decode($signature),
+                $credentialPublicKey,
+                $challengeBuffer,
+                null,
+                false
+            );
+
+            // Update sign count
+            $newSignCount = $this->webAuthn->getSignatureCounter();
+            if ($newSignCount > 0) {
+                $credential->touchUsed($newSignCount);
+            } else {
+                $credential->last_used_at = now();
+                $credential->save();
+            }
+
+            return User::find($credential->user_id);
+        } catch (\Exception $e) {
+            \Log::warning('Passwordless WebAuthn verification failed', [
+                'error' => $e->getMessage(),
+            ]);
+            return null;
+        }
     }
 
     /**

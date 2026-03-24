@@ -102,6 +102,34 @@ tabs:
             default: 5
             tab: golem15.user::lang.settings.two_factor_tab
 
+        # Passwordless Security Key Login
+        two_factor_passwordless_login:
+            span: full
+            label: golem15.user::lang.settings.two_factor_passwordless_login
+            comment: golem15.user::lang.settings.two_factor_passwordless_login_comment
+            type: switch
+            tab: golem15.user::lang.settings.two_factor_tab
+
+        # Trust Device
+        trusted_device_enabled:
+            span: left
+            label: golem15.user::lang.settings.trusted_device_enabled
+            comment: golem15.user::lang.settings.trusted_device_enabled_comment
+            type: switch
+            tab: golem15.user::lang.settings.two_factor_tab
+
+        trusted_device_ttl_days:
+            span: right
+            label: golem15.user::lang.settings.trusted_device_ttl_days
+            comment: golem15.user::lang.settings.trusted_device_ttl_days_comment
+            type: number
+            default: 30
+            tab: golem15.user::lang.settings.two_factor_tab
+            trigger:
+                action: show
+                field: trusted_device_enabled
+                condition: checked
+
         # Enforce for Groups
         two_factor_enforce_groups:
             span: full

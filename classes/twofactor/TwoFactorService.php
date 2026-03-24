@@ -2,7 +2,9 @@
 
 namespace Golem15\User\Classes\TwoFactor;
 
+use Cookie;
 use Golem15\User\Models\Settings as UserSettings;
+use Golem15\User\Models\TrustedDevice;
 use Golem15\User\Models\TwoFactorChallenge;
 use Golem15\User\Models\TwoFactorMethod;
 use Golem15\User\Models\TwoFactorRecoveryCode;
@@ -282,9 +284,10 @@ class TwoFactorService
 
         Event::fire('golem15.user.2fa.disabled', [$user, $method]);
 
-        // If no 2FA methods remain, clean up recovery codes
+        // If no 2FA methods remain, clean up recovery codes and trusted devices
         if (!$this->isEnabledForUser($user)) {
             TwoFactorRecoveryCode::where('user_id', $user->id)->delete();
+            TrustedDevice::where('user_id', $user->id)->delete();
         }
 
         return true;
@@ -295,7 +298,8 @@ class TwoFactorService
      */
     public function getWebAuthnRegistrationOptions(User $user): array
     {
-        return $this->webAuthnMethod->getRegistrationOptions($user);
+        $passwordlessEnabled = Settings::get('two_factor_passwordless_login', false);
+        return $this->webAuthnMethod->getRegistrationOptions($user, $passwordlessEnabled);
     }
 
     /**
@@ -342,9 +346,10 @@ class TwoFactorService
             }
         }
 
-        // If no 2FA methods remain, clean up recovery codes
+        // If no 2FA methods remain, clean up recovery codes and trusted devices
         if (!$this->isEnabledForUser($user)) {
             TwoFactorRecoveryCode::where('user_id', $user->id)->delete();
+            TrustedDevice::where('user_id', $user->id)->delete();
         }
 
         return true;
@@ -356,6 +361,139 @@ class TwoFactorService
     public function getWebAuthnAuthenticationOptions(User $user): array
     {
         return $this->webAuthnMethod->getAuthenticationOptions($user);
+    }
+
+    /**
+     * Check if passwordless security key login is enabled.
+     */
+    public function isPasswordlessLoginEnabled(): bool
+    {
+        return (bool) UserSettings::get('two_factor_passwordless_login', false);
+    }
+
+    /**
+     * Get WebAuthn assertion options for passwordless login.
+     */
+    public function getPasswordlessAuthenticationOptions(): array
+    {
+        return $this->webAuthnMethod->getPasswordlessAuthenticationOptions();
+    }
+
+    /**
+     * Verify a passwordless WebAuthn assertion and return the user.
+     */
+    public function verifyPasswordlessAssertion(string $assertionJson, string $challenge): ?User
+    {
+        return $this->webAuthnMethod->verifyPasswordlessAssertion($assertionJson, $challenge);
+    }
+
+    // ========================================================================
+    // Trusted Device Methods
+    // ========================================================================
+
+    /**
+     * Check if trusted device feature is enabled.
+     */
+    public function isTrustedDeviceEnabled(): bool
+    {
+        return (bool) UserSettings::get('trusted_device_enabled', false);
+    }
+
+    /**
+     * Get the configured trust duration in days.
+     */
+    public function getTrustedDeviceTtlDays(): int
+    {
+        return (int) UserSettings::get('trusted_device_ttl_days', 30);
+    }
+
+    /**
+     * Check if the current request has a valid trusted device cookie.
+     */
+    public function checkTrustedDevice(int $userId): bool
+    {
+        $cookieValue = request()->cookie('g15_trusted_device');
+        if (!$cookieValue) {
+            return false;
+        }
+
+        $parts = explode('|', $cookieValue);
+        if (count($parts) !== 3) {
+            return false;
+        }
+
+        [$cookieUserId, $cookieToken, $hmac] = $parts;
+
+        // Validate HMAC
+        $expectedHmac = hash_hmac('sha256', "{$cookieUserId}|{$cookieToken}", config('app.key'));
+        if (!hash_equals($expectedHmac, $hmac)) {
+            return false;
+        }
+
+        // Validate user ID matches
+        if ((int) $cookieUserId !== $userId) {
+            return false;
+        }
+
+        // Look up token in database
+        $device = TrustedDevice::findValidToken($cookieToken);
+        if (!$device || $device->user_id !== $userId) {
+            return false;
+        }
+
+        // Update last used
+        $device->last_used_at = now();
+        $device->ip_address = request()->ip();
+        $device->save();
+
+        return true;
+    }
+
+    /**
+     * Create a trusted device record and queue the cookie.
+     */
+    public function createTrustedDevice(User $user): void
+    {
+        $ttlDays = $this->getTrustedDeviceTtlDays();
+        $device = TrustedDevice::createForUser(
+            $user,
+            $ttlDays,
+            request()->userAgent(),
+            request()->ip()
+        );
+
+        $cookieValue = "{$user->id}|{$device->token}|" . hash_hmac('sha256', "{$user->id}|{$device->token}", config('app.key'));
+
+        Cookie::queue(
+            'g15_trusted_device',
+            $cookieValue,
+            $ttlDays * 24 * 60, // minutes
+            '/',
+            null,
+            request()->isSecure(),
+            true, // httpOnly
+            false,
+            'Lax'
+        );
+    }
+
+    /**
+     * Revoke a single trusted device.
+     */
+    public function revokeTrustedDevice(int $deviceId, User $user): bool
+    {
+        return (bool) TrustedDevice::where('id', $deviceId)
+            ->where('user_id', $user->id)
+            ->delete();
+    }
+
+    /**
+     * Revoke all trusted devices for a user and clear the cookie.
+     */
+    public function revokeAllTrustedDevices(User $user): int
+    {
+        Cookie::queue(Cookie::forget('g15_trusted_device'));
+        return TrustedDevice::where('user_id', $user->id)->delete();
     }
 
     /**
@@ -395,6 +533,21 @@ class TwoFactorService
 
         $recoveryCodesRemaining = TwoFactorRecoveryCode::remainingCount($user->id);
 
+        $trustedDevices = $this->isTrustedDeviceEnabled()
+            ? TrustedDevice::where('user_id', $user->id)
+                ->where('trusted_until', '>', now())
+                ->orderBy('last_used_at', 'desc')
+                ->get()
+                ->map(fn($d) => [
+                    'id' => $d->id,
+                    'device_name' => $d->device_name ?? 'Unknown Device',
+                    'ip_address' => $d->ip_address,
+                    'last_used_at' => $d->last_used_at,
+                    'trusted_until' => $d->trusted_until,
+                    'created_at' => $d->created_at,
+                ])->toArray()
+            : [];
+
         return [
             'enabled' => $this->isEnabledForUser($user),
             'enforced' => $this->isEnforcedForUser($user),
@@ -402,6 +555,8 @@ class TwoFactorService
             'webauthn_credentials' => $webauthnCredentials->toArray(),
             'recovery_codes_remaining' => $recoveryCodesRemaining,
             'available_methods' => UserSettings::get('two_factor_available_methods', ['totp', 'email']),
+            'trusted_device_enabled' => $this->isTrustedDeviceEnabled(),
+            'trusted_devices' => $trustedDevices,
         ];
     }
 

@@ -283,18 +283,26 @@ class Account extends ComponentBase
 
             $user = Auth::authenticate($credentials, $remember);
 
-            // 2FA check: if enabled, log out and show 2FA verification form
+            // 2FA check: if enabled, check trusted device or show 2FA verification form
             $twoFactorService = app(TwoFactorService::class);
             if ($twoFactorService->isEnabledForUser($user)) {
-                Auth::logout();
-                $challenge = $twoFactorService->createChallenge(
-                    $user, Request::ip(), Request::userAgent()
-                );
-                session(['2fa_challenge_token' => $challenge->token]);
-                session(['2fa_remember' => $remember]);
-                $this->page['challengeToken'] = $challenge->token;
-                $this->page['availableMethods'] = $twoFactorService->getEnabledMethods($user);
-                return ['#account-form' => $this->renderPartial('account/two_factor')];
+                // Check if this device is trusted — skip 2FA if so
+                if ($twoFactorService->isTrustedDeviceEnabled()
+                    && $twoFactorService->checkTrustedDevice($user->id)) {
+                    // Device is trusted, proceed with login
+                } else {
+                    Auth::logout();
+                    $challenge = $twoFactorService->createChallenge(
+                        $user, Request::ip(), Request::userAgent()
+                    );
+                    session(['2fa_challenge_token' => $challenge->token]);
+                    session(['2fa_remember' => $remember]);
+                    $this->page['challengeToken'] = $challenge->token;
+                    $this->page['availableMethods'] = $twoFactorService->getEnabledMethods($user);
+                    $this->page['trustedDeviceEnabled'] = $twoFactorService->isTrustedDeviceEnabled();
+                    $this->page['trustedDeviceTtlDays'] = $twoFactorService->getTrustedDeviceTtlDays();
+                    return ['#account-form' => $this->renderPartial('account/two_factor')];
+                }
             }
 
             if ($user->isBanned()) {
@@ -589,6 +597,10 @@ class Account extends ComponentBase
          */
         if (array_key_exists('password', $data) && strlen($data['password'])) {
             Auth::login($user->reload(), true);
+
+            // Revoke all trusted devices when password changes
+            $twoFactorService = app(TwoFactorService::class);
+            $twoFactorService->revokeAllTrustedDevices($user);
         }
 
         Flash::success(post('flash', Lang::get(/*Settings successfully saved!*/'golem15.user::lang.account.success_saved')));

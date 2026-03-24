@@ -141,3 +141,6 @@
     - v3.0.0/create_webauthn_credentials_table.php
     - v3.0.0/create_two_factor_recovery_codes_table.php
     - v3.0.0/create_two_factor_challenges_table.php
+"3.1.0":
+    - "Add trusted device feature for 2FA bypass with configurable TTL."
+    - v3.1.0/create_trusted_devices_table.php

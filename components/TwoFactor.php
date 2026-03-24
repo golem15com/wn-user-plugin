@@ -70,6 +70,7 @@ class TwoFactor extends ComponentBase
         $this->page['user'] = $this->user();
         $this->page['challengeToken'] = session('2fa_challenge_token');
         $this->page['twoFactorStatus'] = $this->user() ? $this->service->getStatus($this->user()) : null;
+        $this->page['passwordlessLoginEnabled'] = $this->service->isPasswordlessLoginEnabled();
     }
 
     public function user()
@@ -110,6 +111,7 @@ class TwoFactor extends ComponentBase
                 $user = $challenge->user;
                 $remember = session('2fa_remember', false);
                 Auth::login($user, $remember);
+                $this->handleTrustDevice($user);
             }
 
             // Clean up session
@@ -161,6 +163,7 @@ class TwoFactor extends ComponentBase
             $user = $challenge->user;
             $remember = session('2fa_remember', false);
             Auth::login($user, $remember);
+            $this->handleTrustDevice($user);
 
             session()->forget(['2fa_challenge_token', '2fa_remember']);
             Flash::success('Successfully verified.');
@@ -200,6 +203,7 @@ class TwoFactor extends ComponentBase
                 $user = $challenge->user;
                 $remember = session('2fa_remember', false);
                 Auth::login($user, $remember);
+                $this->handleTrustDevice($user);
             }
 
             session()->forget(['2fa_challenge_token', '2fa_remember']);
@@ -262,6 +266,75 @@ class TwoFactor extends ComponentBase
         $challenge->save();
 
         return $options;
+    }
+
+    // ========================================================================
+    // Passwordless Login Handlers
+    // ========================================================================
+
+    /**
+     * Get WebAuthn assertion options for passwordless login.
+     */
+    public function onPasswordlessOptions()
+    {
+        if (!$this->service->isPasswordlessLoginEnabled()) {
+            throw new ApplicationException('Passwordless login is not enabled.');
+        }
+
+        $options = $this->service->getPasswordlessAuthenticationOptions();
+        session(['passwordless_challenge' => $options['challenge']]);
+
+        return $options;
+    }
+
+    /**
+     * Verify a passwordless WebAuthn assertion and log the user in.
+     */
+    public function onPasswordlessVerify()
+    {
+        try {
+            if (!$this->service->isPasswordlessLoginEnabled()) {
+                throw new ApplicationException('Passwordless login is not enabled.');
+            }
+
+            $assertion = post('assertion');
+            $challenge = session('passwordless_challenge');
+
+            if (!$assertion || !$challenge) {
+                throw new ApplicationException('Missing assertion data. Please try again.');
+            }
+
+            $user = $this->service->verifyPasswordlessAssertion(
+                is_string($assertion) ? $assertion : json_encode($assertion),
+                $challenge
+            );
+
+            if (!$user) {
+                throw new ValidationException(['assertion' => 'Security key verification failed. Key not recognized.']);
+            }
+
+            if ($user->isBanned()) {
+                throw new ApplicationException('This account is currently not activated.');
+            }
+
+            session()->forget('passwordless_challenge');
+
+            // Log the user in
+            Auth::login($user, true);
+
+            if ($ipAddress = Request::ip()) {
+                $user->touchIpAddress($ipAddress);
+            }
+
+            if ($redirect = $this->makeRedirection()) {
+                return $redirect;
+            }
+
+            return Redirect::refresh();
+        } catch (Exception $ex) {
+            if (Request::ajax()) throw $ex;
+            else Flash::error($ex->getMessage());
+        }
     }
 
     // ========================================================================
@@ -469,8 +542,69 @@ class TwoFactor extends ComponentBase
     }
 
     // ========================================================================
+    // Trusted Device Handlers
+    // ========================================================================
+
+    /**
+     * Revoke a single trusted device.
+     */
+    public function onRevokeTrustedDevice()
+    {
+        try {
+            if (!$user = $this->user()) {
+                throw new ApplicationException('You must be logged in.');
+            }
+
+            $deviceId = (int) post('device_id');
+            if (!$deviceId) {
+                throw new ApplicationException('Device ID is required.');
+            }
+
+            $this->service->revokeTrustedDevice($deviceId, $user);
+
+            Flash::success('Trusted device revoked.');
+            $this->prepareVars();
+            return ['#two-factor-manage' => $this->renderPartial('twofactor/default')];
+        } catch (Exception $ex) {
+            if (Request::ajax()) throw $ex;
+            else Flash::error($ex->getMessage());
+        }
+    }
+
+    /**
+     * Revoke all trusted devices.
+     */
+    public function onRevokeAllTrustedDevices()
+    {
+        try {
+            if (!$user = $this->user()) {
+                throw new ApplicationException('You must be logged in.');
+            }
+
+            $this->service->revokeAllTrustedDevices($user);
+
+            Flash::success('All trusted devices revoked.');
+            $this->prepareVars();
+            return ['#two-factor-manage' => $this->renderPartial('twofactor/default')];
+        } catch (Exception $ex) {
+            if (Request::ajax()) throw $ex;
+            else Flash::error($ex->getMessage());
+        }
+    }
+
+    // ========================================================================
     // Helpers
     // ========================================================================
+
+    /**
+     * Handle "trust this device" checkbox after successful 2FA verification.
+     */
+    protected function handleTrustDevice($user): void
+    {
+        if (post('trust_device') && $this->service->isTrustedDeviceEnabled()) {
+            $this->service->createTrustedDevice($user);
+        }
+    }
 
     protected function makeRedirection()
     {
