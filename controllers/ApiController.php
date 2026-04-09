@@ -9,6 +9,7 @@ use Golem15\User\Models\DeviceAuthSession;
 use Golem15\User\Models\Settings as UserSettings;
 use Golem15\User\Models\User as UserModel;
 use Illuminate\Auth\AuthenticationException;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Lang;
@@ -606,7 +607,11 @@ class ApiController
      */
     public function oauthProviders(): JsonResponse
     {
-        $providers = ['google', 'facebook', 'github'];
+        $providers = ['google', 'facebook'];
+        $labels = [
+            'google' => 'Kontynuuj z Google',
+            'facebook' => 'Kontynuuj z Facebookiem',
+        ];
         $enabled = [];
 
         foreach ($providers as $provider) {
@@ -614,7 +619,10 @@ class ApiController
             $clientSecret = config("services.{$provider}.client_secret");
 
             if (!empty($clientId) && !empty($clientSecret)) {
-                $enabled[] = $provider;
+                $enabled[] = [
+                    'name' => $provider,
+                    'label' => $labels[$provider] ?? ucfirst($provider),
+                ];
             }
         }
 
@@ -622,6 +630,83 @@ class ApiController
             'success' => true,
             'providers' => $enabled,
         ]);
+    }
+
+    /**
+     * Redeem a one-time OAuth completion code generated during provider callback.
+     */
+    public function oauthComplete(Request $request): JsonResponse
+    {
+        $code = (string) $request->query('code', '');
+
+        if ($code === '') {
+            return response()->json(['error' => 'Missing OAuth completion code'], 422);
+        }
+
+        $payload = Cache::pull('oauth-complete:' . $code);
+        if (!is_array($payload)) {
+            return response()->json(['error' => 'OAuth completion code is invalid or expired'], 410);
+        }
+
+        return response()->json([
+            'token' => $payload['token'] ?? null,
+            'user' => $payload['user'] ?? null,
+            'action' => $payload['action'] ?? 'login',
+            'return_to' => $payload['return_to'] ?? '/',
+        ]);
+    }
+
+    public function oauthRegisterComplete(Request $request): JsonResponse
+    {
+        $pendingCode = (string) $request->input('pending_code', '');
+        if ($pendingCode === '') {
+            return response()->json(['error' => 'Missing pending registration code'], 422);
+        }
+
+        $payload = Cache::get('oauth-pending-registration:' . $pendingCode);
+        if (!is_array($payload)) {
+            return response()->json(['error' => 'OAuth registration session is invalid or expired'], 410);
+        }
+
+        $termsAccepted = (bool) $request->input('terms_accepted', false);
+        $privacyAccepted = (bool) $request->input('privacy_accepted', false);
+        $marketingConsent = (bool) $request->input('marketing_consent', false);
+
+        if (!$termsAccepted || !$privacyAccepted) {
+            return response()->json([
+                'error' => 'Musisz zaakceptować regulamin i politykę prywatności, aby dokończyć rejestrację.',
+                'errors' => [
+                    'terms_accepted' => !$termsAccepted ? ['Musisz zaakceptować regulamin.'] : [],
+                    'privacy_accepted' => !$privacyAccepted ? ['Musisz zaakceptować politykę prywatności.'] : [],
+                ],
+            ], 422);
+        }
+
+        $payload['terms_accepted'] = true;
+        $payload['privacy_accepted'] = true;
+        $payload['marketing_consent'] = $marketingConsent;
+
+        try {
+            $component = new \Golem15\User\Components\SocialAuth();
+            $result = $component->completePendingRegistration($payload);
+            Cache::forget('oauth-pending-registration:' . $pendingCode);
+
+            return response()->json([
+                'token' => $result['token'],
+                'user' => $result['user'],
+                'action' => $result['action'] ?? 'register',
+                'return_to' => $result['return_to'] ?? '/',
+            ]);
+        } catch (ValidationException $ex) {
+            return response()->json([
+                'error' => $ex->validator->errors()->first(),
+                'errors' => $ex->validator->errors()->toArray(),
+            ], 422);
+        } catch (ApplicationException $ex) {
+            return response()->json(['error' => $ex->getMessage()], 422);
+        } catch (\Exception $ex) {
+            return response()->json(['error' => $ex->getMessage()], 500);
+        }
     }
 
     /**

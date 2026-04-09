@@ -121,6 +121,18 @@ Route::group(
                 return (new \Golem15\User\Controllers\ApiController())->oauthProviders();
             }
         );
+        Route::get(
+            'oauth-complete',
+            static function (Request $request) {
+                return (new \Golem15\User\Controllers\ApiController())->oauthComplete($request);
+            }
+        );
+        Route::post(
+            'oauth-register-complete',
+            static function (Request $request) {
+                return (new \Golem15\User\Controllers\ApiController())->oauthRegisterComplete($request);
+            }
+        );
 
         /*
          * Device Management - requires JWT authentication
