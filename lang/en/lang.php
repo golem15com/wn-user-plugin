@@ -179,6 +179,7 @@ return [
         'invalid_activation_code' => 'Invalid activation code supplied.',
         'invalid_deactivation_pass' => 'The password you entered was invalid.',
         'invalid_current_pass' => 'The current password you entered was invalid.',
+        'invalid_login' => 'Invalid email or password',
         'invalid_username' => 'The username you have entered is invalid.',
         'invalid_email' => 'The email address you have entered is invalid.',
         'success_activation' => 'Successfully activated your account.',

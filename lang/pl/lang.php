@@ -199,6 +199,7 @@ return [
         'invalid_email' => 'Nieprawidłowy e-mail',
         'activation_by_admin' => 'Aktywacja przez administratora',
         'invalid_current_pass' => 'Nieprawidłowe hasło',
+        'invalid_login' => 'Nieprawidłowy email lub hasło',
         'no_avatar' => 'Brak avatara',
         'avatar_removed' => 'Avatar usunięty',
     ],

@@ -19,6 +19,7 @@ use Illuminate\Validation\ValidationException;
 use PHPOpenSourceSaver\JWTAuth\Contracts\JWTSubject;
 use PHPOpenSourceSaver\JWTAuth\Exceptions\TokenBlacklistedException;
 use PHPOpenSourceSaver\JWTAuth\Facades\JWTAuth;
+use Winter\Storm\Auth\AuthenticationException as AuthException;
 use Winter\Storm\Exception\ApplicationException;
 use Winter\Storm\Support\Facades\Event;
 
@@ -38,7 +39,7 @@ class ApiController
 
         try {
             if (!$token = JWTAuth::attempt($credentials)) {
-                return response()->json(['error' => 'Unauthorized'], 401);
+                return response()->json(['error' => Lang::get('golem15.user::lang.account.invalid_login')], 401);
             }
             JWTAuth::setToken($token);
             $userModel = JWTAuth::toUser();
@@ -48,7 +49,7 @@ class ApiController
             return response()->json(
                 [
                     'error' => true,
-                    'message' => $e->getMessage(),
+                    'message' => Lang::get('golem15.user::lang.account.invalid_login'),
                 ],
                 401
             );

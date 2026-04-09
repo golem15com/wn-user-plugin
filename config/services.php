@@ -26,7 +26,9 @@ return [
     'google' => [
         'client_id'     => env('GOOGLE_CLIENT_ID'),
         'client_secret' => env('GOOGLE_CLIENT_SECRET'),
-        'redirect'      => env('APP_URL') . '/oauth/google/callback',
+        // CMS_URL points to the backend (api.horoskopia.eu) where the /oauth routes live;
+        // APP_URL points to the frontend and would produce a 404 on the Nuxt SSR.
+        'redirect'      => rtrim(env('CMS_URL', env('APP_URL')), '/') . '/oauth/google/callback',
     ],
 
     /*
@@ -41,7 +43,7 @@ return [
     'facebook' => [
         'client_id'     => env('FACEBOOK_CLIENT_ID'),
         'client_secret' => env('FACEBOOK_CLIENT_SECRET'),
-        'redirect'      => env('APP_URL') . '/oauth/facebook/callback',
+        'redirect'      => rtrim(env('CMS_URL', env('APP_URL')), '/') . '/oauth/facebook/callback',
     ],
 
     /*
@@ -56,7 +58,7 @@ return [
     'github' => [
         'client_id'     => env('GITHUB_CLIENT_ID'),
         'client_secret' => env('GITHUB_CLIENT_SECRET'),
-        'redirect'      => env('APP_URL') . '/oauth/github/callback',
+        'redirect'      => rtrim(env('CMS_URL', env('APP_URL')), '/') . '/oauth/github/callback',
     ],
 
 ];
