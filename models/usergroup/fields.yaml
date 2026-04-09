@@ -17,3 +17,11 @@ fields:
         label: golem15.user::lang.group.description_field
         type: textarea
         size: tiny
+
+tabs:
+    fields:
+        permissions:
+            tab: Permissions
+            type: Golem15\User\FormWidgets\FrontendPermissionEditor
+            mode: checkbox
+            span: full

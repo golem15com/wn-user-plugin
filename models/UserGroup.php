@@ -38,8 +38,14 @@ class UserGroup extends GroupBase
     protected $fillable = [
         'name',
         'code',
-        'description'
+        'description',
+        'permissions',
     ];
+
+    /**
+     * @var array List of attribute names which are json encoded and decoded from the database.
+     */
+    protected $jsonable = ['permissions'];
 
     protected static $guestGroup = null;
 

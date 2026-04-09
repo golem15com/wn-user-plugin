@@ -124,6 +124,7 @@ class User extends UserBase implements JWTSubject
         'is_onboarded' => 'boolean',
         'oauth_profile_data' => 'array',
         'cookie_preferences' => 'array',
+        'ui_preferences' => 'array',
         // GDPR consent booleans
         'terms_accepted' => 'boolean',
         'privacy_accepted' => 'boolean',
@@ -210,6 +211,41 @@ class User extends UserBase implements JWTSubject
         if ($sendNotification) {
             $this->sendInvitation();
         }
+    }
+
+    //
+    // Permissions
+    //
+
+    /**
+     * Check if the user has the given frontend permission.
+     */
+    public function can(string $permission): bool
+    {
+        return $this->hasAccess($permission);
+    }
+
+    /**
+     * Merge group permissions (most-positive-wins) then overlay user-level overrides.
+     */
+    public function getMergedPermissions()
+    {
+        if (!$this->mergedPermissions) {
+            // Step 1: Merge all group permissions (most positive wins)
+            $groupPermissions = [];
+            foreach ($this->groups as $group) {
+                foreach ((array) $group->permissions as $code => $value) {
+                    if (!isset($groupPermissions[$code]) || (int) $value > (int) $groupPermissions[$code]) {
+                        $groupPermissions[$code] = (int) $value;
+                    }
+                }
+            }
+
+            // Step 2: User-level permissions override group-level
+            $this->mergedPermissions = array_merge($groupPermissions, (array) $this->permissions);
+        }
+
+        return $this->mergedPermissions;
     }
 
     //

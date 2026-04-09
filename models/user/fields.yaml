@@ -84,6 +84,13 @@ tabs:
             tab: golem15.user::lang.user.account
             context: preview
 
+        permissions:
+            tab: Permissions
+            type: Golem15\User\FormWidgets\FrontendPermissionEditor
+            mode: radio
+            span: full
+            context: update
+
 secondaryTabs:
     fields:
 

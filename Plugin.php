@@ -4,7 +4,6 @@ use App;
 use Auth;
 use Event;
 use Backend;
-use Golem15\QuestStream\Models\Team;
 use Golem15\User\Contracts\UserRepository;
 use Golem15\User\Repositories\UserEloquentRepository;
 use Illuminate\Auth\AuthManager;
@@ -126,6 +125,14 @@ class Plugin extends PluginBase
          * Register console commands
          */
         $this->registerConsoleCommand('user:process-scheduled-deletions', \Golem15\User\Commands\ProcessScheduledDeletions::class);
+        $this->registerConsoleCommand('user:import-permissions', \Golem15\User\Commands\ImportPermissions::class);
+    }
+
+    public function registerFormWidgets()
+    {
+        return [
+            \Golem15\User\FormWidgets\FrontendPermissionEditor::class => 'frontendpermissioneditor',
+        ];
     }
 
     public function registerComponents()
@@ -295,18 +302,20 @@ class Plugin extends PluginBase
 
         User::extend(
             static function ($model) {
-                $model->hasOne['owned_team'] = [
-                    Team::class,
-                    'key' => 'owner_id',
-                ];
-                $model->belongsTo['team'] = [
-                    Team::class,
-                    'key' => 'team_id',
-                ];
+                if (class_exists(\Golem15\QuestStream\Models\Team::class)) {
+                    $model->hasOne['owned_team'] = [
+                        \Golem15\QuestStream\Models\Team::class,
+                        'key' => 'owner_id',
+                    ];
+                    $model->belongsTo['team'] = [
+                        \Golem15\QuestStream\Models\Team::class,
+                        'key' => 'team_id',
+                    ];
+                }
                 $model->addDynamicMethod(
                     'getApiArray',
                     static function () use ($model) {
-                        return [
+                        $data = [
                             'id' => $model->id,
                             'name' => $model->name,
                             'surname' => $model->surname,
@@ -317,11 +326,16 @@ class Plugin extends PluginBase
                             'avatar_url' => $model->getAvatarThumb(128),
                             'groups' => $model->groups->pluck('name', 'id')->toArray(),
                             'role' => $model->role ? $model->role->slug : null,
-                            'is_parent' => $model->isParent() ?? false,
-                            'is_child' => $model->isChild(),
-                            'family_id' => $model->family_id,
-                            'is_onboarded' => (bool) $model->is_onboarded,
                         ];
+                        if (method_exists($model, 'isParent')) {
+                            $data['is_parent'] = $model->isParent() ?? false;
+                            $data['is_child'] = $model->isChild();
+                            $data['family_id'] = $model->family_id;
+                        }
+                        if (isset($model->is_onboarded)) {
+                            $data['is_onboarded'] = (bool) $model->is_onboarded;
+                        }
+                        return $data;
                     }
                 );
             }
