@@ -961,11 +961,21 @@ class SocialAuth extends ComponentBase
             return null;
         }
 
-        $requestHost = parse_url(Request::root(), PHP_URL_HOST);
         $host = $parts['host'];
-        $isLocalhost = in_array($host, ['localhost', '127.0.0.1'], true);
 
-        if (!$isLocalhost && $requestHost && $host !== $requestHost) {
+        // Build a whitelist of allowed frontend origins. In split-domain deployments
+        // (e.g. frontend on horoskopia.eu, backend on api.horoskopia.eu) the request
+        // host differs from the frontend host, so APP_URL (the frontend) is the
+        // authoritative source. Localhost is always allowed for dev.
+        $allowedHosts = ['localhost', '127.0.0.1'];
+        if ($requestHost = parse_url(Request::root(), PHP_URL_HOST)) {
+            $allowedHosts[] = $requestHost;
+        }
+        if ($appHost = parse_url((string) env('APP_URL'), PHP_URL_HOST)) {
+            $allowedHosts[] = $appHost;
+        }
+
+        if (!in_array($host, $allowedHosts, true)) {
             return null;
         }
 
