@@ -50,6 +50,7 @@ class AccessControlTest extends UserPluginTestCase
             str_contains($source, 'Internal server error')
             || str_contains($source, 'An error occurred')
             || str_contains($source, 'generic error')
+            || str_contains($source, 'safeExceptionMessage')
         ) || (
             // Or: catches specific exceptions instead of generic \Exception
             !str_contains($source, "catch (\\Exception \$e)")

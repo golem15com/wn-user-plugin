@@ -24,9 +24,12 @@ use Winter\Storm\Auth\AuthenticationException as AuthException;
 use Golem15\User\Classes\TwoFactor\TwoFactorService;
 use Winter\Storm\Exception\ApplicationException;
 use Winter\Storm\Support\Facades\Event;
+use Golem15\Apparatus\Classes\Traits\SafeExceptionResponse;
 
 class ApiController
 {
+    use SafeExceptionResponse;
+
     public const ADMIN_USERS_GROUP = 'admin';
 
     /**
@@ -84,9 +87,9 @@ class ApiController
             return response()->json(
                 [
                     'error' => true,
-                    'message' => $e->getMessage(),
+                    'message' => $this->safeExceptionMessage($e),
                 ],
-                500
+                $this->safeExceptionStatus($e)
             );
         }
     }
@@ -151,7 +154,8 @@ class ApiController
                 }
                 return response()->json(['token' => $token]);
             } catch (\Exception $e) {
-                return response()->json(['error' => 'Could not refresh token', 'msg' => $e->getMessage()], 500);
+                $msg = $this->safeExceptionMessage($e);
+                return response()->json(['error' => 'Could not refresh token', 'msg' => $msg], $this->safeExceptionStatus($e));
             }
         }
         return response()->json(['error' => 'Token not found'], 401);
@@ -270,8 +274,8 @@ class ApiController
         }
         catch (Exception $ex) {
             return response()->json([
-                'error' => $ex->getMessage(),
-            ], 422);
+                'error' => $this->safeExceptionMessage($ex),
+            ], $this->safeExceptionStatus($ex));
         }
     }
 
@@ -732,7 +736,7 @@ class ApiController
         } catch (ApplicationException $ex) {
             return response()->json(['error' => $ex->getMessage()], 422);
         } catch (\Exception $ex) {
-            return response()->json(['error' => $ex->getMessage()], 500);
+            return response()->json(['error' => $this->safeExceptionMessage($ex)], $this->safeExceptionStatus($ex));
         }
     }
 
