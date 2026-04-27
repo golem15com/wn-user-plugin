@@ -73,7 +73,7 @@ class TwoFactorService
      */
     public function isGloballyDisabled(): bool
     {
-        return UserSettings::get('two_factor_mode', UserSettings::TWO_FACTOR_DISABLED) === UserSettings::TWO_FACTOR_DISABLED;
+        return (string) UserSettings::get('two_factor_mode', UserSettings::TWO_FACTOR_DISABLED) === UserSettings::TWO_FACTOR_DISABLED;
     }
 
     /**
@@ -85,8 +85,8 @@ class TwoFactorService
             return false;
         }
 
-        $availableMethods = UserSettings::get('two_factor_available_methods', ['totp', 'email']);
-        return in_array($method, $availableMethods);
+        $availableMethods = (array) UserSettings::get('two_factor_available_methods', ['totp', 'email']);
+        return in_array($method, $availableMethods, true);
     }
 
     /**
@@ -94,12 +94,12 @@ class TwoFactorService
      */
     public function isEnforcedForUser(User $user): bool
     {
-        $mode = UserSettings::get('two_factor_mode', UserSettings::TWO_FACTOR_DISABLED);
+        $mode = (string) UserSettings::get('two_factor_mode', UserSettings::TWO_FACTOR_DISABLED);
         if ($mode !== UserSettings::TWO_FACTOR_ENFORCED) {
             return false;
         }
 
-        $enforcedGroups = UserSettings::get('two_factor_enforce_groups', []);
+        $enforcedGroups = (array) UserSettings::get('two_factor_enforce_groups', []);
         if (empty($enforcedGroups)) {
             return true; // Enforced for all users
         }

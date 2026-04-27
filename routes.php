@@ -96,12 +96,9 @@ Route::group(
          * Verify PIN - for authenticated users to verify their own PIN
          * Used by parents on user picker to confirm their identity
          */
-        Route::post(
-            'verify-pin',
-            static function (Request $request) {
-                return (new \Golem15\User\Controllers\ApiController())->verifyPin($request);
-            }
-        );
+        Route::post('verify-pin', static function (Request $request) {
+            return (new \Golem15\User\Controllers\ApiController())->verifyPin($request);
+        })->middleware('throttle:pin-login');
 
         /*
          * Verify Family Member PIN - verify PIN for any family member
@@ -113,7 +110,7 @@ Route::group(
             static function (Request $request) {
                 return (new \Golem15\User\Controllers\ApiController())->verifyFamilyMemberPin($request);
             }
-        );
+        )->middleware('throttle:pin-login');
 
         /*
          * OAuth Providers - get list of enabled OAuth providers

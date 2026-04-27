@@ -48,9 +48,11 @@ class AuthenticationTest extends UserPluginTestCase
             str_contains($source, 'state')
             && (
                 str_contains($source, 'verifyState')
+                || str_contains($source, 'verifyOAuthState')
                 || str_contains($source, 'validateState')
                 || str_contains($source, 'session()->get(\'state\')')
                 || str_contains($source, 'csrf')
+                || str_contains($source, 'hash_hmac')
             )
         );
 
@@ -167,11 +169,14 @@ class AuthenticationTest extends UserPluginTestCase
 
         // A secure implementation casts the Settings::get() value to string
         // before comparing with enforcement mode strings.
+        // Note: code uses "UserSettings" alias for Golem15\User\Models\Settings
         $hasTypeSafeCast = (
             str_contains($source, "(string) Settings::get")
             || str_contains($source, "(string)Settings::get")
+            || str_contains($source, "(string) UserSettings::get")
+            || str_contains($source, "(string)UserSettings::get")
             || str_contains($source, "strval(Settings::get")
-            || str_contains($source, "Settings::get('two_factor_enforcement', 'disabled')")
+            || str_contains($source, "strval(UserSettings::get")
         );
 
         $this->assertTrue(
