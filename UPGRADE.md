@@ -95,3 +95,58 @@ Update `golem15/user` to `^2.0` in downstream composer.json.
 - Verify that OAuth login/registration flow still works correctly (social auth via Google/Facebook/GitHub).
 - Verify that `linkOAuthProvider()` still correctly encrypts and stores OAuth tokens.
 - Attempt to register a user with `oauth_provider` in the POST body and verify it is ignored.
+
+## AUTH-08: Invitation Email No Longer Contains Plaintext Password
+
+**Severity:** HIGH
+**Breaking change:** The invitation email (`golem15.user::mail.invite`) no longer includes the user's password. Instead, it contains a signed activation link that lets the user set their own password. The `password` key has been removed from `getNotificationVars()`.
+
+### What changed
+
+Sending plaintext passwords via email violates OWASP ASVS V2.1.6 and creates security risk (passwords in SMTP logs, email inboxes, relay servers). The `sendInvitation()` method now generates a time-limited signed URL via `URL::temporarySignedRoute()` and passes it as `activation_url` to the email template. The `getNotificationVars()` method no longer includes a `password` key.
+
+### Migration steps
+
+1. **File-based templates:** No action needed -- the updated `invite.htm` ships with this version.
+
+2. **Database-customized templates:** If you have customized the invitation template via the WinterCMS backend (Backend > Settings > Mail templates), you MUST update it:
+   - Remove any reference to `{{ password }}` or `{{ password|raw }}` -- this variable is no longer available
+   - Add `{{ activation_url }}` where you want the activation link to appear
+   - You can also run `php artisan apparatus:mail-reset` to reset all mail templates to their file-based defaults
+
+3. **Custom code consuming `getNotificationVars()`:** If you have code that reads the `password` key from `getNotificationVars()`, it will now return `null`. The password is no longer exposed in notification variables.
+
+4. **Custom invitation flows:** If you call `sendInvitation()` directly or fire the `golem15.user.getNotificationVars` event expecting a `password` key, update your code to use `activation_url` instead.
+
+5. **ResetPassword component requirement:** The activation link redirects to a URL with `?reset={code}`. Your project must have a CMS page with the `ResetPassword` component for the password-set form to render. If your project already supports password reset (most do), no additional setup is needed.
+
+### New behavior
+
+- User receives email with "Set up your account" link
+- Link is valid for 72 hours
+- Clicking the link redirects to password-set form (via ResetPassword component)
+- After 72 hours, the link shows an "expired" message and redirects to site root
+- The `&activate=1` query parameter is passed in the redirect URL -- projects can optionally use this to customize messaging (e.g., "Welcome" vs "Reset Password")
+
+### Before / after code
+
+```php
+// Before (insecure) -- plaintext password in email
+// getNotificationVars() returned: ['name' => ..., 'password' => 'plaintext']
+// invite.htm displayed: "Password: {{ password|raw }}"
+
+// After (secure) -- signed activation URL in email
+// getNotificationVars() returns: ['name' => ..., 'login' => ...]
+// sendInvitation() adds: ['activation_url' => URL::temporarySignedRoute(...)]
+// invite.htm displays: "[Set up your account]({{ activation_url }})"
+```
+
+### Required env / config changes
+
+None. The signed URL uses the existing `APP_KEY` for HMAC signature.
+
+### Verification
+
+- Send an invitation via the backend and verify the email contains an activation link, not a password.
+- Click the activation link and verify you are redirected to a password-set form.
+- Wait >72 hours (or modify the expiry temporarily) and verify the link shows an expired message.
