@@ -158,7 +158,9 @@ class SocialAuth extends ComponentBase
         }
 
         // Redirect to provider (stateless for JWT compatibility)
-        return Socialite::driver($provider)->stateless()->redirect();
+        // AUTH-03: Attach HMAC-signed state parameter for csrf protection
+        $state = $this->generateOAuthState();
+        return Socialite::driver($provider)->stateless()->with(['state' => $state])->redirect();
     }
 
     /**
@@ -173,6 +175,12 @@ class SocialAuth extends ComponentBase
 
             // Validate provider
             if (!in_array($provider, ['google', 'facebook', 'github'])) {
+                throw new ApplicationException(Lang::get('golem15.user::lang.oauth.invalid_provider'));
+            }
+
+            // AUTH-03: Validate HMAC-signed state parameter (csrf protection)
+            $state = request()->input('state');
+            if (!$this->verifyOAuthState($state)) {
                 throw new ApplicationException(Lang::get('golem15.user::lang.oauth.invalid_provider'));
             }
 
@@ -626,6 +634,57 @@ class SocialAuth extends ComponentBase
     //
     // Helper Methods
     //
+
+    /**
+     * Generate HMAC-signed OAuth state parameter for CSRF protection.
+     * Format: base64(timestamp|nonce|HMAC(timestamp|nonce, APP_KEY))
+     * Fully stateless -- no server-side storage needed.
+     */
+    private function generateOAuthState(): string
+    {
+        $timestamp = time();
+        $nonce = bin2hex(random_bytes(16));
+        $payload = $timestamp . '|' . $nonce;
+        $hmac = hash_hmac('sha256', $payload, config('app.key'));
+        return base64_encode($payload . '|' . $hmac);
+    }
+
+    /**
+     * Verify HMAC-signed OAuth state parameter.
+     * Checks HMAC signature and ensures timestamp < 10 minutes.
+     * Stateless verification using APP_KEY.
+     */
+    private function verifyOAuthState(?string $state): bool
+    {
+        if (empty($state)) {
+            return false;
+        }
+
+        $decoded = base64_decode($state, true);
+        if ($decoded === false) {
+            return false;
+        }
+
+        $parts = explode('|', $decoded);
+        if (count($parts) !== 3) {
+            return false;
+        }
+
+        [$timestamp, $nonce, $hmac] = $parts;
+
+        // Verify HMAC signature
+        $expectedHmac = hash_hmac('sha256', $timestamp . '|' . $nonce, config('app.key'));
+        if (!hash_equals($expectedHmac, $hmac)) {
+            return false;
+        }
+
+        // Check timestamp < 10 minutes (600 seconds)
+        if ((time() - (int) $timestamp) > 600) {
+            return false;
+        }
+
+        return true;
+    }
 
     /**
      * Check if OAuth provider is configured
