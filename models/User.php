@@ -76,13 +76,6 @@ class User extends UserBase implements JWTSubject
         'last_ip_address',
         'is_onboarded',
         'preferred_locale',
-        'oauth_provider',
-        'oauth_provider_id',
-        'oauth_access_token',
-        'oauth_refresh_token',
-        'oauth_token_expires_at',
-        'oauth_profile_data',
-        'oauth_linked_at',
         // GDPR consent fields
         'terms_accepted',
         'privacy_accepted',

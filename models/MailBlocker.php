@@ -20,9 +20,14 @@ class MailBlocker extends Model
     public $table = 'golem15_user_mail_blockers';
 
     /**
-     * @var array Guarded fields
+     * @var array The attributes that aren't mass assignable.
      */
-    protected $guarded = [];
+    protected $guarded = ['*'];
+
+    /**
+     * @var array The attributes that are mass assignable.
+     */
+    protected $fillable = ['email', 'template', 'user_id'];
 
     /**
      * @var array Relations
