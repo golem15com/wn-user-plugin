@@ -287,6 +287,38 @@ Route::group(
     }
 );
 
+/*
+|--------------------------------------------------------------------------
+| User Activation - Signed URL from Invitation Email
+|--------------------------------------------------------------------------
+|
+| Per AUTH-08: replaces plaintext password in invitation.
+| The signed URL is verified by Laravel's hasValidSignature().
+| Expires after 72 hours (configured in sendInvitation()).
+|
+*/
+
+Route::get('_user/activate/{id}', function ($id) {
+    if (!request()->hasValidSignature()) {
+        // Expired or invalid signature
+        return redirect('/')->with('error', 'This activation link has expired. Please request a new invitation.');
+    }
+
+    $user = \Golem15\User\Models\User::findOrFail($id);
+
+    // Generate a WinterCMS-native reset password code
+    // This uses the same mechanism as ResetPassword::onRestorePassword()
+    $resetCode = $user->getResetPasswordCode();
+
+    // Build the code in the format expected by ResetPassword component: {userId}!{resetCode}
+    $code = implode('!', [$user->id, $resetCode]);
+
+    // Redirect to site root with ?reset= query parameter
+    // The ResetPassword component's code() method reads get('reset')
+    // and renders the password-set form when a code is present.
+    return redirect(url('/') . '?reset=' . $code . '&activate=1');
+})->name('user.activate');
+
 // 2FA Management Routes (authenticated via JWT)
 Route::group(
     ['prefix' => '/_user/api/v1/2fa', 'middleware' => ['jwt.auth', 'bindings']],

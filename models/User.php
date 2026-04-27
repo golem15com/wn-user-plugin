@@ -651,7 +651,6 @@ class User extends UserBase implements JWTSubject
             'email'    => $this->email,
             'username' => $this->username,
             'login'    => $this->getLogin(),
-            'password' => $this->getOriginalHashValue('password')
         ];
 
         /*
@@ -677,7 +676,17 @@ class User extends UserBase implements JWTSubject
      */
     protected function sendInvitation()
     {
-        Mail::sendTo($this, 'golem15.user::mail.invite', $this->getNotificationVars());
+        // AUTH-08: Generate signed activation URL (expires in 72 hours)
+        $activationUrl = \URL::temporarySignedRoute(
+            'user.activate',
+            now()->addHours(72),
+            ['id' => $this->id]
+        );
+
+        $vars = $this->getNotificationVars();
+        $vars['activation_url'] = $activationUrl;
+
+        Mail::sendTo($this, 'golem15.user::mail.invite', $vars);
     }
 
     /**
