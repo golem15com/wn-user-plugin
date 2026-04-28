@@ -3,15 +3,15 @@
 use Golem15\User\Tests\UserPluginTestCase;
 
 /**
- * Security PoC tests for HIGH findings USER-003, USER-004, USER-005.
+ * Security regression tests for HIGH findings USER-003, USER-004, USER-005.
  * Each test method is named test_user_NNN_<short_slug> and references
  * the finding in .planning/audit/plugins/golem15/user/FINDINGS.md.
  *
  * @group security
  *
  * Per Phase 7 D-20: PoC tests use HTTP-only + unit fidelity.
- * These tests MUST FAIL on current code (red-bar regression locks).
- * The remediation milestone's fixes will turn them green.
+ * These tests act as regression locks for the remediated findings and
+ * should stay green after the fixes to prevent reintroducing the issues.
  */
 class AuthenticationTest extends UserPluginTestCase
 {
