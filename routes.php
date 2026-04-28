@@ -317,7 +317,7 @@ Route::get('_user/activate/{id}', function ($id) {
     // The ResetPassword component's code() method reads get('reset')
     // and renders the password-set form when a code is present.
     return redirect(url('/') . '?reset=' . $code . '&activate=1');
-})->name('user.activate');
+})->middleware('web')->name('user.activate');
 
 // 2FA Management Routes (authenticated via JWT)
 Route::group(
