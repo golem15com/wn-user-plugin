@@ -7,7 +7,7 @@ use Mockery;
 /**
  * Security regression tests for CRITICAL findings USER-001.
  * Each test method is named test_user_NNN_<short_slug> and references the finding ID
- * in .planning/audit/plugins/user/FINDINGS.md.
+ * in .planning/audit/plugins/golem15/user/FINDINGS.md.
  *
  * @group security
  *
@@ -40,7 +40,7 @@ class DataHandlingTest extends UserPluginTestCase
      *
      * @test
      * @group security
-     * @see .planning/audit/plugins/user/FINDINGS.md USER-001
+     * @see .planning/audit/plugins/golem15/user/FINDINGS.md USER-001
      */
     public function test_user_001_oauth_tokens_mass_assignable(): void
     {
