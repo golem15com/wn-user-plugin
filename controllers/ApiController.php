@@ -272,7 +272,7 @@ class ApiController
                 'errors' => $ex->validator->errors()->toArray(),
             ], 422);
         }
-        catch (Exception $ex) {
+        catch (\Exception $ex) {
             return response()->json([
                 'error' => $this->safeExceptionMessage($ex),
             ], $this->safeExceptionStatus($ex));
