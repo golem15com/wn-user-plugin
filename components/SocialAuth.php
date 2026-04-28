@@ -18,6 +18,7 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Str;
 use Laravel\Socialite\Facades\Socialite;
 use Laravel\Socialite\Contracts\User as SocialiteUser;
+use Laravel\Socialite\Two\InvalidStateException;
 use PHPOpenSourceSaver\JWTAuth\Facades\JWTAuth;
 
 /**
@@ -157,10 +158,14 @@ class SocialAuth extends ComponentBase
             session(['oauth_consent' => $consent]);
         }
 
-        // Redirect to provider (stateless for JWT compatibility)
-        // AUTH-03: Attach HMAC-signed state parameter for csrf protection
-        $state = $this->generateOAuthState();
-        return Socialite::driver($provider)->stateless()->with(['state' => $state])->redirect();
+        // USER-003: Use Socialite's default stateful mode so the OAuth `state`
+        // parameter is a session-bound, one-time-use random nonce. Socialite
+        // stores the state in the session via the web middleware group (see
+        // routes.php OAuth group) and pulls + compares it on callback,
+        // throwing InvalidStateException on mismatch. This blocks login-CSRF
+        // and link-CSRF replay attacks where an attacker captures their own
+        // valid callback URL and tricks a victim into visiting it.
+        return Socialite::driver($provider)->redirect();
     }
 
     /**
@@ -178,15 +183,17 @@ class SocialAuth extends ComponentBase
                 throw new ApplicationException(Lang::get('golem15.user::lang.oauth.invalid_provider'));
             }
 
-            // AUTH-03: Validate HMAC-signed state parameter (csrf protection)
-            $state = request()->input('state');
-            if (!$this->verifyOAuthState($state)) {
-                throw new ApplicationException(Lang::get('golem15.user::lang.oauth.invalid_provider'));
-            }
-
-            // Get user data from provider
+            // Get user data from provider; Socialite (stateful) verifies the
+            // session-bound `state` parameter internally and throws
+            // InvalidStateException on a CSRF replay (USER-003).
             try {
-                $socialiteUser = Socialite::driver($provider)->stateless()->user();
+                $socialiteUser = Socialite::driver($provider)->user();
+            } catch (InvalidStateException $e) {
+                \Log::warning('OAuth state validation failed (possible CSRF replay)', [
+                    'provider' => $provider,
+                    'ip' => Request::ip(),
+                ]);
+                return $this->redirectOAuthError(Lang::get('golem15.user::lang.oauth.invalid_provider'));
             } catch (\GuzzleHttp\Exception\ClientException $e) {
                 // Handle expired/invalid OAuth codes (400 Bad Request with invalid_grant)
                 $response = $e->getResponse();
@@ -634,57 +641,6 @@ class SocialAuth extends ComponentBase
     //
     // Helper Methods
     //
-
-    /**
-     * Generate HMAC-signed OAuth state parameter for CSRF protection.
-     * Format: base64(timestamp|nonce|HMAC(timestamp|nonce, APP_KEY))
-     * Fully stateless -- no server-side storage needed.
-     */
-    private function generateOAuthState(): string
-    {
-        $timestamp = time();
-        $nonce = bin2hex(random_bytes(16));
-        $payload = $timestamp . '|' . $nonce;
-        $hmac = hash_hmac('sha256', $payload, config('app.key'));
-        return base64_encode($payload . '|' . $hmac);
-    }
-
-    /**
-     * Verify HMAC-signed OAuth state parameter.
-     * Checks HMAC signature and ensures timestamp < 10 minutes.
-     * Stateless verification using APP_KEY.
-     */
-    private function verifyOAuthState(?string $state): bool
-    {
-        if (empty($state)) {
-            return false;
-        }
-
-        $decoded = base64_decode($state, true);
-        if ($decoded === false) {
-            return false;
-        }
-
-        $parts = explode('|', $decoded);
-        if (count($parts) !== 3) {
-            return false;
-        }
-
-        [$timestamp, $nonce, $hmac] = $parts;
-
-        // Verify HMAC signature
-        $expectedHmac = hash_hmac('sha256', $timestamp . '|' . $nonce, config('app.key'));
-        if (!hash_equals($expectedHmac, $hmac)) {
-            return false;
-        }
-
-        // Check timestamp < 10 minutes (600 seconds)
-        if ((time() - (int) $timestamp) > 600) {
-            return false;
-        }
-
-        return true;
-    }
 
     /**
      * Check if OAuth provider is configured
