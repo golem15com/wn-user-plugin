@@ -6,7 +6,9 @@ Hello {{ name }}
 An account has been created for you. Click the link below to set up your account and choose your password:
 
 {% partial 'panel' body %}
-[Set up your account]({{ activation_url }})
+{% partial 'button' url=activation_url body %}
+Set up your account
+{% endpartial %}
 {% endpartial %}
 
 This link will expire in 72 hours. If it has expired, please contact your administrator for a new invitation.
