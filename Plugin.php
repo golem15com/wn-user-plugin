@@ -30,6 +30,11 @@ class Plugin extends PluginBase
      */
     public $elevated = true;
 
+    /**
+     * @var array Plugins this plugin depends on.
+     */
+    public $require = ['Golem15.Apparatus'];
+
     public function pluginDetails()
     {
         return [

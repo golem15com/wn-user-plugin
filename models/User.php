@@ -76,13 +76,6 @@ class User extends UserBase implements JWTSubject
         'last_ip_address',
         'is_onboarded',
         'preferred_locale',
-        'oauth_provider',
-        'oauth_provider_id',
-        'oauth_access_token',
-        'oauth_refresh_token',
-        'oauth_token_expires_at',
-        'oauth_profile_data',
-        'oauth_linked_at',
         // GDPR consent fields
         'terms_accepted',
         'privacy_accepted',
@@ -658,7 +651,6 @@ class User extends UserBase implements JWTSubject
             'email'    => $this->email,
             'username' => $this->username,
             'login'    => $this->getLogin(),
-            'password' => $this->getOriginalHashValue('password')
         ];
 
         /*
@@ -684,7 +676,17 @@ class User extends UserBase implements JWTSubject
      */
     protected function sendInvitation()
     {
-        Mail::sendTo($this, 'golem15.user::mail.invite', $this->getNotificationVars());
+        // AUTH-08: Generate signed activation URL (expires in 72 hours)
+        $activationUrl = \URL::temporarySignedRoute(
+            'user.activate',
+            now()->addHours(72),
+            ['id' => $this->id]
+        );
+
+        $vars = $this->getNotificationVars();
+        $vars['activation_url'] = $activationUrl;
+
+        Mail::sendTo($this, 'golem15.user::mail.invite', $vars);
     }
 
     /**

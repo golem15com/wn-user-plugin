@@ -18,6 +18,7 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Str;
 use Laravel\Socialite\Facades\Socialite;
 use Laravel\Socialite\Contracts\User as SocialiteUser;
+use Laravel\Socialite\Two\InvalidStateException;
 use PHPOpenSourceSaver\JWTAuth\Facades\JWTAuth;
 
 /**
@@ -157,8 +158,14 @@ class SocialAuth extends ComponentBase
             session(['oauth_consent' => $consent]);
         }
 
-        // Redirect to provider (stateless for JWT compatibility)
-        return Socialite::driver($provider)->stateless()->redirect();
+        // USER-003: Use Socialite's default stateful mode so the OAuth `state`
+        // parameter is a session-bound, one-time-use random nonce. Socialite
+        // stores the state in the session via the web middleware group (see
+        // routes.php OAuth group) and pulls + compares it on callback,
+        // throwing InvalidStateException on mismatch. This blocks login-CSRF
+        // and link-CSRF replay attacks where an attacker captures their own
+        // valid callback URL and tricks a victim into visiting it.
+        return Socialite::driver($provider)->redirect();
     }
 
     /**
@@ -176,9 +183,17 @@ class SocialAuth extends ComponentBase
                 throw new ApplicationException(Lang::get('golem15.user::lang.oauth.invalid_provider'));
             }
 
-            // Get user data from provider
+            // Get user data from provider; Socialite (stateful) verifies the
+            // session-bound `state` parameter internally and throws
+            // InvalidStateException on a CSRF replay (USER-003).
             try {
-                $socialiteUser = Socialite::driver($provider)->stateless()->user();
+                $socialiteUser = Socialite::driver($provider)->user();
+            } catch (InvalidStateException $e) {
+                \Log::warning('OAuth state validation failed (possible CSRF replay)', [
+                    'provider' => $provider,
+                    'ip' => Request::ip(),
+                ]);
+                return $this->redirectOAuthError(Lang::get('golem15.user::lang.oauth.invalid_state'));
             } catch (\GuzzleHttp\Exception\ClientException $e) {
                 // Handle expired/invalid OAuth codes (400 Bad Request with invalid_grant)
                 $response = $e->getResponse();

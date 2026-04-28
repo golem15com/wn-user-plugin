@@ -356,6 +356,7 @@ return [
 
         // Error messages
         'invalid_provider' => 'Invalid OAuth provider specified.',
+        'invalid_state' => 'Your sign-in session has expired or could not be verified. Please try signing in again.',
         'provider_not_configured' => ':provider login is not configured. Please contact the administrator.',
         'provider_error' => 'OAuth authentication failed: :error',
         'code_expired' => 'Your login session has expired. Please try signing in again.',

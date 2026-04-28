@@ -3,11 +3,14 @@ description = "Invite a new user to the website"
 ==
 Hello {{ name }}
 
-A user account has been created for you. Please use the following login and password to sign in:
+An account has been created for you. Click the link below to set up your account and choose your password:
 
 {% partial 'panel' body %}
-- Login: `{{ login }}`
-- Password: `{{ password|raw }}`
+{% partial 'button' url=activation_url body %}
+Set up your account
+{% endpartial %}
 {% endpartial %}
 
-After signing in you should change your password as soon as possible.
+This link will expire in 72 hours. If it has expired, please contact your administrator for a new invitation.
+
+Your login: `{{ login }}`

@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <phpunit
     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    bootstrap="../../../tests/bootstrap.php"
     backupGlobals="false"
     backupStaticAttributes="false"
     colors="true"
@@ -12,8 +13,11 @@
     xsi:noNamespaceSchemaLocation="https://schema.phpunit.de/9.3/phpunit.xsd"
 >
     <testsuites>
-        <testsuite name="Golem15.User">
-            <directory>./tests</directory>
+        <testsuite name="Golem15.User Unit Tests">
+            <directory>./tests/unit</directory>
+        </testsuite>
+        <testsuite name="Golem15.User Security Regressions">
+            <directory>./tests/security</directory>
         </testsuite>
     </testsuites>
     <coverage processUncoveredFiles="true">
@@ -32,4 +36,11 @@
             <directory>./vendor</directory>
         </exclude>
     </coverage>
+    <php>
+        <env name="APP_ENV" value="testing"/>
+        <env name="CACHE_DRIVER" value="array"/>
+        <env name="SESSION_DRIVER" value="array"/>
+        <env name="DB_CONNECTION" value="sqlite"/>
+        <env name="DB_DATABASE" value=":memory:"/>
+    </php>
 </phpunit>

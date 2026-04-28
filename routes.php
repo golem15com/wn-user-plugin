@@ -96,12 +96,9 @@ Route::group(
          * Verify PIN - for authenticated users to verify their own PIN
          * Used by parents on user picker to confirm their identity
          */
-        Route::post(
-            'verify-pin',
-            static function (Request $request) {
-                return (new \Golem15\User\Controllers\ApiController())->verifyPin($request);
-            }
-        );
+        Route::post('verify-pin', static function (Request $request) {
+            return (new \Golem15\User\Controllers\ApiController())->verifyPin($request);
+        })->middleware('throttle:pin-login');
 
         /*
          * Verify Family Member PIN - verify PIN for any family member
@@ -113,7 +110,7 @@ Route::group(
             static function (Request $request) {
                 return (new \Golem15\User\Controllers\ApiController())->verifyFamilyMemberPin($request);
             }
-        );
+        )->middleware('throttle:pin-login');
 
         /*
          * OAuth Providers - get list of enabled OAuth providers
@@ -289,6 +286,38 @@ Route::group(
         );
     }
 );
+
+/*
+|--------------------------------------------------------------------------
+| User Activation - Signed URL from Invitation Email
+|--------------------------------------------------------------------------
+|
+| Per AUTH-08: replaces plaintext password in invitation.
+| The signed URL is verified by Laravel's hasValidSignature().
+| Expires after 72 hours (configured in sendInvitation()).
+|
+*/
+
+Route::get('_user/activate/{id}', function ($id) {
+    if (!request()->hasValidSignature()) {
+        // Expired or invalid signature
+        return redirect('/')->with('error', 'This activation link has expired. Please request a new invitation.');
+    }
+
+    $user = \Golem15\User\Models\User::findOrFail($id);
+
+    // Generate a WinterCMS-native reset password code
+    // This uses the same mechanism as ResetPassword::onRestorePassword()
+    $resetCode = $user->getResetPasswordCode();
+
+    // Build the code in the format expected by ResetPassword component: {userId}!{resetCode}
+    $code = implode('!', [$user->id, $resetCode]);
+
+    // Redirect to site root with ?reset= query parameter
+    // The ResetPassword component's code() method reads get('reset')
+    // and renders the password-set form when a code is present.
+    return redirect(url('/') . '?reset=' . $code . '&activate=1');
+})->middleware('web')->name('user.activate');
 
 // 2FA Management Routes (authenticated via JWT)
 Route::group(
