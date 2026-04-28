@@ -193,7 +193,7 @@ class SocialAuth extends ComponentBase
                     'provider' => $provider,
                     'ip' => Request::ip(),
                 ]);
-                return $this->redirectOAuthError(Lang::get('golem15.user::lang.oauth.invalid_provider'));
+                return $this->redirectOAuthError(Lang::get('golem15.user::lang.oauth.invalid_state'));
             } catch (\GuzzleHttp\Exception\ClientException $e) {
                 // Handle expired/invalid OAuth codes (400 Bad Request with invalid_grant)
                 $response = $e->getResponse();
