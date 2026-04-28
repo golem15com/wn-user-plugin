@@ -87,7 +87,7 @@ None.
 
 ### Composer constraint changes (if any)
 
-Update `golem15/user` to `^2.0` in downstream composer.json.
+Update `golem15/wn-user-plugin` to `^2.0` in downstream composer.json.
 
 ### Verification
 
