@@ -13,11 +13,11 @@
     xsi:noNamespaceSchemaLocation="https://schema.phpunit.de/9.3/phpunit.xsd"
 >
     <testsuites>
-        <testsuite name="Golem15.User">
-            <directory>./tests</directory>
+        <testsuite name="Golem15.User Unit Tests">
+            <directory>./tests/unit</directory>
         </testsuite>
         <testsuite name="Golem15.User Security Regressions">
-            <directory>./tests/Security</directory>
+            <directory>./tests/security</directory>
         </testsuite>
     </testsuites>
     <coverage processUncoveredFiles="true">
