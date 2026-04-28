@@ -5,14 +5,15 @@ use Golem15\User\Tests\UserPluginTestCase;
 use Mockery;
 
 /**
- * Security PoC tests for CRITICAL findings USER-001.
+ * Security regression tests for CRITICAL findings USER-001.
  * Each test method is named test_user_NNN_<short_slug> and references the finding ID
  * in .planning/audit/plugins/user/FINDINGS.md.
  *
  * @group security
  *
- * Per Phase 3 D-20: these tests MUST FAIL on current code (red-bar regression locks).
- * Phase 7 / RMED-01 remediation will turn them green.
+ * These tests were originally introduced as red-bar PoC regression locks during
+ * Phase 3 D-20. After Phase 7 / RMED-01 remediation, they are expected to stay
+ * green and protect against regressions.
  */
 class DataHandlingTest extends UserPluginTestCase
 {
