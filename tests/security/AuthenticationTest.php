@@ -91,21 +91,22 @@ class AuthenticationTest extends UserPluginTestCase
             dirname(__DIR__, 2) . '/routes.php'
         );
 
-        // The verify-pin route definition spans from the Route::post('verify-pin',...)
-        // to the closing ");". We need to check if THIS specific route has
-        // ->middleware('throttle:pin-login') chained, not whether pin-login route
-        // (which is nearby) has it.
-        //
-        // Pattern: extract the Route::post('verify-pin',...) block and check for
-        // pin-login throttle on THAT specific route.
+        // USER-004 covers BOTH verify-pin AND verify-family-member-pin (both accept
+        // 4-digit PINs). The regression lock must assert strict throttling on each
+        // route block independently, otherwise removing the throttle from one route
+        // would slip through.
+        $assertRouteHasStrictThrottle = function (string $routeName) use ($source): void {
+            $pos = strpos($source, "'{$routeName}'");
+            $this->assertNotFalse(
+                $pos,
+                "USER-004: Could not locate {$routeName} route in routes.php to verify "
+                . 'rate limiting middleware. Manual verification needed.'
+            );
 
-        // Find the verify-pin route definition and extract its full block
-        $verifyPinPos = strpos($source, "'verify-pin'");
-        if ($verifyPinPos !== false) {
-            // Get the route definition block (from 'verify-pin' to the next blank line or Route::)
-            $routeBlock = substr($source, $verifyPinPos, 200);
+            // Inspect the next 200 chars of source -- the chained ->middleware(...) call
+            // appears within this window for the route definitions in routes.php.
+            $routeBlock = substr($source, $pos, 200);
 
-            // Check if this specific route block chains ->middleware('throttle:pin-login')
             $hasStrictThrottle = (
                 str_contains($routeBlock, 'throttle:pin-login')
                 || str_contains($routeBlock, 'throttle:verify-pin')
@@ -114,20 +115,17 @@ class AuthenticationTest extends UserPluginTestCase
 
             $this->assertTrue(
                 $hasStrictThrottle,
-                'USER-004: verify-pin route does not have strict rate limiting middleware. '
-                . 'pin-login has throttle:pin-login (10/min) but verify-pin uses only the '
-                . 'group-level throttle:user-api (120/min). A 4-digit PIN (10,000 '
-                . 'possibilities) can be brute-forced in ~83 minutes at 120 requests/min. '
-                . 'GDPR-Art8-Applicable: YES (child PIN brute force). '
-                . 'Post-fix: apply ->middleware(\'throttle:pin-login\') to verify-pin and '
-                . 'verify-family-member-pin routes.'
+                "USER-004: {$routeName} route does not have strict rate limiting middleware. "
+                . 'pin-login has throttle:pin-login (10/min) but this route would otherwise '
+                . 'fall back to the group-level throttle:user-api (120/min). A 4-digit PIN '
+                . '(10,000 possibilities) can be brute-forced in ~83 minutes at 120 '
+                . 'requests/min. GDPR-Art8-Applicable: YES (child PIN brute force). '
+                . "Post-fix: apply ->middleware('throttle:pin-login') to the {$routeName} route."
             );
-        } else {
-            $this->fail(
-                'USER-004: Could not locate verify-pin route in routes.php to verify '
-                . 'rate limiting middleware. Manual verification needed.'
-            );
-        }
+        };
+
+        $assertRouteHasStrictThrottle('verify-pin');
+        $assertRouteHasStrictThrottle('verify-family-member-pin');
     }
 
     /**
