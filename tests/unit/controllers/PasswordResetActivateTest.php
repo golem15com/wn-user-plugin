@@ -2,6 +2,7 @@
 
 namespace Golem15\User\Tests\Unit\Controllers;
 
+use Mockery;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Mail;
 use Golem15\User\Controllers\ApiController;
@@ -45,9 +46,25 @@ class PasswordResetActivateTest extends UserPluginTestCase
     // forgotPassword()
     //
 
+    /**
+     * Swap the Mail facade root with a Mockery spy.
+     *
+     * forgotPassword() uses the canonical raw-view send `Mail::queue($view, $data, $closure)`
+     * (ported verbatim from ResetPassword::onRestorePassword()). Laravel's MailFake silently
+     * drops non-Mailable raw-view queues, so Mail::assertQueued() can never observe it — we spy
+     * on the underlying mailer instead and assert the restore view (does / does not) get queued.
+     */
+    protected function spyMail()
+    {
+        $spy = Mockery::spy('Illuminate\Contracts\Mail\Mailer');
+        Mail::swap($spy);
+
+        return $spy;
+    }
+
     public function test_forgot_password_unknown_email_returns_200_and_queues_no_mail(): void
     {
-        Mail::fake();
+        $mail = $this->spyMail();
 
         $response = (new ApiController())->forgotPassword(
             $this->makeRequest(['email' => 'nobody-here@example.tld'])
@@ -59,14 +76,14 @@ class PasswordResetActivateTest extends UserPluginTestCase
             $response->getData(true)['message']
         );
 
-        Mail::assertNothingQueued();
+        $mail->shouldNotHaveReceived('queue');
     }
 
     public function test_forgot_password_known_email_returns_same_200_and_queues_one_mail(): void
     {
-        Mail::fake();
-
         $user = $this->makeUser(['email' => 'known-user@example.tld']);
+
+        $mail = $this->spyMail();
 
         $response = (new ApiController())->forgotPassword(
             $this->makeRequest(['email' => 'known-user@example.tld'])
@@ -79,12 +96,14 @@ class PasswordResetActivateTest extends UserPluginTestCase
             $response->getData(true)['message']
         );
 
-        Mail::assertQueued('golem15.user::mail.restore', 1);
+        $mail->shouldHaveReceived('queue')
+            ->with('golem15.user::mail.restore', Mockery::type('array'), Mockery::type('callable'))
+            ->once();
     }
 
     public function test_forgot_password_invalid_email_returns_422_with_errors(): void
     {
-        Mail::fake();
+        $mail = $this->spyMail();
 
         $response = (new ApiController())->forgotPassword(
             $this->makeRequest(['email' => 'not-an-email'])
@@ -96,7 +115,7 @@ class PasswordResetActivateTest extends UserPluginTestCase
         $this->assertArrayHasKey('errors', $body);
         $this->assertArrayHasKey('email', $body['errors']);
 
-        Mail::assertNothingQueued();
+        $mail->shouldNotHaveReceived('queue');
     }
 
     //

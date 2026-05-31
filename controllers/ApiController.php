@@ -289,21 +289,84 @@ class ApiController
     }
 
     /**
+     * Enumeration-safe password-reset request (D-09).
+     *
+     * Always returns an identical 200 body regardless of whether the email belongs to a real
+     * account; a reset mail is queued only for an existing non-guest user. Ports the canonical
+     * ResetPassword::onRestorePassword() logic additively (no shape change to other endpoints).
+     *
      * @param Request $request
      * @return JsonResponse
      */
     public function forgotPassword(Request $request): JsonResponse
     {
+        $validation = Validator::make($request->all(), [
+            'email' => 'required|email|between:6,255',
+        ]);
 
+        if ($validation->fails()) {
+            return response()->json([
+                'error' => $validation->errors()->first(),
+                'errors' => $validation->errors()->toArray(),
+            ], 422);
+        }
+
+        $user = UserModel::findByEmail($request->get('email'));
+
+        if ($user && !$user->is_guest) {
+            $code = implode('!', [$user->id, $user->getResetPasswordCode()]);
+            $resetUrlBase = config('golem15.user::reset_url_base', url('/reset-password'));
+
+            Mail::queue('golem15.user::mail.restore', [
+                'name' => $user->name,
+                'username' => $user->username,
+                'link' => $resetUrlBase . '?code=' . $code,
+                'code' => $code,
+            ], function ($message) use ($user) {
+                $message->to($user->email, $user->full_name);
+            });
+        }
+
+        // Identical response either way — never leak account existence.
+        return response()->json(['message' => 'If that email exists, a reset link has been sent.']);
     }
 
     /**
+     * Perform a password reset from a "{userId}!{code}" string (D-09).
+     *
+     * Uses the same {error, errors} 422 envelope as register() so the SPA's inline-error path is
+     * uniform. `confirmed` requires the SPA to send password_confirmation (parity with register()).
+     *
      * @param Request $request
      * @return JsonResponse
      */
     public function resetPassword(Request $request): JsonResponse
     {
+        $validation = Validator::make($request->all(), [
+            'code' => 'required',
+            'password' => 'required|between:8,255|confirmed',
+        ]);
 
+        if ($validation->fails()) {
+            return response()->json([
+                'error' => $validation->errors()->first(),
+                'errors' => $validation->errors()->toArray(),
+            ], 422);
+        }
+
+        $parts = explode('!', (string) $request->get('code'));
+        if (count($parts) !== 2) {
+            return response()->json(['error' => 'Invalid reset code'], 422);
+        }
+
+        [$userId, $code] = $parts;
+        $user = UserModel::find($userId);
+
+        if (!$user || !$user->attemptResetPassword($code, $request->get('password'))) {
+            return response()->json(['error' => 'Invalid or expired reset code'], 422);
+        }
+
+        return response()->json(['message' => 'Password has been reset']);
     }
 
     /**
