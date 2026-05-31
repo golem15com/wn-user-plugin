@@ -2,8 +2,8 @@
 
 namespace Golem15\User\Tests\Unit\Components;
 
-use Mockery;
 use ReflectionMethod;
+use Laravel\Socialite\Two\User as SocialiteTwoUser;
 use Laravel\Socialite\Contracts\User as SocialiteUser;
 use Golem15\User\Components\SocialAuth;
 use Golem15\User\Tests\UserPluginTestCase;
@@ -23,17 +23,23 @@ use Golem15\User\Tests\UserPluginTestCase;
  */
 class SocialAuthGateTest extends UserPluginTestCase
 {
+    /**
+     * Build a CONCRETE Socialite user (Two\User extends AbstractUser) so getRaw() is a real
+     * method — matching runtime fidelity. The Contracts\User interface does NOT declare getRaw(),
+     * so a bare interface mock would make providerEmailVerified()'s method_exists() guard return
+     * false and never read the email_verified claim.
+     */
     protected function socialiteUser(?string $email, array $raw = [], string $id = 'provider-id-123'): SocialiteUser
     {
-        $user = Mockery::mock(SocialiteUser::class);
-        $user->shouldReceive('getId')->andReturn($id);
-        $user->shouldReceive('getEmail')->andReturn($email);
-        $user->shouldReceive('getName')->andReturn('Social Tester');
-        $user->shouldReceive('getAvatar')->andReturn(null);
-        $user->shouldReceive('getRaw')->andReturn($raw);
-        $user->token = 'tok';
-        $user->refreshToken = 'refresh';
-        $user->expiresIn = 3600;
+        $user = new SocialiteTwoUser();
+        $user->map([
+            'id' => $id,
+            'name' => 'Social Tester',
+            'email' => $email,
+            'avatar' => null,
+        ]);
+        $user->setRaw($raw);
+        $user->setToken('tok')->setRefreshToken('refresh')->setExpiresIn(3600);
 
         return $user;
     }

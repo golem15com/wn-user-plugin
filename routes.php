@@ -74,6 +74,16 @@ Route::group(
                 return (new \Golem15\User\Controllers\ApiController())->activate($request);
             }
         );
+        /*
+         * Public activation by {userId}!{code} (D-02) — NO jwt.auth.
+         * The emailed activation link must work for a logged-out visitor.
+         */
+        Route::post(
+            'activate-by-code',
+            static function (Request $request) {
+                return (new \Golem15\User\Controllers\ApiController())->activateByCode($request);
+            }
+        );
         Route::post(
             '/update',
             static function (Request $request) {

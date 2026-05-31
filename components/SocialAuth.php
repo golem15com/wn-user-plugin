@@ -271,9 +271,30 @@ class SocialAuth extends ComponentBase
 
         // If not found, check if email exists and auto-link
         if (!$user) {
-            $user = UserModel::where('email', $socialiteUser->getEmail())->first();
+            $email = $socialiteUser->getEmail();
+
+            // D-07 absent-email guard: never query where('email', null). Divert to the SPA
+            // "we couldn't get your email" fallback.
+            if (empty($email)) {
+                \Log::info('OAuth login with absent email, diverting to fallback', [
+                    'provider' => $provider,
+                ]);
+                return $this->redirectToPendingRegistration($provider, $socialiteUser, 'fb_no_email');
+            }
+
+            $user = UserModel::where('email', $email)->first();
 
             if ($user) {
+                // D-06 gate: only auto-link an existing-email match when the provider asserts a
+                // verified email; otherwise divert to the "confirm it's you" pending screen.
+                if (!$this->providerEmailVerified($provider, $socialiteUser)) {
+                    \Log::info('OAuth email match but provider email not verified, diverting to confirm', [
+                        'user_id' => $user->id,
+                        'provider' => $provider,
+                    ]);
+                    return $this->redirectToPendingRegistration($provider, $socialiteUser, 'unverified_match');
+                }
+
                 // Auto-link OAuth provider to existing account
                 \Log::info('Auto-linking OAuth provider to existing account', [
                     'user_id' => $user->id,
@@ -366,9 +387,28 @@ class SocialAuth extends ComponentBase
             return $this->handleOAuthLogin($provider, $socialiteUser);
         }
 
+        // D-07 absent-email guard: never query where('email', null). Divert to the SPA
+        // "we couldn't get your email" fallback.
+        $registrationEmail = $socialiteUser->getEmail();
+        if (empty($registrationEmail)) {
+            \Log::info('OAuth registration with absent email, diverting to fallback', [
+                'provider' => $provider,
+            ]);
+            return $this->redirectToPendingRegistration($provider, $socialiteUser, 'fb_no_email');
+        }
+
         // Check if email already exists - auto-link instead of erroring
-        $existingEmailUser = UserModel::where('email', $socialiteUser->getEmail())->first();
+        $existingEmailUser = UserModel::where('email', $registrationEmail)->first();
         if ($existingEmailUser) {
+            // D-06 gate: only auto-link a verified-email match; otherwise divert to confirm.
+            if (!$this->providerEmailVerified($provider, $socialiteUser)) {
+                \Log::info('OAuth registration email match but not verified, diverting to confirm', [
+                    'user_id' => $existingEmailUser->id,
+                    'provider' => $provider,
+                ]);
+                return $this->redirectToPendingRegistration($provider, $socialiteUser, 'unverified_match');
+            }
+
             \Log::info('OAuth registration with existing email - auto-linking', [
                 'user_id' => $existingEmailUser->id,
                 'provider' => $provider,
@@ -735,7 +775,26 @@ class SocialAuth extends ComponentBase
         return Redirect::to($fallbackPath);
     }
 
-    protected function redirectToPendingRegistration(string $provider, SocialiteUser $socialiteUser)
+    /**
+     * Does the provider assert the user's email is verified? (D-06 / D-07)
+     *
+     * Facebook exposes no per-user email_verified signal, so a Facebook email is treated as
+     * unverified by default. Google (and other OIDC providers) expose the `email_verified`
+     * claim in the raw payload. Gate auto-link on this so an unverified social email cannot
+     * silently take over an existing account.
+     */
+    protected function providerEmailVerified(string $provider, SocialiteUser $socialiteUser): bool
+    {
+        if ($provider === 'facebook') {
+            return false;
+        }
+
+        $raw = method_exists($socialiteUser, 'getRaw') ? $socialiteUser->getRaw() : [];
+
+        return (bool) ($raw['email_verified'] ?? false);
+    }
+
+    protected function redirectToPendingRegistration(string $provider, SocialiteUser $socialiteUser, ?string $reason = null)
     {
         $context = $this->getOAuthContext();
         $frontendCallback = $context['frontend_callback'] ?? null;
@@ -765,7 +824,15 @@ class SocialAuth extends ComponentBase
         session()->forget('oauth_context');
         session()->forget('oauth_consent');
 
-        return Redirect::to($frontendCallback . '?pending_registration=' . urlencode($pendingCode));
+        // Additive reason discriminator (Plan 01 <-> Plan 04 contract). Default null => no
+        // reason param, so existing callers behave identically for genuine new-OAuth-user
+        // pending registrations.
+        $url = $frontendCallback . '?pending_registration=' . urlencode($pendingCode);
+        if ($reason !== null) {
+            $url .= '&reason=' . urlencode($reason);
+        }
+
+        return Redirect::to($url);
     }
 
     protected function getOAuthContext(): array

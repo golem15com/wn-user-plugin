@@ -184,6 +184,44 @@ class ApiController
     }
 
     /**
+     * Public activation from a "{userId}!{code}" string (D-02).
+     *
+     * Unlike activate(), this takes NO JWT — the emailed activation link must work for a
+     * logged-out visitor. It grants no session; it only flips the account's activation flag
+     * after verifying the per-user activation code via the model.
+     *
+     * @param Request $request
+     * @return JsonResponse
+     */
+    public function activateByCode(Request $request): JsonResponse
+    {
+        $validation = Validator::make($request->all(), [
+            'code' => 'required',
+        ]);
+
+        if ($validation->fails()) {
+            return response()->json([
+                'error' => $validation->errors()->first(),
+                'errors' => $validation->errors()->toArray(),
+            ], 422);
+        }
+
+        $parts = explode('!', (string) $request->get('code'));
+        if (count($parts) !== 2) {
+            return response()->json(['error' => 'Invalid activation code'], 422);
+        }
+
+        [$userId, $code] = $parts;
+        $user = UserModel::find($userId);
+
+        if (!$user || !$user->attemptActivation($code)) {
+            return response()->json(['error' => 'This activation link is invalid or has expired'], 422);
+        }
+
+        return response()->json(['message' => 'Account activated']);
+    }
+
+    /**
      * @param Request $request
      * @return JsonResponse
      */
