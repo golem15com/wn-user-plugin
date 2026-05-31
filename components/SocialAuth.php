@@ -832,6 +832,15 @@ class SocialAuth extends ComponentBase
             $url .= '&reason=' . urlencode($reason);
         }
 
+        // Additive personalization context (WR-03 / restores D-06): thread the provider and, when
+        // available, the social email so the frontend consent/confirm screen can pre-fill them.
+        // Existing params and the method signature are unchanged; callers behave identically.
+        $url .= '&provider=' . urlencode($provider);
+        $email = $socialiteUser->getEmail();
+        if ($email) {
+            $url .= '&email=' . urlencode($email);
+        }
+
         return Redirect::to($url);
     }
 

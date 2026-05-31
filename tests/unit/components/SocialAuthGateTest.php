@@ -111,6 +111,9 @@ class SocialAuthGateTest extends UserPluginTestCase
         $url = $redirect->getTargetUrl();
         $this->assertStringContainsString('pending_registration=', $url);
         $this->assertStringContainsString('reason=unverified_match', $url);
+        // WR-03: provider + email additively threaded for the frontend consent/confirm screen.
+        $this->assertStringContainsString('provider=google', $url);
+        $this->assertStringContainsString('email=' . urlencode('match@example.tld'), $url);
     }
 
     public function test_divert_appends_fb_no_email_reason(): void
@@ -131,6 +134,9 @@ class SocialAuthGateTest extends UserPluginTestCase
         $url = $redirect->getTargetUrl();
         $this->assertStringContainsString('pending_registration=', $url);
         $this->assertStringContainsString('reason=fb_no_email', $url);
+        // WR-03: provider is always threaded; email is omitted when the social user has none.
+        $this->assertStringContainsString('provider=facebook', $url);
+        $this->assertStringNotContainsString('email=', $url);
     }
 
     public function test_divert_without_reason_emits_no_reason_param(): void
@@ -150,5 +156,8 @@ class SocialAuthGateTest extends UserPluginTestCase
         $url = $redirect->getTargetUrl();
         $this->assertStringContainsString('pending_registration=', $url);
         $this->assertStringNotContainsString('reason=', $url);
+        // WR-03: provider + email still threaded on the genuine new-user (no-reason) path.
+        $this->assertStringContainsString('provider=google', $url);
+        $this->assertStringContainsString('email=' . urlencode('new@example.tld'), $url);
     }
 }
