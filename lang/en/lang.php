@@ -87,6 +87,8 @@ return [
         'activate_mode_user_comment' => 'The user activates their own account using mail.',
         'activate_mode_admin' => 'Administrator',
         'activate_mode_admin_comment' => 'Only an Administrator can activate a user.',
+        'activation_url' => 'Headless activation URL',
+        'activation_url_comment' => 'Frontend/SPA URL the activation email links to. Leave empty to use the built-in backend link. Use a ":code" (or "{code}") placeholder, e.g. https://www.wavepath.org/user/activate/:code',
         'require_activation' => 'Sign in requires activation',
         'require_activation_comment' => 'Users must have an activated account to sign in.',
         'use_throttle' => 'Throttle attempts',

@@ -21,6 +21,20 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Headless activation URL
+    |--------------------------------------------------------------------------
+    |
+    | Frontend/SPA URL the activation email should link to. Leave empty to use
+    | the built-in backend activation link. Use a ":code" (or "{code}")
+    | placeholder for the activation code, e.g.
+    | https://www.wavepath.org/user/activate/:code
+    |
+    */
+
+    'activationUrl' => '',
+
+    /*
+    |--------------------------------------------------------------------------
     | Allow user registration
     |--------------------------------------------------------------------------
     |

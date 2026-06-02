@@ -68,6 +68,15 @@ tabs:
             type: radio
             tab: golem15.user::lang.settings.activation_tab
 
+        # Headless activation URL (frontend/SPA)
+        activation_url:
+            span: left
+            label: golem15.user::lang.settings.activation_url
+            commentAbove: golem15.user::lang.settings.activation_url_comment
+            placeholder: 'https://www.example.com/user/activate/:code'
+            type: text
+            tab: golem15.user::lang.settings.activation_tab
+
         # Two-Factor Authentication Mode
         two_factor_mode:
             span: left

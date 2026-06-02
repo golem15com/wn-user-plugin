@@ -86,6 +86,8 @@ return [
         'activate_mode_user_comment' => 'Użytkownik aktywuje własne konto za pomocą poczty e-mail.',
         'activate_mode_admin' => 'Administrator',
         'activate_mode_admin_comment' => 'Tylko administrator może aktywować użytkownika.',
+        'activation_url' => 'Adres URL aktywacji (headless)',
+        'activation_url_comment' => 'Adres frontendu/SPA, do którego prowadzi link aktywacyjny w e-mailu. Pozostaw puste, aby użyć wbudowanego linku backendu. Użyj symbolu ":code" (lub "{code}"), np. https://www.wavepath.org/user/activate/:code',
         'require_activation' => 'Logowanie wymaga aktywacji konta',
         'require_activation_comment' => 'Użytkownicy muszą mieć aktywne konto, aby się zalogować.',
         'use_throttle' => 'Blokada prób logowania',

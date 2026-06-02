@@ -218,7 +218,18 @@ class ApiController
             return response()->json(['error' => 'This activation link is invalid or has expired'], 422);
         }
 
-        return response()->json(['message' => 'Account activated']);
+        /*
+         * The activation code is the bearer secret (magic-link equivalent): issue a JWT for the
+         * now-active user so a headless client can sign in immediately. The wavepath cookie
+         * wrapper strips this token into the httpOnly cookie (D-16); legacy callers ignore it.
+         */
+        $token = JWTAuth::fromUser($user);
+
+        return response()->json([
+            'message' => 'Account activated',
+            'token'   => $token,
+            'user'    => $user->getApiArray(),
+        ]);
     }
 
     /**
@@ -302,7 +313,12 @@ class ApiController
                 return response()->json(['token' => $token, 'user' => $userModel->getApiArray()]);
             }
 
-
+            /*
+             * Admin activation (or any activation-required mode that did not log the user in):
+             * the account exists but is not yet active. Return a deterministic empty 200 so the
+             * caller renders a "pending approval" state — never fall through to a 500 (D-03).
+             */
+            return response()->json([], 200);
         }
         catch (ValidationException $ex) {
             return response()->json([
@@ -1109,6 +1125,22 @@ class ApiController
 
     private function makeActivationUrl(string $code)
     {
+        /*
+         * Headless mode: a frontend/SPA URL template was configured. Substitute the :code
+         * (or {code}) placeholder, otherwise append the code as a trailing path segment.
+         */
+        $template = UserSettings::get('activation_url');
+        if (!empty($template)) {
+            if (str_contains($template, ':code') || str_contains($template, '{code}')) {
+                return str_replace([':code', '{code}'], $code, $template);
+            }
+
+            return rtrim($template, '/') . '/' . $code;
+        }
+
+        /*
+         * Default: built-in backend activation link (unchanged).
+         */
         $url = env('APP_URL') . '/_user/api/v1/activate';
         if (strpos($url, $code) === false) {
             $url .= '?activate=' . $code;

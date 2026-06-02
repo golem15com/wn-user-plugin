@@ -34,6 +34,7 @@ class Settings extends Model
     {
         $this->require_activation = config('golem15.user::requireActivation', true);
         $this->activate_mode = config('golem15.user::activateMode', self::ACTIVATE_AUTO);
+        $this->activation_url = config('golem15.user::activationUrl', '');
         $this->use_throttle = config('golem15.user::useThrottle', true);
         $this->block_persistence = config('golem15.user::blockPersistence', false);
         $this->allow_registration = config('golem15.user::allowRegistration', true);
