@@ -35,6 +35,20 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Headless password-reset URL
+    |--------------------------------------------------------------------------
+    |
+    | Frontend/SPA URL the password-reset email should link to. Leave empty to
+    | use the legacy "/reset-password" link on this app. Use a ":code" (or
+    | "{code}") placeholder for the reset code, e.g.
+    | https://www.wavepath.org/reset-password?code=:code
+    |
+    */
+
+    'resetUrl' => '',
+
+    /*
+    |--------------------------------------------------------------------------
     | Allow user registration
     |--------------------------------------------------------------------------
     |

@@ -77,6 +77,15 @@ tabs:
             type: text
             tab: golem15.user::lang.settings.activation_tab
 
+        # Headless password-reset URL (frontend/SPA)
+        reset_url:
+            span: right
+            label: golem15.user::lang.settings.reset_url
+            commentAbove: golem15.user::lang.settings.reset_url_comment
+            placeholder: 'https://www.example.com/reset-password?code=:code'
+            type: text
+            tab: golem15.user::lang.settings.activation_tab
+
         # Two-Factor Authentication Mode
         two_factor_mode:
             span: left

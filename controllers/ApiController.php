@@ -369,12 +369,11 @@ class ApiController
 
         if ($user && !$user->is_guest) {
             $code = implode('!', [$user->id, $user->getResetPasswordCode()]);
-            $resetUrlBase = config('golem15.user::reset_url_base', url('/reset-password'));
 
             Mail::queue('golem15.user::mail.restore', [
                 'name' => $user->name,
                 'username' => $user->username,
-                'link' => $resetUrlBase . '?code=' . $code,
+                'link' => $this->makeResetUrl($code),
                 'code' => $code,
             ], function ($message) use ($user) {
                 $message->to($user->email, $user->full_name);
@@ -1147,5 +1146,29 @@ class ApiController
         }
 
         return $url;
+    }
+
+    private function makeResetUrl(string $code)
+    {
+        /*
+         * Headless mode: a frontend/SPA URL template was configured. Substitute the :code
+         * (or {code}) placeholder, otherwise append the code as a ?code= query parameter
+         * (the reset form reads it from the query string).
+         */
+        $template = UserSettings::get('reset_url');
+        if (!empty($template)) {
+            if (str_contains($template, ':code') || str_contains($template, '{code}')) {
+                return str_replace([':code', '{code}'], $code, $template);
+            }
+
+            return rtrim($template, '/') . '?code=' . $code;
+        }
+
+        /*
+         * Default: legacy reset link base (config override, else this app's /reset-password).
+         */
+        $base = config('golem15.user::reset_url_base', url('/reset-password'));
+
+        return $base . '?code=' . $code;
     }
 }
