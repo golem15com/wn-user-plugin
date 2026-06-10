@@ -1,6 +1,7 @@
 <?php namespace Golem15\User\Tests;
 
 use App;
+use Config;
 use Illuminate\Foundation\AliasLoader;
 use Golem15\User\Models\Settings;
 
@@ -21,6 +22,14 @@ abstract class UserPluginTestCase extends \PluginTestCase
     public function setUp(): void
     {
         parent::setUp();
+
+        // Provide a deterministic JWT secret so controller paths that mint a token
+        // (e.g. activate-and-sign-in) run under the plain-phpunit harness. Production
+        // always has a configured secret via `php artisan jwt:secret`; without one the
+        // jwt-auth provider throws SecretMissingException. Test-only, behaviour-neutral.
+        if (!Config::get('jwt.secret')) {
+            Config::set('jwt.secret', 'testing-only-deterministic-jwt-secret-key-0001');
+        }
 
         // reset any modified settings
         Settings::resetDefault();

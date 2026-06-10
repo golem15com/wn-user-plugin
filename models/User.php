@@ -326,7 +326,17 @@ class User extends UserBase implements JWTSubject
      */
     public static function getMinPasswordLength()
     {
-        return Config::get('golem15.user::minPasswordLength', 8);
+        $value = Config::get('golem15.user::minPasswordLength', 8);
+
+        // Guard against a non-scalar resolution (e.g. a namespaced config key that
+        // resolves to the whole config array under certain plugin-test harnesses).
+        // The value is interpolated into a validation rule string, so a non-numeric
+        // value would otherwise trigger an "Array to string conversion".
+        if (!is_numeric($value)) {
+            return 8;
+        }
+
+        return (int) $value;
     }
 
     //

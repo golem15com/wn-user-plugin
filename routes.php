@@ -1,5 +1,6 @@
 <?php
 
+use Golem15\User\Controllers\ApiController;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\RateLimiter;
@@ -115,12 +116,9 @@ Route::group(
          * Used by user picker to verify parent/child PINs before switching profiles
          * Requires authenticated user (must be in same family)
          */
-        Route::post(
-            'verify-family-member-pin',
-            static function (Request $request) {
-                return (new \Golem15\User\Controllers\ApiController())->verifyFamilyMemberPin($request);
-            }
-        )->middleware('throttle:pin-login');
+        Route::post('verify-family-member-pin', static function (Request $request) {
+            return (new ApiController())->verifyFamilyMemberPin($request);
+        })->middleware('throttle:pin-login');
 
         /*
          * OAuth Providers - get list of enabled OAuth providers
