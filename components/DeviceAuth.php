@@ -376,7 +376,8 @@ class DeviceAuth extends ComponentBase
 
         $device->revoke();
 
-        // TODO: Optionally destroy the actual session in sessions table
+        // NOTE(g15-starter): optional hard-destroy of the session row on device logout is
+        // deferred (current behavior unchanged). Tracked — see G15 Starter g15office task.
         // This requires access to session storage
 
         Log::info('QuestStream: Device authorization revoked', [
