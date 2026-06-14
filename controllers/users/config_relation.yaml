@@ -1,0 +1,13 @@
+# ===================================
+#  Relation Behavior Config
+# ===================================
+
+# belongsTo organisation — single-user assignment (D-11). Pick or clear the
+# organisation this user belongs to from the User edit form.
+organisation:
+    label: golem15.user::lang.organisation.label
+    view:
+        list: $/golem15/user/models/organisation/columns.yaml
+    manage:
+        list: $/golem15/user/models/organisation/columns.yaml
+        showSearch: true

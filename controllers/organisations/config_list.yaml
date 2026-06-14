@@ -1,0 +1,20 @@
+# ===================================
+#  List Behavior Config
+# ===================================
+
+title: golem15.user::lang.organisation.label_plural
+
+list: $/golem15/user/models/organisation/columns.yaml
+
+modelClass: Golem15\User\Models\Organisation
+
+recordUrl: golem15/user/organisations/update/:id
+
+noRecordsMessage: backend::lang.list.no_records
+
+recordsPerPage: 20
+
+toolbar:
+    buttons: list_toolbar
+    search:
+        prompt: backend::lang.list.search_prompt

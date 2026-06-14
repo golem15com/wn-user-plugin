@@ -1,0 +1,16 @@
+# ===================================
+#  Relation Behavior Config
+# ===================================
+
+# hasMany members — assign EXISTING users to this organisation.
+# Uses add|remove (the hasMany pattern); the link/unlink pair is for belongsToMany
+# pivots. members is a hasMany so add|remove sets/clears the user's foreign key.
+members:
+    label: golem15.user::lang.organisation.members
+    view:
+        list: $/golem15/user/models/user/columns.yaml
+        toolbarButtons: add|remove
+        showSearch: true
+    manage:
+        list: $/golem15/user/models/user/columns.yaml
+        showSearch: true

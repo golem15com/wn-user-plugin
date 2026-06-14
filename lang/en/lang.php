@@ -378,4 +378,18 @@ return [
         'security_notice' => 'Security Notice',
         'password_required' => 'You must have a password set on your account before unlinking OAuth providers to ensure you can still sign in.',
     ],
+    'organisation' => [
+        'id' => 'ID',
+        'label' => 'Organisation',
+        'label_plural' => 'Organisations',
+        'menu_label' => 'Organisations',
+        'new' => 'New Organisation',
+        'name' => 'Name',
+        'slug' => 'Slug',
+        'slug_comment' => 'Auto-generated from the name if left blank.',
+        'description' => 'Description',
+        'avatar' => 'Avatar',
+        'members' => 'Members',
+        'plural' => 'Organisations',
+    ],
 ];

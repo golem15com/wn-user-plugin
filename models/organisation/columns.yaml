@@ -1,0 +1,21 @@
+# ===================================
+#  Column Definitions
+# ===================================
+
+columns:
+    id:
+        label: golem15.user::lang.organisation.id
+        invisible: true
+
+    name:
+        label: golem15.user::lang.organisation.name
+        searchable: true
+
+    slug:
+        label: golem15.user::lang.organisation.slug
+        searchable: true
+
+    created_at:
+        label: backend::lang.list.column_created
+        type: datetime
+        sortable: true

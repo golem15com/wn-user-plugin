@@ -200,6 +200,12 @@ class Plugin extends PluginBase
                         'icon' => 'icon-users',
                         'url' => Backend::url('golem15/user/usergroups'),
                         'permissions' => ['golem15.users.access_groups']
+                    ],
+                    'organisations' => [
+                        'label' => 'golem15.user::lang.organisation.menu_label',
+                        'icon' => 'icon-sitemap',
+                        'url' => Backend::url('golem15/user/organisations'),
+                        'permissions' => ['golem15.users.access_users']
                     ]
                 ]
             ]

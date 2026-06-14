@@ -1,0 +1,26 @@
+# ===================================
+#  Form Field Definitions
+# ===================================
+
+fields:
+    name:
+        label: golem15.user::lang.organisation.name
+        span: left
+        required: true
+
+    slug:
+        label: golem15.user::lang.organisation.slug
+        span: right
+        comment: golem15.user::lang.organisation.slug_comment
+
+    description:
+        label: golem15.user::lang.organisation.description
+        type: textarea
+        size: small
+
+    avatar:
+        label: golem15.user::lang.organisation.avatar
+        type: fileupload
+        mode: image
+        imageWidth: 120
+        imageHeight: 120
