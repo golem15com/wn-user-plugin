@@ -70,6 +70,14 @@ tabs:
             type: relation
             emptyOption: golem15.user::lang.user.empty_groups
 
+        organisation:
+            label: golem15.user::lang.organisation.label
+            tab: golem15.user::lang.user.account
+            type: relation
+            nameFrom: name
+            span: full
+            emptyOption: golem15.user::lang.organisation.empty_organisation
+
         created_ip_address:
             label: golem15.user::lang.user.created_ip_address
             span: auto

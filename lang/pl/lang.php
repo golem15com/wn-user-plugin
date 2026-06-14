@@ -278,5 +278,6 @@ return [
         'avatar' => 'Awatar',
         'members' => 'Członkowie',
         'plural' => 'Organizacje',
+        'empty_organisation' => '— Brak organizacji —',
     ],
 ];

@@ -391,5 +391,6 @@ return [
         'avatar' => 'Avatar',
         'members' => 'Members',
         'plural' => 'Organisations',
+        'empty_organisation' => '— No organisation —',
     ],
 ];
