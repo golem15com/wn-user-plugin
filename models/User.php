@@ -48,6 +48,10 @@ class User extends UserBase implements JWTSubject
         'groups' => [UserGroup::class, 'table' => 'users_groups']
     ];
 
+    public $belongsTo = [
+        'organisation' => [\Golem15\User\Models\Organisation::class, 'key' => 'organisation_id'],
+    ];
+
     public $hasMany = [
         'consentAudits' => [ConsentAudit::class, 'key' => 'user_id'],
         'twoFactorMethods' => [TwoFactorMethod::class, 'key' => 'user_id'],
@@ -82,6 +86,9 @@ class User extends UserBase implements JWTSubject
         'marketing_consent',
         'consent_ip_address',
         'deletion_reason',
+        // Phase 12 (WS-1): additive org relation
+        'organisation_id',
+        'organisation_role',
     ];
 
     /**
