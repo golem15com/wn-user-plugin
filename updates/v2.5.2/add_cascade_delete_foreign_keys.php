@@ -18,63 +18,25 @@ class AddCascadeDeleteForeignKeys extends Migration
 {
     public function up()
     {
+        // Generic, table-agnostic GDPR cascade-FK hook. Plugins that own related
+        // tables register a listener on 'golem15.user.gdprCascadeForeignKeys' and
+        // push their target columns. With no listeners registered this is a
+        // silent no-op (the plugins that own those tables declare cascade FKs
+        // in their own migrations).
         $updated = [];
-
-        // 1. golem15_queststream_user_quests - player_id
-        if ($this->updateForeignKey(
-            'golem15_queststream_user_quests',
-            'player_id',
-            'users',
-            'golem15_queststream_user_quests_player_id_foreign'
-        )) {
-            $updated[] = 'golem15_queststream_user_quests';
+        foreach ($this->cascadeTargets() as $t) {
+            if ($this->updateForeignKey(
+                $t['table'],
+                $t['column'],
+                $t['references'] ?? 'users',
+                $t['constraint'] ?? null,
+                $t['on_delete'] ?? 'cascade'
+            )) {
+                $updated[] = $t['table'] . '.' . $t['column'];
+            }
         }
 
-        // 2. golem15_queststream_user_rewards - user_id
-        if ($this->updateForeignKey(
-            'golem15_queststream_user_rewards',
-            'user_id',
-            'users',
-            'golem15_queststream_user_rewards_user_id_foreign'
-        )) {
-            $updated[] = 'golem15_queststream_user_rewards';
-        }
-
-        // 3. golem15_queststream_user_achievements - user_id
-        if ($this->updateForeignKey(
-            'golem15_queststream_user_achievements',
-            'user_id',
-            'users',
-            'golem15_queststream_user_achievements_user_id_foreign'
-        )) {
-            $updated[] = 'golem15_queststream_user_achievements';
-        }
-
-        // 4. golem15_queststream_family_invitations - invited_user_id (CASCADE) and invited_by (SET NULL)
-        if ($this->updateForeignKey(
-            'golem15_queststream_family_invitations',
-            'invited_user_id',
-            'users',
-            'golem15_queststream_family_invitations_invited_user_id_foreign',
-            'cascade'
-        )) {
-            $updated[] = 'golem15_queststream_family_invitations.invited_user_id';
-        }
-
-        // invited_by should SET NULL (keep invitation record but remove inviter reference)
-        if ($this->updateForeignKey(
-            'golem15_queststream_family_invitations',
-            'invited_by',
-            'users',
-            'golem15_queststream_family_invitations_invited_by_foreign',
-            'set null'
-        )) {
-            $updated[] = 'golem15_queststream_family_invitations.invited_by';
-        }
-
-        // Only log a summary when this migration actually touched something. In
-        // projects without the QuestStream tables (e.g. WavePath) this is a silent
-        // no-op rather than a stream of misleading warning/info lines on every run.
+        // Only log a summary when this migration actually touched something.
         if (!empty($updated)) {
             Log::info("GDPR Migration: Added cascade delete to foreign keys", [
                 'migration' => 'v2.5.2',
@@ -85,46 +47,36 @@ class AddCascadeDeleteForeignKeys extends Migration
 
     public function down()
     {
-        // Restore original foreign keys without cascade
-        $this->restoreForeignKey(
-            'golem15_queststream_user_quests',
-            'player_id',
-            'users',
-            'golem15_queststream_user_quests_player_id_foreign',
-            'restrict'
-        );
+        foreach ($this->cascadeTargets() as $t) {
+            $this->restoreForeignKey(
+                $t['table'],
+                $t['column'],
+                $t['references'] ?? 'users',
+                $t['constraint'] ?? null,
+                'restrict'
+            );
+        }
+    }
 
-        $this->restoreForeignKey(
-            'golem15_queststream_user_rewards',
-            'user_id',
-            'users',
-            'golem15_queststream_user_rewards_user_id_foreign',
-            'restrict'
-        );
+    /**
+     * Collect cascade-FK targets from plugins. Each listener returns a list of
+     * entries of the form
+     * ['table' => ..., 'column' => ..., 'on_delete' => 'cascade'|'set null'].
+     *
+     * @return array
+     */
+    protected function cascadeTargets(): array
+    {
+        $results = (array) \Event::fire('golem15.user.gdprCascadeForeignKeys', [], false);
 
-        $this->restoreForeignKey(
-            'golem15_queststream_user_achievements',
-            'user_id',
-            'users',
-            'golem15_queststream_user_achievements_user_id_foreign',
-            'restrict'
-        );
+        $targets = [];
+        foreach ($results as $set) {
+            if (is_array($set)) {
+                $targets = array_merge($targets, $set);
+            }
+        }
 
-        $this->restoreForeignKey(
-            'golem15_queststream_family_invitations',
-            'invited_user_id',
-            'users',
-            'golem15_queststream_family_invitations_invited_user_id_foreign',
-            'restrict'
-        );
-
-        $this->restoreForeignKey(
-            'golem15_queststream_family_invitations',
-            'invited_by',
-            'users',
-            'golem15_queststream_family_invitations_invited_by_foreign',
-            'restrict'
-        );
+        return $targets;
     }
 
     /**
@@ -139,8 +91,8 @@ class AddCascadeDeleteForeignKeys extends Migration
      */
     protected function updateForeignKey($table, $column, $references, $constraintName, $onDelete = 'cascade')
     {
-        // Absent table/column is an expected no-op in projects that don't ship these
-        // QuestStream tables. Use debug level so it never floods info/warning logs.
+        // Absent table/column is an expected no-op in projects that don't ship the
+        // target tables. Use debug level so it never floods info/warning logs.
         if (!Schema::hasTable($table)) {
             Log::debug("GDPR Migration: Table {$table} does not exist, skipping foreign key update");
             return false;

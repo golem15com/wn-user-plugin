@@ -568,7 +568,7 @@ class SocialAuth extends ComponentBase
         // Clean up consent from session
         session()->forget('oauth_consent');
 
-        // Fire registration event (triggers Family creation in QuestStream)
+        // Fire registration event (listeners may run project-specific onboarding)
         Event::fire('golem15.user.register', [$user, []]);
 
         // Log the user in
