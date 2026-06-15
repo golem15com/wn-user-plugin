@@ -452,12 +452,13 @@ class ApiController
         $user = UserModel::find($request->get('user_id'));
 
         // Generic error for user-not-found or not an eligible PIN-login target
-        // (prevents enumeration). Plugins decide eligibility;
-        // default is eligible when no listener restricts it.
+        // (prevents enumeration). Plugins opt a user in to PIN login by returning
+        // true; fail-safe — without a listener this QuestStream-specific flow is
+        // disabled (denied), never wide open.
         $pinLoginEligible = $user
             ? \Event::fire('golem15.user.pinLoginEligible', [$user], true)
             : false;
-        if (!$user || $pinLoginEligible === false) {
+        if (!$user || $pinLoginEligible !== true) {
             return response()->json([
                 'success' => false,
                 'error' => ['message' => 'Invalid credentials'],
@@ -477,14 +478,15 @@ class ApiController
         }
 
         // PIN-less children: require an authorized profile authority (e.g. a
-        // parent in the same family). Authorization is plugin-defined; default
-        // allows when no listener restricts it.
+        // parent in the same family). Authorization is plugin-defined and
+        // fail-safe — access is granted only when a listener explicitly returns
+        // true, so without a listener this flow is denied.
         if (!$userHasPin) {
-            $parent = $this->getAuthenticatedParent();
-            $authorized = $parent
-                ? \Event::fire('golem15.user.authorizeProfileAccess', [$parent, $user], true)
+            $authority = $this->getAuthenticatedAuthority();
+            $authorized = $authority
+                ? \Event::fire('golem15.user.authorizeProfileAccess', [$authority, $user], true)
                 : false;
-            if (!$parent || $authorized === false) {
+            if (!$authority || $authorized !== true) {
                 return response()->json([
                     'success' => false,
                     'error' => ['message' => 'Invalid credentials'],
@@ -688,9 +690,10 @@ class ApiController
         }
 
         // Verify the current user is authorized to access the target profile
-        // (e.g. same family). Plugin-defined; default allows.
+        // (e.g. same family). Plugin-defined and fail-safe — access is granted
+        // only when a listener explicitly returns true.
         $authorized = \Event::fire('golem15.user.authorizeProfileAccess', [$currentUser, $targetUser], true);
-        if ($authorized === false) {
+        if ($authorized !== true) {
             return response()->json([
                 'success' => false,
                 'error' => ['message' => 'User is not in your family'],
@@ -704,8 +707,9 @@ class ApiController
                 'message' => 'No PIN required',
                 'user' => $targetUser->getApiArray(),
             ];
+            // Fail-safe: only mint a token when a listener explicitly grants it.
             $issuesToken = \Event::fire('golem15.user.profileSwitchIssuesToken', [$targetUser], true);
-            if ($issuesToken === null || $issuesToken === true) {
+            if ($issuesToken === true) {
                 $responseData['token'] = JWTAuth::fromUser($targetUser);
             }
             return response()->json($responseData);
@@ -751,8 +755,9 @@ class ApiController
             'message' => 'PIN verified',
             'user' => $targetUser->getApiArray(),
         ];
+        // Fail-safe: only mint a token when a listener explicitly grants it.
         $issuesToken = \Event::fire('golem15.user.profileSwitchIssuesToken', [$targetUser], true);
-        if ($issuesToken === null || $issuesToken === true) {
+        if ($issuesToken === true) {
             $responseData['token'] = JWTAuth::fromUser($targetUser);
         }
         return response()->json($responseData);
@@ -1071,7 +1076,7 @@ class ApiController
      * Returns null if there is no valid token, the token is invalid, or the user
      * is not permitted to authorize other profiles (see golem15.user.canAuthorizeProfiles).
      */
-    private function getAuthenticatedParent(): ?UserModel
+    private function getAuthenticatedAuthority(): ?UserModel
     {
         try {
             $token = TokenExtractor::fromRequest(request());
@@ -1082,10 +1087,11 @@ class ApiController
             if (!$user) {
                 return null;
             }
-            // Plugins decide who may authorize other profiles;
-            // default treats any authenticated user as an authority.
+            // Plugins decide who may authorize other profiles. Fail-safe — a user
+            // is an authority only when a listener explicitly returns true, so
+            // without a listener no one is treated as an authority.
             $canAuthorize = \Event::fire('golem15.user.canAuthorizeProfiles', [$user], true);
-            return ($canAuthorize === false) ? null : $user;
+            return ($canAuthorize === true) ? $user : null;
         } catch (\Exception $e) {
             return null;
         }

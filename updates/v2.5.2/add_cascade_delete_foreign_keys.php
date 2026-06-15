@@ -63,6 +63,10 @@ class AddCascadeDeleteForeignKeys extends Migration
      * entries of the form
      * ['table' => ..., 'column' => ..., 'on_delete' => 'cascade'|'set null'].
      *
+     * Entries are plugin-controlled, so malformed ones (not an array, or missing
+     * the required 'table'/'column' keys) are skipped rather than allowed to
+     * raise undefined-key warnings or break the migration.
+     *
      * @return array
      */
     protected function cascadeTargets(): array
@@ -71,8 +75,17 @@ class AddCascadeDeleteForeignKeys extends Migration
 
         $targets = [];
         foreach ($results as $set) {
-            if (is_array($set)) {
-                $targets = array_merge($targets, $set);
+            if (!is_array($set)) {
+                continue;
+            }
+            foreach ($set as $entry) {
+                if (is_array($entry) && !empty($entry['table']) && !empty($entry['column'])) {
+                    $targets[] = $entry;
+                } else {
+                    Log::debug('GDPR Migration: skipping malformed cascade-FK target', [
+                        'entry' => $entry,
+                    ]);
+                }
             }
         }
 
