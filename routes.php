@@ -93,6 +93,19 @@ Route::group(
         );
 
         /*
+         * Authenticated change-password. Confirms the current password, sets a new
+         * one, and clears the must_change_password flag (forced first-login change
+         * for admin-provisioned temporary passwords). Authorizes via the bearer
+         * token inside the controller (same pattern as the device endpoints).
+         */
+        Route::post(
+            '/change-password',
+            static function (Request $request) {
+                return (new \Golem15\User\Controllers\ApiController())->changePassword($request);
+            }
+        );
+
+        /*
          * PIN Login - for children to authenticate with their 4-digit PIN
          * This is a public endpoint (no auth required) since it initiates authentication
          */
