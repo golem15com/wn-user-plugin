@@ -33,7 +33,7 @@ class AddOAuthFieldsToUsers extends Migration
             $table->timestamp('oauth_linked_at')->nullable();
 
             // Ensure unique provider + provider_id combination
-            // Prevents same Google account linked to multiple QuestStream users
+            // Prevents the same provider account being linked to multiple users
             $table->unique(['oauth_provider', 'oauth_provider_id'], 'oauth_unique_provider_user');
         });
     }

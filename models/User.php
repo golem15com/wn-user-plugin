@@ -1098,16 +1098,8 @@ class User extends UserBase implements JWTSubject
      */
     public function requestDeletion($reason = null)
     {
-        // Check if primary parent with family members
-        if ($this->isParent() && $this->isPrimaryParent()) {
-            $family = $this->family;
-            if ($family && ($family->parents()->count() > 1 || $family->children()->count() > 0)) {
-                throw new \ApplicationException(
-                    'Cannot delete account. You are the primary parent with family members. ' .
-                    'Please transfer ownership or remove all members first.'
-                );
-            }
-        }
+        // Allow plugins to block deletion by throwing.
+        Event::fire('golem15.user.requestingDeletion', [$this]);
 
         $gracePeriodDays = config('gdpr.deletion_grace_period_days', 30);
 
@@ -1163,67 +1155,18 @@ class User extends UserBase implements JWTSubject
                 'email' => $this->email,
             ]);
 
-            // 1. Check if primary parent with family members (unless skipped)
-            if (!$skipFamilyCheck && $this->isParent() && $this->isPrimaryParent()) {
-                $family = $this->family;
-                if ($family && ($family->parents()->count() > 1 || $family->children()->count() > 0)) {
-                    throw new \ApplicationException(
-                        'Cannot delete user. They are the primary parent with family members.'
-                    );
-                }
-            }
+            // 1. Let plugins run their own cascade/cleanup and
+            //    enforce their own guards. Runs inside this transaction, so a
+            //    listener throwing rolls the whole deletion back. The
+            //    $skipFamilyCheck flag is forwarded for cascaded child deletions.
+            Event::fire('golem15.user.deleting', [$this, $skipFamilyCheck]);
 
             // 2. Delete avatar file
             if ($this->avatar) {
                 $this->avatar->delete();
             }
 
-            // 3. Delete quest completion photos (System\Models\File)
-            $userQuests = \DB::table('golem15_queststream_user_quests')
-                ->where('player_id', $this->id)
-                ->whereNotNull('completion_photo')
-                ->pluck('completion_photo');
-
-            foreach ($userQuests as $photoId) {
-                $photo = \System\Models\File::find($photoId);
-                if ($photo) {
-                    $photo->delete();
-                }
-            }
-
-            // 4. If parent, delete children's avatars and hard delete children
-            if ($this->isParent()) {
-                $children = $this->children;
-                foreach ($children as $child) {
-                    if ($child->avatar) {
-                        $child->avatar->delete();
-                    }
-                    // Skip family check for children (parent is being deleted)
-                    $child->hardDelete(true);
-                }
-            }
-
-            // 5. Handle family deletion
-            if ($this->family) {
-                $family = $this->family;
-
-                // If primary parent and sole member, delete family
-                if ($this->isPrimaryParent() && $family->members()->count() <= 1) {
-                    $family->forceDelete(); // Permanent deletion
-                    \Log::info("Family deleted", ['family_id' => $family->id]);
-                } else {
-                    // Just remove from family
-                    $this->family_id = null;
-                    $this->parent_id = null;
-                    $this->save();
-                }
-            }
-
-            // 6. Force delete user (bypasses soft delete, triggers cascade deletes)
-            // Cascade will handle:
-            // - user_quests, user_rewards, user_achievements
-            // - device_auth_sessions, family_invitations
-            // - user_parents pivot, consent_audit
+            // 3. Force delete user (bypasses soft delete, triggers DB cascade deletes)
             $this->forceDelete();
 
             \DB::commit();
@@ -1245,36 +1188,6 @@ class User extends UserBase implements JWTSubject
             ]);
             throw $e;
         }
-    }
-
-    /**
-     * Override this method to check if user is a parent in a family
-     * @return bool
-     */
-    public function isParent() {
-        if (!$this->family) {
-            return false;
-        }
-        return $this->family->parents()->get()->contains($this);
-    }
-
-    public function isChild() {
-        if (!$this->family) {
-            return false;
-        }
-        return $this->family->children()->get()->contains($this);
-    }
-    /**
-     * Check if user is primary parent of their family
-     *
-     * @return bool
-     */
-    public function isPrimaryParent()
-    {
-        if (!$this->family) {
-            return false;
-        }
-        return $this->family->primary_parent_id === $this->id;
     }
 
     /**
@@ -1319,61 +1232,6 @@ class User extends UserBase implements JWTSubject
                 }),
             ],
 
-            'family' => $this->family ? [
-                'id' => $this->family->id,
-                'name' => $this->family->name,
-                'role' => $this->isParent() ? 'parent' : 'child',
-                'is_primary_parent' => $this->isPrimaryParent(),
-            ] : null,
-
-            'children' => $this->isParent() ? $this->children->map(function($child) {
-                return [
-                    'id' => $child->id,
-                    'name' => $child->name,
-                    'level' => $child->level,
-                    'experience' => $child->experience,
-                    'coins' => $child->coins,
-                ];
-            }) : [],
-
-            'quests' => $this->quests()->withPivot(['status', 'completed_at', 'approved_at', 'experience_earned', 'coins_earned'])->get()->map(function($quest) {
-                return [
-                    'title' => $quest->title,
-                    'description' => $quest->description,
-                    'status' => $quest->pivot->status,
-                    'assigned_at' => $quest->pivot->created_at ? $quest->pivot->created_at->toIso8601String() : null,
-                    'completed_at' => $quest->pivot->completed_at ? $quest->pivot->completed_at->toIso8601String() : null,
-                    'experience_earned' => $quest->pivot->experience_earned,
-                    'coins_earned' => $quest->pivot->coins_earned,
-                ];
-            }),
-
-            'rewards' => $this->rewards()->withPivot(['purchased_at'])->get()->map(function($reward) {
-                return [
-                    'name' => $reward->name,
-                    'cost' => $reward->cost,
-                    'purchased_at' => $reward->pivot->purchased_at ? $reward->pivot->purchased_at->toIso8601String() : null,
-                ];
-            }),
-
-            'achievements' => $this->achievements()->withPivot(['unlocked_at', 'progress'])->get()->map(function($achievement) {
-                return [
-                    'name' => $achievement->name,
-                    'description' => $achievement->description,
-                    'unlocked_at' => $achievement->pivot->unlocked_at ? $achievement->pivot->unlocked_at->toIso8601String() : null,
-                    'progress' => $achievement->pivot->progress,
-                ];
-            }),
-
-            'statistics' => [
-                'level' => $this->level,
-                'experience' => $this->experience,
-                'coins' => $this->coins,
-                'total_quests_completed' => $this->quests()->wherePivot('status', 'completed')->count(),
-                'total_rewards_purchased' => $this->rewards()->count(),
-                'total_achievements_unlocked' => $this->achievements()->wherePivotNotNull('unlocked_at')->count(),
-            ],
-
             'two_factor_authentication' => [
                 'methods' => $this->twoFactorMethods()->where('is_enabled', true)->get()->map(function ($method) {
                     return [
@@ -1392,6 +1250,15 @@ class User extends UserBase implements JWTSubject
                 'recovery_codes_remaining' => $this->twoFactorRecoveryCodes()->whereNull('used_at')->count(),
             ],
         ];
+
+        // Let plugins append their own export sections (each listener returns
+        // an associative array of extra sections to merge in).
+        $sections = Event::fire('golem15.user.exportPersonalData', [$this], false);
+        foreach ((array) $sections as $section) {
+            if (is_array($section)) {
+                $data = array_merge($data, $section);
+            }
+        }
 
         Event::fire('golem15.user.data_exported', [$this]);
 

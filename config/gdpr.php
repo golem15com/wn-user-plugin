@@ -76,7 +76,7 @@ return [
 
     'export_format' => 'json', // Options: json, csv (future)
     'export_version' => '1.0',
-    'export_filename_pattern' => 'queststream-data-export-{user_id}-{date}.json',
+    'export_filename_pattern' => 'data-export-{user_id}-{date}.json',
 
     /*
     |--------------------------------------------------------------------------

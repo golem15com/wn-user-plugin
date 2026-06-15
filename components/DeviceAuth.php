@@ -102,7 +102,7 @@ class DeviceAuth extends ComponentBase
         $writer = new Writer($renderer);
         $qrCodeSvg = $writer->writeString($authSession->getAuthUrl());
 
-        Log::info('QuestStream: Device authorization QR code generated', [
+        Log::info('DeviceAuth: Device authorization QR code generated', [
             'user_id' => $user->id,
             'token' => $authSession->token,
             'expires_at' => $authSession->expires_at->toDateTimeString(),
@@ -189,7 +189,7 @@ class DeviceAuth extends ComponentBase
         $writer = new Writer($renderer);
         $qrCodeSvg = $writer->writeString($authSession->getAuthUrl());
 
-        Log::info('QuestStream: Device QR code generated (unauthenticated)', [
+        Log::info('DeviceAuth: Device QR code generated (unauthenticated)', [
             'token' => $authSession->token,
             'short_code' => $authSession->short_code,
             'device_ip' => $authSession->device_ip,
@@ -246,7 +246,7 @@ class DeviceAuth extends ComponentBase
             // Mark session as used
             $authSession->markAsUsed($sessionId);
 
-            Log::info('QuestStream: Device authorization completed via QR scan', [
+            Log::info('DeviceAuth: Device authorization completed via QR scan', [
                 'user_id' => $user->id,
                 'token' => $authSession->token,
                 'session_id' => $sessionId,
@@ -306,7 +306,7 @@ class DeviceAuth extends ComponentBase
         // Confirm the authorization
         $authSession->confirm(request()->ip());
 
-        Log::info('QuestStream: Device authorization confirmed by parent', [
+        Log::info('DeviceAuth: Device authorization confirmed by parent', [
             'user_id' => $user->id,
             'token' => $authSession->token,
             'device_ip' => $authSession->device_ip,
@@ -380,7 +380,7 @@ class DeviceAuth extends ComponentBase
         // deferred (current behavior unchanged). Tracked — see G15 Starter g15office task.
         // This requires access to session storage
 
-        Log::info('QuestStream: Device authorization revoked', [
+        Log::info('DeviceAuth: Device authorization revoked', [
             'user_id' => $user->id,
             'device_id' => $deviceId,
             'device_info' => $device->device_info_attribute,

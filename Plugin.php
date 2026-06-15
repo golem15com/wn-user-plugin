@@ -311,16 +311,6 @@ class Plugin extends PluginBase
 
         User::extend(
             static function ($model) {
-                if (class_exists(\Golem15\QuestStream\Models\Team::class)) {
-                    $model->hasOne['owned_team'] = [
-                        \Golem15\QuestStream\Models\Team::class,
-                        'key' => 'owner_id',
-                    ];
-                    $model->belongsTo['team'] = [
-                        \Golem15\QuestStream\Models\Team::class,
-                        'key' => 'team_id',
-                    ];
-                }
                 $model->addDynamicMethod(
                     'getApiArray',
                     static function () use ($model) {
@@ -337,13 +327,15 @@ class Plugin extends PluginBase
                             'groups' => $model->groups->pluck('name', 'id')->toArray(),
                             'role' => $model->role ? $model->role->slug : null,
                         ];
-                        if (method_exists($model, 'isParent')) {
-                            $data['is_parent'] = $model->isParent() ?? false;
-                            $data['is_child'] = $model->isChild();
-                            $data['family_id'] = $model->family_id;
-                        }
                         if (isset($model->is_onboarded)) {
                             $data['is_onboarded'] = (bool) $model->is_onboarded;
+                        }
+                        // Let plugins contribute extra fields.
+                        $extra = \Event::fire('golem15.user.getApiArray', [$model], false);
+                        foreach ((array) $extra as $section) {
+                            if (is_array($section)) {
+                                $data = array_merge($data, $section);
+                            }
                         }
                         return $data;
                     }
