@@ -19,8 +19,13 @@ class Organisation extends Model
     protected $fillable = ['slug', 'name', 'description'];
 
     public $rules = [
-        'name' => 'required',
-        'slug' => 'required|alpha_dash|unique:golem15_user_organisations',
+        // IN-04: cap name at the column width (string/255) so an over-length name yields
+        // a validation message instead of a DB truncation/error, and bound the free-text
+        // description. Additive-only — these tighten validation without changing the
+        // accepted shape of any existing valid row.
+        'name'        => 'required|max:255',
+        'slug'        => 'required|alpha_dash|unique:golem15_user_organisations',
+        'description' => 'nullable|max:5000',
     ];
 
     public $attachOne = [
