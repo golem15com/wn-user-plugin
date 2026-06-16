@@ -144,3 +144,10 @@
 "3.1.0":
     - "Add trusted device feature for 2FA bypass with configurable TTL."
     - v3.1.0/create_trusted_devices_table.php
+"3.2.0":
+    - "Add Organisation model and nullable organisation_id/organisation_role relation on users (additive)."
+    - v3.2.0/create_organisations_table.php
+    - v3.2.0/add_organisation_to_users.php
+"3.2.1":
+    - "Add must_change_password flag for admin-provisioned temporary passwords (additive)."
+    - v3.2.1/add_must_change_password_to_users.php

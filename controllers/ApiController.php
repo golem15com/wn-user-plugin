@@ -10,6 +10,7 @@ use Golem15\User\Models\Settings as UserSettings;
 use Golem15\User\Models\User as UserModel;
 use Illuminate\Auth\AuthenticationException;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Lang;
@@ -340,6 +341,62 @@ class ApiController
     public function update(Request $request): JsonResponse
     {
 
+    }
+
+    /**
+     * Authenticated change-password (JWT group).
+     *
+     * Lets a signed-in user set a new password after confirming their current one.
+     * Primary use: an admin-provisioned account with a temporary password (the
+     * must_change_password flag) is forced through this before reaching the app;
+     * a successful change clears the flag. Reuses the {error, errors} 422 envelope
+     * for parity with register()/resetPassword(); the new user payload is returned
+     * so the SPA can refresh the (now-cleared) flag without a second round-trip.
+     *
+     * @param Request $request
+     * @return JsonResponse
+     */
+    public function changePassword(Request $request): JsonResponse
+    {
+        try {
+            $user = $this->authorize($request);
+        } catch (AuthenticationException|TokenBlacklistedException $e) {
+            return response()->json(['error' => true, 'message' => 'Unauthorized'], 401);
+        }
+
+        $minLength = UserModel::getMinPasswordLength();
+
+        $validation = Validator::make($request->all(), [
+            'current_password' => 'required',
+            'password'         => "required|between:$minLength,255|confirmed|different:current_password",
+        ]);
+
+        if ($validation->fails()) {
+            return response()->json([
+                'error'  => $validation->errors()->first(),
+                'errors' => $validation->errors()->toArray(),
+            ], 422);
+        }
+
+        // Verify the current password against the stored hash before allowing a change.
+        if (!Hash::check($request->get('current_password'), $user->password)) {
+            return response()->json([
+                'error'  => Lang::get('golem15.user::lang.account.invalid_login'),
+                'errors' => ['current_password' => [Lang::get('golem15.user::lang.account.invalid_login')]],
+            ], 422);
+        }
+
+        // Trusted server-side write: set the new (auto-hashed) password and clear the
+        // forced-change flag. forceSave() skips the password=>confirmed re-validation
+        // quirk on the second write (documented harness behaviour, Plan 05).
+        $user->password = $request->get('password');
+        $user->must_change_password = false;
+        $user->forceSave();
+
+        return response()->json([
+            'message' => 'Password changed',
+            'user'    => $user->getApiArray(),
+        ]);
     }
 
     /**

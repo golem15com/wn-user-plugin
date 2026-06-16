@@ -48,6 +48,10 @@ class User extends UserBase implements JWTSubject
         'groups' => [UserGroup::class, 'table' => 'users_groups']
     ];
 
+    public $belongsTo = [
+        'organisation' => [\Golem15\User\Models\Organisation::class, 'key' => 'organisation_id'],
+    ];
+
     public $hasMany = [
         'consentAudits' => [ConsentAudit::class, 'key' => 'user_id'],
         'twoFactorMethods' => [TwoFactorMethod::class, 'key' => 'user_id'],
@@ -82,6 +86,11 @@ class User extends UserBase implements JWTSubject
         'marketing_consent',
         'consent_ip_address',
         'deletion_reason',
+        // Phase 12 (WS-1): additive org relation
+        'organisation_id',
+        'organisation_role',
+        // Phase 12: forced password change on first login for admin-provisioned accounts
+        'must_change_password',
     ];
 
     /**
@@ -126,6 +135,7 @@ class User extends UserBase implements JWTSubject
         'terms_accepted' => 'boolean',
         'privacy_accepted' => 'boolean',
         'marketing_consent' => 'boolean',
+        'must_change_password' => 'boolean',
     ];
 
     public static $loginAttribute = null;

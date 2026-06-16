@@ -21,7 +21,8 @@ class Users extends Controller
      */
     public $implement = [
         \Backend\Behaviors\FormController::class,
-        \Backend\Behaviors\ListController::class
+        \Backend\Behaviors\ListController::class,
+        \Backend\Behaviors\RelationController::class
     ];
 
     /**
@@ -37,7 +38,7 @@ class Users extends Controller
     /**
      * @var array `RelationController` configuration, by extension.
      */
-    public $relationConfig;
+    public $relationConfig = 'config_relation.yaml';
 
     /**
      * @var array Permissions required to view this page.

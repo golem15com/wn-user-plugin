@@ -1,0 +1,19 @@
+# ===================================
+#  Form Behavior Config
+# ===================================
+
+name: golem15.user::lang.organisation.label
+
+form: $/golem15/user/models/organisation/fields.yaml
+
+modelClass: Golem15\User\Models\Organisation
+
+defaultRedirect: golem15/user/organisations
+
+create:
+    redirect: golem15/user/organisations/update/:id
+    redirectClose: golem15/user/organisations
+
+update:
+    redirect: golem15/user/organisations
+    redirectClose: golem15/user/organisations
