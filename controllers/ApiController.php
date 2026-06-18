@@ -335,12 +335,54 @@ class ApiController
     }
 
     /**
+     * Authenticated self-service profile edit (JWT group).
+     *
+     * Lets a signed-in user correct their own name, surname, and email. The route
+     * group carries no jwt.auth middleware, so the in-controller authorize() is the
+     * sole auth gate and resolves the user strictly from the verified bearer token —
+     * no user_id is read from the request body. The email-unique rule ignores the
+     * user's own row (so re-saving an unchanged email does not falsely fail). Only
+     * name/surname/email are set explicitly (no mass-assignment); username is
+     * auto-synced from email by the model's beforeSave and password is owned by
+     * changePassword(). Returns the refreshed user payload so the SPA can update
+     * state without a second round-trip; reuses the {error, errors} 422 envelope.
+     *
      * @param Request $request
      * @return JsonResponse
      */
     public function update(Request $request): JsonResponse
     {
+        try {
+            $user = $this->authorize($request);
+        } catch (AuthenticationException|TokenBlacklistedException $e) {
+            return response()->json(['error' => true, 'message' => 'Unauthorized'], 401);
+        }
 
+        $validation = Validator::make($request->all(), [
+            'name'    => 'required|between:2,255',
+            'surname' => 'required|between:2,255',
+            'email'   => 'required|between:6,255|email|unique:users,email,' . $user->id,
+        ]);
+
+        if ($validation->fails()) {
+            return response()->json([
+                'error'  => $validation->errors()->first(),
+                'errors' => $validation->errors()->toArray(),
+            ], 422);
+        }
+
+        // Trusted server-side write: set only the individually validated fields
+        // (never $user->fill($request->all())). forceSave() mirrors changePassword()'s
+        // established trusted-write idiom in this controller.
+        $user->name = $request->get('name');
+        $user->surname = $request->get('surname');
+        $user->email = $request->get('email');
+        $user->forceSave();
+
+        return response()->json([
+            'message' => 'Profile updated',
+            'user'    => $user->getApiArray(),
+        ]);
     }
 
     /**
