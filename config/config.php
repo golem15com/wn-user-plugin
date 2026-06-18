@@ -27,7 +27,7 @@ return [
     | Frontend/SPA URL the activation email should link to. Leave empty to use
     | the built-in backend activation link. Use a ":code" (or "{code}")
     | placeholder for the activation code, e.g.
-    | https://www.wavepath.org/user/activate/:code
+    | https://www.example.com/user/activate/:code
     |
     */
 
@@ -41,7 +41,7 @@ return [
     | Frontend/SPA URL the password-reset email should link to. Leave empty to
     | use the legacy "/reset-password" link on this app. Use a ":code" (or
     | "{code}") placeholder for the reset code, e.g.
-    | https://www.wavepath.org/reset-password?code=:code
+    | https://www.example.com/reset-password?code=:code
     |
     */
 
