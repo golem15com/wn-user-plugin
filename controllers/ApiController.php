@@ -221,7 +221,7 @@ class ApiController
 
         /*
          * The activation code is the bearer secret (magic-link equivalent): issue a JWT for the
-         * now-active user so a headless client can sign in immediately. The wavepath cookie
+         * now-active user so a headless client can sign in immediately. The SPA cookie
          * wrapper strips this token into the httpOnly cookie (D-16); legacy callers ignore it.
          */
         $token = JWTAuth::fromUser($user);
