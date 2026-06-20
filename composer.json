@@ -30,7 +30,7 @@
     "require": {
         "php": ">=7.2",
         "composer/installers": "~1.0",
-        "php-open-source-saver/jwt-auth": "1.*",
+        "php-open-source-saver/jwt-auth": "^2.9",
         "firebase/php-jwt": "^5.0 || ^6.0 || ^7.0",
         "google/recaptcha": "^1.2",
         "pragmarx/google2fa": "^8.0",
