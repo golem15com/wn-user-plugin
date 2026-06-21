@@ -1,6 +1,7 @@
 <?php namespace Golem15\User\Commands;
 
 use Illuminate\Console\Command;
+use Symfony\Component\Console\Attribute\AsCommand;
 use Golem15\User\Models\User;
 use Log;
 
@@ -14,6 +15,7 @@ use Log;
  * Should be scheduled to run daily via cron:
  * 0 2 * * * php artisan user:process-scheduled-deletions
  */
+#[AsCommand(name: 'user:process-scheduled-deletions')]
 class ProcessScheduledDeletions extends Command
 {
     /**

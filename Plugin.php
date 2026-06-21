@@ -294,7 +294,8 @@ class Plugin extends PluginBase
             $guard = new JwtAuthGuard(
                 $app['tymon.jwt'],
                 $app['auth']->createUserProvider($config['provider']),
-                $app['request']
+                $app['request'],
+                $app['events']
             );
             $app->refresh('request', $guard, 'setRequest');
 

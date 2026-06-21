@@ -1,8 +1,10 @@
 <?php namespace Golem15\User\Commands;
 
 use Illuminate\Console\Command;
+use Symfony\Component\Console\Attribute\AsCommand;
 use Golem15\User\Models\FrontendPermission;
 
+#[AsCommand(name: 'user:import-permissions')]
 class ImportPermissions extends Command
 {
     protected $signature = 'user:import-permissions {--prune : Remove permissions not found in any CSV}';

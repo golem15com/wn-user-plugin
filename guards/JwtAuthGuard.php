@@ -6,6 +6,7 @@ use BadMethodCallException;
 use Illuminate\Auth\GuardHelpers;
 use Illuminate\Contracts\Auth\Guard;
 use Illuminate\Contracts\Auth\UserProvider;
+use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpKernel\Exception\BadRequestHttpException;
 use PHPOpenSourceSaver\JWTAuth\Contracts\JWTSubject;
@@ -37,17 +38,31 @@ class JwtAuthGuard implements Guard
     protected $request;
 
     /**
+     * The event dispatcher instance.
+     *
+     * @var \Illuminate\Contracts\Events\Dispatcher
+     */
+    protected $events;
+
+    /**
      * Create a new authentication guard.
+     *
+     * jwt-auth 2.x widened the JWTGuard constructor with a 4th $eventDispatcher arg
+     * (vendor JWTGuard.php:83); the guard is now constructed with $app['events'] passed
+     * as the dispatcher (closes the D-14 boot fatal). This clone retains its custom
+     * $this->jwt->check()-gated user() resolution; event firing is not currently used.
      *
      * @param \PHPOpenSourceSaver\JWTAuth\JWT                      $jwt
      * @param \Illuminate\Contracts\Auth\UserProvider $provider
      * @param \Illuminate\Http\Request                $request
+     * @param \Illuminate\Contracts\Events\Dispatcher $eventDispatcher
      */
-    public function __construct(JWT $jwt, UserProvider $provider, Request $request)
+    public function __construct(JWT $jwt, UserProvider $provider, Request $request, Dispatcher $eventDispatcher)
     {
         $this->jwt = $jwt;
         $this->provider = $provider;
         $this->request = $request;
+        $this->events = $eventDispatcher;
     }
 
     public function check()

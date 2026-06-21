@@ -43,7 +43,7 @@ class JwtServiceProvider extends LaravelServiceProvider
 
         $this->app['tymon.jwt.parser']->addParser([
             new RouteParams(),
-            new Cookies($this->config('decrypt_cookies')),
+            new Cookies($this->app->make('config')->get('jwt.decrypt_cookies')),
         ]);
     }
 
@@ -54,8 +54,8 @@ class JwtServiceProvider extends LaravelServiceProvider
     {
         $this->app->singleton(
             'tymon.jwt.provider.storage',
-            function () {
-                $instance = $this->getConfigInstance('providers.storage');
+            function ($app) {
+                $instance = $this->getConfigInstance($app, 'providers.storage');
 
                 if (method_exists($instance, 'setLaravelVersion')) {
                     $instance->setLaravelVersion($this->app->version());
@@ -85,17 +85,23 @@ class JwtServiceProvider extends LaravelServiceProvider
     /**
      * Get an instantiable configuration instance.
      *
+     * jwt-auth 2.x widened this signature to ($app, $key) on AbstractServiceProvider
+     * and removed the legacy $this->config() helper (closes the D-14 boot fatal). Read
+     * config via the injected $app and resolve string class names through it, matching
+     * the vendor contract (AbstractServiceProvider::getConfigInstance:345).
+     *
+     * @param \Illuminate\Contracts\Foundation\Application $app
      * @param string $key
      *
      * @return mixed
      * @throws \Illuminate\Contracts\Container\BindingResolutionException
      */
-    protected function getConfigInstance($key)
+    protected function getConfigInstance($app, $key)
     {
-        $instance = $this->config($key);
+        $instance = $app->make('config')->get('jwt.'.$key);
 
         if (is_string($instance)) {
-            return $this->app->make($instance);
+            return $app->make($instance);
         }
 
         return $instance;

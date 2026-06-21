@@ -112,7 +112,7 @@ class DeviceAuth extends ComponentBase
             'qr_code' => $qrCodeSvg,
             'token' => $authSession->token,
             'expires_at' => $authSession->expires_at->toDateTimeString(),
-            'expires_in_seconds' => $authSession->expires_at->diffInSeconds(now()),
+            'expires_in_seconds' => (int) $authSession->expires_at->diffInSeconds(now(), absolute: true),
             'auth_url' => $authSession->getAuthUrl(),
         ];
     }
@@ -201,7 +201,7 @@ class DeviceAuth extends ComponentBase
             'token' => $authSession->token,
             'short_code' => $authSession->short_code,
             'expires_at' => $authSession->expires_at->toDateTimeString(),
-            'expires_in_seconds' => $authSession->expires_at->diffInSeconds(now()),
+            'expires_in_seconds' => (int) $authSession->expires_at->diffInSeconds(now(), absolute: true),
             'auth_url' => $authSession->getAuthUrl(),
         ];
     }
@@ -264,7 +264,7 @@ class DeviceAuth extends ComponentBase
         return [
             'status' => $authSession->status,
             'message' => 'Waiting for authorization...',
-            'expires_in_seconds' => max(0, $authSession->expires_at->diffInSeconds(now())),
+            'expires_in_seconds' => (int) $authSession->expires_at->diffInSeconds(now(), absolute: true),
         ];
     }
 
