@@ -194,7 +194,7 @@ return [
         'allowed_groups_title' => 'Autoriser les groupes',
         'allowed_groups_description' => 'Choisissez les groupes autorisés ou aucun pour autoriser tous les groupes',
         'redirect_title' => 'Rediriger vers',
-        'redirect_desc' => 'Nom de la page de redirection au cas où l'accès est refusé.',
+        'redirect_desc' => 'Nom de la page de redirection au cas où l\'accès est refusé.',
         'logout' => 'Vous avez été déconnecté avec succès.',
         'stop_impersonate_success' => 'Vous n\'êtes plus en train d\'usurper l\'identité d\'un utilisateur',
         'access_denied' => 'Accès refusé. Vous n\'avez pas la permission d\'accéder à cette page.',
