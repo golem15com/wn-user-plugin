@@ -3,18 +3,19 @@
 use Golem15\User\Models\User;
 use Golem15\User\Tests\UserPluginTestCase;
 use Mockery;
+use PHPUnit\Framework\Attributes\Group;
+use PHPUnit\Framework\Attributes\Test;
 
 /**
  * Security regression tests for CRITICAL findings USER-001.
  * Each test method is named test_user_NNN_<short_slug> and references the finding ID
  * in .planning/audit/plugins/golem15/user/FINDINGS.md.
  *
- * @group security
- *
  * These tests were originally introduced as red-bar PoC regression locks during
  * Phase 3 D-20. After Phase 7 / RMED-01 remediation, they are expected to stay
  * green and protect against regressions.
  */
+#[Group('security')]
 class DataHandlingTest extends UserPluginTestCase
 {
     public function tearDown(): void
@@ -38,10 +39,10 @@ class DataHandlingTest extends UserPluginTestCase
      * The assertion fails because oauth_access_token is set to the attacker's plaintext
      * value — this is the red-bar lock proving the vulnerability exists.
      *
-     * @test
-     * @group security
      * @see .planning/audit/plugins/golem15/user/FINDINGS.md USER-001
      */
+    #[Test]
+    #[Group('security')]
     public function test_user_001_oauth_tokens_mass_assignable(): void
     {
         // Arrange: create a partial mock of User to avoid database writes

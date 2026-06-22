@@ -1,18 +1,19 @@
 <?php namespace Golem15\User\Tests\Security;
 
 use Golem15\User\Tests\UserPluginTestCase;
+use PHPUnit\Framework\Attributes\Group;
+use PHPUnit\Framework\Attributes\Test;
 
 /**
  * Security regression tests for HIGH findings USER-003, USER-004, USER-005.
  * Each test method is named test_user_NNN_<short_slug> and references
  * the finding in .planning/audit/plugins/golem15/user/FINDINGS.md.
  *
- * @group security
- *
  * Per Phase 7 D-20: PoC tests use HTTP-only + unit fidelity.
  * These tests act as regression locks for the remediated findings and
  * should stay green after the fixes to prevent reintroducing the issues.
  */
+#[Group('security')]
 class AuthenticationTest extends UserPluginTestCase
 {
     /**
@@ -27,11 +28,11 @@ class AuthenticationTest extends UserPluginTestCase
      * TODAY (pre-fix): stateless() is called, disabling state validation entirely.
      * This assertion FAILS because stateless() is present without compensating controls.
      *
-     * @test
-     * @group security
      * @see .planning/audit/plugins/golem15/user/FINDINGS.md #USER-003
      * @see .planning/audit/DASHBOARD.md #USER-003
      */
+    #[Test]
+    #[Group('security')]
     public function test_user_003_oauth_stateless_csrf_bypass(): void
     {
         $source = file_get_contents(
@@ -80,11 +81,11 @@ class AuthenticationTest extends UserPluginTestCase
      * TODAY (pre-fix): these endpoints use only the general API throttle.
      * This assertion FAILS because the strict rate limiting is absent.
      *
-     * @test
-     * @group security
      * @see .planning/audit/plugins/golem15/user/FINDINGS.md #USER-004
      * @see .planning/audit/DASHBOARD.md #USER-004
      */
+    #[Test]
+    #[Group('security')]
     public function test_user_004_verify_pin_missing_rate_limit(): void
     {
         $source = file_get_contents(
@@ -141,11 +142,11 @@ class AuthenticationTest extends UserPluginTestCase
      * TODAY (pre-fix): No cast exists; Collection is compared to string literals.
      * This assertion FAILS because the type-safe pattern is absent.
      *
-     * @test
-     * @group security
      * @see .planning/audit/plugins/golem15/user/FINDINGS.md #USER-005
      * @see .planning/audit/DASHBOARD.md #USER-005
      */
+    #[Test]
+    #[Group('security')]
     public function test_user_005_twofactor_type_confusion(): void
     {
         $twoFactorServicePath = dirname(__DIR__, 2) . '/classes/twofactor/TwoFactorService.php';

@@ -1,18 +1,19 @@
 <?php namespace Golem15\User\Tests\Security;
 
 use Golem15\User\Tests\UserPluginTestCase;
+use PHPUnit\Framework\Attributes\Group;
+use PHPUnit\Framework\Attributes\Test;
 
 /**
  * Security regression tests for HIGH finding USER-002.
  * Each test method is named test_user_NNN_<short_slug> and references
  * the finding in .planning/audit/plugins/golem15/user/FINDINGS.md.
  *
- * @group security
- *
  * Per Phase 7 D-20: PoC tests use HTTP-only + unit fidelity.
  * These tests act as regression locks for the remediated findings and
  * should stay green after the fixes to prevent reintroducing the issues.
  */
+#[Group('security')]
 class AccessControlTest extends UserPluginTestCase
 {
     /**
@@ -28,11 +29,11 @@ class AccessControlTest extends UserPluginTestCase
      * TODAY (pre-fix): $e->getMessage() is returned directly to API clients.
      * This assertion FAILS because the generic error message pattern is absent.
      *
-     * @test
-     * @group security
      * @see .planning/audit/plugins/golem15/user/FINDINGS.md #USER-002
      * @see .planning/audit/DASHBOARD.md #USER-002
      */
+    #[Test]
+    #[Group('security')]
     public function test_user_002_api_exception_message_leakage(): void
     {
         $source = file_get_contents(
