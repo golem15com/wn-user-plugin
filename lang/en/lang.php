@@ -390,7 +390,6 @@ return [
         'account_already_linked' => 'This :provider account is already linked to another user.',
         'no_provider_linked' => 'No OAuth provider is currently linked to your account.',
         'cannot_unlink_without_password' => 'You must set a password before unlinking your OAuth account to prevent being locked out.',
-        'replacing_provider' => 'Linking :new will replace your existing :old connection.',
 
         // Settings page
         'security_notice' => 'Security Notice',

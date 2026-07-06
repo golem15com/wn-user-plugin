@@ -623,15 +623,8 @@ class SocialAuth extends ComponentBase
             throw new ApplicationException(Lang::get('golem15.user::lang.oauth.account_already_linked'));
         }
 
-        // Check if user already has a different provider linked
-        if ($user->hasOAuthProvider() && $user->oauth_provider !== $provider) {
-            Flash::warning(Lang::get('golem15.user::lang.oauth.replacing_provider', [
-                'old' => $user->getOAuthProviderName(),
-                'new' => ucfirst($provider)
-            ]));
-        }
-
-        // Link OAuth provider
+        // Link OAuth provider — a user may have Google, Facebook, and GitHub all linked
+        // simultaneously; linkOAuthProvider() adds/updates only this provider's own row.
         $user->linkOAuthProvider(
             $provider,
             $providerUserId,
@@ -694,7 +687,9 @@ class SocialAuth extends ComponentBase
             throw new ApplicationException(Lang::get('golem15.user::lang.oauth.must_be_logged_in'));
         }
 
-        if (!$user->hasOAuthProvider()) {
+        $provider = post('provider');
+
+        if (!$provider || !$user->hasOAuthProvider($provider)) {
             throw new ApplicationException(Lang::get('golem15.user::lang.oauth.no_provider_linked'));
         }
 
@@ -703,10 +698,10 @@ class SocialAuth extends ComponentBase
             throw new ApplicationException(Lang::get('golem15.user::lang.oauth.cannot_unlink_without_password'));
         }
 
-        $provider = $user->getOAuthProviderName();
-        $user->unlinkOAuthProvider();
+        $providerName = $user->getOAuthProviderName($provider);
+        $user->unlinkOAuthProvider($provider);
 
-        Flash::success(Lang::get('golem15.user::lang.oauth.unlink_success', ['provider' => $provider]));
+        Flash::success(Lang::get('golem15.user::lang.oauth.unlink_success', ['provider' => $providerName]));
 
         return ['success' => true];
     }
