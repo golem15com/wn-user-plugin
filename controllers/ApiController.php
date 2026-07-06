@@ -874,8 +874,8 @@ class ApiController
     {
         $providers = ['google', 'facebook'];
         $labels = [
-            'google' => 'Kontynuuj z Google',
-            'facebook' => 'Kontynuuj z Facebookiem',
+            'google' => 'Google',
+            'facebook' => 'Facebook',
         ];
         $enabled = [];
 
