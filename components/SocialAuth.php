@@ -1055,15 +1055,20 @@ class SocialAuth extends ComponentBase
         $host = $parts['host'];
 
         // Build a whitelist of allowed frontend origins. In split-domain deployments
-        // (e.g. frontend on horoskopia.eu, backend on api.horoskopia.eu) the request
-        // host differs from the frontend host, so APP_URL (the frontend) is the
-        // authoritative source. Localhost is always allowed for dev.
+        // (e.g. frontend on www.wavepath.org, backend on api.wavepath.org) the request
+        // host differs from the frontend host, so FRONTEND_URL (when set) is the
+        // authoritative source for the frontend's own origin; APP_URL is included too
+        // since some deployments still point it at the frontend. Localhost is always
+        // allowed for dev.
         $allowedHosts = ['localhost', '127.0.0.1'];
         if ($requestHost = parse_url(Request::root(), PHP_URL_HOST)) {
             $allowedHosts[] = $requestHost;
         }
         if ($appHost = parse_url((string) env('APP_URL'), PHP_URL_HOST)) {
             $allowedHosts[] = $appHost;
+        }
+        if ($frontendHost = parse_url((string) env('FRONTEND_URL'), PHP_URL_HOST)) {
+            $allowedHosts[] = $frontendHost;
         }
 
         if (!in_array($host, $allowedHosts, true)) {
