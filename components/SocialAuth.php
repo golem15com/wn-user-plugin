@@ -641,6 +641,27 @@ class SocialAuth extends ComponentBase
             'email' => $user->email
         ]);
 
+        $context = $this->getOAuthContext();
+        $mode = $context['mode'] ?? 'web';
+
+        if ($mode === 'spa') {
+            $frontendCallback = $context['frontend_callback'] ?? null;
+            if ($frontendCallback) {
+                $code = Str::random(64);
+                Cache::put('oauth-complete:' . $code, [
+                    'token' => JWTAuth::fromUser($user),
+                    'user' => $user->getApiArray(),
+                    'action' => 'link',
+                    'return_to' => $context['return_to'] ?? '/',
+                ], now()->addMinutes(self::OAUTH_COMPLETE_TTL_MINUTES));
+
+                session()->forget('oauth_context');
+                session()->forget('oauth_consent');
+
+                return Redirect::to($frontendCallback . '?code=' . urlencode($code));
+            }
+        }
+
         // Flash success message
         Flash::success(Lang::get('golem15.user::lang.oauth.link_success'));
 
