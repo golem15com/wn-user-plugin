@@ -159,3 +159,38 @@ tabs:
                 action: show
                 field: two_factor_mode
                 condition: value[enforced]
+
+        # Social Providers overview
+        _social_overview_hint:
+            type: hint
+            label: golem15.user::lang.settings.social_overview_hint_label
+            path: ~/plugins/golem15/user/models/settings/_social_overview_hint.php
+            tab: golem15.user::lang.settings.social_tab
+
+        # Google section
+        _google_section:
+            type: section
+            label: golem15.user::lang.settings.google_section
+            tab: golem15.user::lang.settings.social_tab
+
+        _google_oauth_hint:
+            type: hint
+            path: ~/plugins/golem15/user/models/settings/_google_oauth_hint.php
+            tab: golem15.user::lang.settings.social_tab
+
+        google_client_id:
+            span: left
+            label: golem15.user::lang.settings.google_client_id
+            comment: golem15.user::lang.settings.google_client_id_comment
+            type: text
+            tab: golem15.user::lang.settings.social_tab
+
+        google_client_secret:
+            span: right
+            label: golem15.user::lang.settings.google_client_secret
+            comment: golem15.user::lang.settings.google_client_secret_comment
+            type: text
+            attributes:
+                type: password
+                autocomplete: off
+            tab: golem15.user::lang.settings.social_tab

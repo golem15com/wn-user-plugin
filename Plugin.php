@@ -15,6 +15,7 @@ use Golem15\User\Middleware\JwtAuthenticate;
 use Golem15\User\Classes\JwtServiceProvider;
 use Golem15\User\Guards\JwtAuthGuard;
 use Golem15\User\Guards\JwtAuthGuardServiceProvider;
+use Golem15\User\Models\Settings;
 use Golem15\User\Models\User;
 use System\Classes\PluginBase;
 use System\Classes\SettingsManager;
@@ -53,6 +54,7 @@ class Plugin extends PluginBase
         $this->bootRepositories();
         // Load GDPR configuration
         \Config::set('gdpr', require __DIR__ . '/config/gdpr.php');
+        $this->applyOAuthSettingsOverrides();
     }
 
     public function register()
@@ -353,5 +355,34 @@ class Plugin extends PluginBase
     private function bootRepositories()
     {
         $this->app->bind(UserRepository::class, UserEloquentRepository::class);
+    }
+
+    /**
+     * Layer backend-configured OAuth credentials on top of the .env-derived
+     * `services.*` config, so Socialite and every provider-config consumer
+     * (SocialAuth, Account, ApiController) pick them up transparently. If a
+     * provider has no credentials saved in Settings, its .env values are left
+     * untouched.
+     */
+    private function applyOAuthSettingsOverrides(): void
+    {
+        if (!App::hasDatabase()) {
+            return;
+        }
+
+        try {
+            $settings = Settings::instance();
+
+            $clientId = $settings->google_client_id;
+            $clientSecret = $settings->google_client_secret;
+
+            if (!empty($clientId) && !empty($clientSecret)) {
+                \Config::set('services.google.client_id', $clientId);
+                \Config::set('services.google.client_secret', $clientSecret);
+            }
+        } catch (\Throwable $e) {
+            // system_settings table not migrated yet, or a decrypt failure
+            // (e.g. rotated APP_KEY) — fall through and keep the .env values.
+        }
     }
 }

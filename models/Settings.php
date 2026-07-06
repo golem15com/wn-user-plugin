@@ -4,6 +4,8 @@ use Model;
 
 class Settings extends Model
 {
+    use \Winter\Storm\Database\Traits\Encryptable;
+
     /**
      * @var array Behaviors implemented by this model.
      */
@@ -13,6 +15,13 @@ class Settings extends Model
 
     public $settingsCode = 'user_settings';
     public $settingsFields = 'fields.yaml';
+
+    /**
+     * @var array Attributes to encrypt at rest.
+     */
+    protected $encryptable = [
+        'google_client_secret',
+    ];
 
 
     const ACTIVATE_AUTO = 'auto';
