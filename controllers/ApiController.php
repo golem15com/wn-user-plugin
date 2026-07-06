@@ -872,10 +872,11 @@ class ApiController
      */
     public function oauthProviders(): JsonResponse
     {
-        $providers = ['google', 'facebook'];
+        $providers = ['google', 'facebook', 'github'];
         $labels = [
             'google' => 'Google',
             'facebook' => 'Facebook',
+            'github' => 'GitHub',
         ];
         $enabled = [];
 

@@ -222,3 +222,31 @@ tabs:
                 type: password
                 autocomplete: off
             tab: golem15.user::lang.settings.social_tab
+
+        # GitHub section
+        _github_section:
+            type: section
+            label: golem15.user::lang.settings.github_section
+            tab: golem15.user::lang.settings.social_tab
+
+        _github_oauth_hint:
+            type: hint
+            path: ~/plugins/golem15/user/models/settings/_github_oauth_hint.php
+            tab: golem15.user::lang.settings.social_tab
+
+        github_client_id:
+            span: left
+            label: golem15.user::lang.settings.github_client_id
+            comment: golem15.user::lang.settings.github_client_id_comment
+            type: text
+            tab: golem15.user::lang.settings.social_tab
+
+        github_client_secret:
+            span: right
+            label: golem15.user::lang.settings.github_client_secret
+            comment: golem15.user::lang.settings.github_client_secret_comment
+            type: text
+            attributes:
+                type: password
+                autocomplete: off
+            tab: golem15.user::lang.settings.social_tab

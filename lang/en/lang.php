@@ -145,6 +145,11 @@ return [
         'facebook_client_id_comment' => 'From Facebook for Developers. Leave blank to keep using the FACEBOOK_CLIENT_ID environment variable.',
         'facebook_client_secret' => 'Facebook App Secret',
         'facebook_client_secret_comment' => 'Leave blank to keep using the FACEBOOK_CLIENT_SECRET environment variable. Stored encrypted.',
+        'github_section' => 'GitHub',
+        'github_client_id' => 'GitHub Client ID',
+        'github_client_id_comment' => 'From GitHub Developer Settings. Leave blank to keep using the GITHUB_CLIENT_ID environment variable.',
+        'github_client_secret' => 'GitHub Client Secret',
+        'github_client_secret_comment' => 'Leave blank to keep using the GITHUB_CLIENT_SECRET environment variable. Stored encrypted.',
     ],
     'user' => [
         'label' => 'User',

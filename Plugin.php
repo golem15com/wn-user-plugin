@@ -373,7 +373,7 @@ class Plugin extends PluginBase
         try {
             $settings = Settings::instance();
 
-            foreach (['google', 'facebook'] as $provider) {
+            foreach (['google', 'facebook', 'github'] as $provider) {
                 $clientId = $settings->{$provider . '_client_id'};
                 $clientSecret = $settings->{$provider . '_client_secret'};
 
