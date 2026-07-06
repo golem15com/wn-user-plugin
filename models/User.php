@@ -5,6 +5,7 @@ use Illuminate\Support\Facades\Cache;
 use PHPOpenSourceSaver\JWTAuth\Contracts\JWTSubject;
 use Str;
 use Auth;
+use Lang;
 use Mail;
 use Event;
 use Config;
@@ -58,6 +59,7 @@ class User extends UserBase implements JWTSubject
         'webauthnCredentials' => [WebAuthnCredential::class, 'key' => 'user_id'],
         'twoFactorRecoveryCodes' => [TwoFactorRecoveryCode::class, 'key' => 'user_id'],
         'trustedDevices' => [TrustedDevice::class, 'key' => 'user_id'],
+        'oauthIdentities' => [OAuthIdentity::class, 'key' => 'user_id'],
     ];
 
     public $attachOne = [
@@ -764,81 +766,84 @@ class User extends UserBase implements JWTSubject
 
     /**
      * Check if this user has an OAuth provider linked
-     * @param string|null $provider Check for specific provider (google, facebook, etc.)
+     * @param string|null $provider Check for a specific provider (google, facebook, etc.); null = any
      * @return boolean
      */
     public function hasOAuthProvider($provider = null)
     {
-        if (!$this->oauth_provider) {
-            return false;
+        $query = $this->oauthIdentities();
+
+        if ($provider !== null) {
+            $query->where('provider', $provider);
         }
 
-        if ($provider === null) {
-            return true;
-        }
-
-        return $this->oauth_provider === $provider;
+        return $query->exists();
     }
 
     /**
-     * Get the display name for the OAuth provider
+     * Get the display name for a linked OAuth provider
+     * @param string $provider Provider name (google, facebook, etc.)
      * @return string|null
      */
-    public function getOAuthProviderName()
+    public function getOAuthProviderName($provider)
     {
-        if (!$this->oauth_provider) {
-            return null;
-        }
+        $identity = $this->oauthIdentities()->where('provider', $provider)->first();
 
-        $providers = [
-            'google' => 'Google',
-            'facebook' => 'Facebook',
-            'github' => 'GitHub',
-        ];
-
-        return $providers[$this->oauth_provider] ?? ucfirst($this->oauth_provider);
+        return $identity?->getDisplayName();
     }
 
     /**
-     * Link an OAuth provider to this user account
+     * Link an OAuth provider to this user account (add-or-update: a user may have one row per
+     * provider simultaneously — linking Facebook does not affect an existing Google link).
      * @param string $provider Provider name (google, facebook, etc.)
      * @param string $providerId Unique ID from the provider
      * @param array $tokens Array with 'token' and optionally 'refreshToken', 'expiresIn'
      * @param array $profileData Additional profile data from provider
      * @return void
-     * @throws \Exception if account already linked to different user
+     * @throws \Exception if this provider identity is already linked to a different user
      */
     public function linkOAuthProvider($provider, $providerId, $tokens, $profileData = [])
     {
         // Check if this OAuth account is already linked to another user
-        $existingUser = static::where('oauth_provider', $provider)
-            ->where('oauth_provider_id', $providerId)
-            ->where('id', '!=', $this->id)
+        $existingIdentity = OAuthIdentity::where('provider', $provider)
+            ->where('provider_id', $providerId)
+            ->where('user_id', '!=', $this->id)
             ->first();
 
-        if ($existingUser) {
+        if ($existingIdentity) {
             throw new \Exception(
-                Lang::get('golem15.user::lang.oauth.account_already_linked')
+                Lang::get('golem15.user::lang.oauth.account_already_linked', ['provider' => ucfirst($provider)])
             );
         }
 
-        // Encrypt tokens for security
-        $this->oauth_provider = $provider;
-        $this->oauth_provider_id = $providerId;
-        $this->oauth_access_token = encrypt($tokens['token']);
+        // Avoid firstOrNew()/fill()-style mass assignment — OAuthIdentity is deliberately
+        // $guarded=['*'] with no $fillable at all, so every field is set via direct property
+        // assignment here instead.
+        $identity = OAuthIdentity::where('user_id', $this->id)
+            ->where('provider', $provider)
+            ->first();
+
+        if (!$identity) {
+            $identity = new OAuthIdentity();
+            $identity->user_id = $this->id;
+            $identity->provider = $provider;
+        }
+
+        $identity->provider_id = $providerId;
+        $identity->setAccessToken($tokens['token']);
 
         if (isset($tokens['refreshToken'])) {
-            $this->oauth_refresh_token = encrypt($tokens['refreshToken']);
+            $identity->setRefreshToken($tokens['refreshToken']);
         }
 
         if (isset($tokens['expiresIn'])) {
-            $this->oauth_token_expires_at = Carbon::now()->addSeconds($tokens['expiresIn']);
+            $identity->token_expires_at = Carbon::now()->addSeconds($tokens['expiresIn']);
         }
 
-        $this->oauth_profile_data = $profileData;
-        $this->oauth_linked_at = Carbon::now();
+        $identity->profile_data = $profileData;
+        $identity->linked_at = Carbon::now();
 
-        $this->save();
+        $identity->save();
 
         \Log::info('OAuth account linked', [
             'user_id' => $this->id,
@@ -848,22 +853,13 @@ class User extends UserBase implements JWTSubject
     }
 
     /**
-     * Unlink OAuth provider from this user account
+     * Unlink an OAuth provider from this user account
+     * @param string $provider Provider name (google, facebook, etc.)
      * @return void
      */
-    public function unlinkOAuthProvider()
+    public function unlinkOAuthProvider($provider)
     {
-        $provider = $this->oauth_provider;
-
-        $this->oauth_provider = null;
-        $this->oauth_provider_id = null;
-        $this->oauth_access_token = null;
-        $this->oauth_refresh_token = null;
-        $this->oauth_token_expires_at = null;
-        $this->oauth_profile_data = null;
-        $this->oauth_linked_at = null;
-
-        $this->save();
+        $this->oauthIdentities()->where('provider', $provider)->delete();
 
         \Log::info('OAuth account unlinked', [
             'user_id' => $this->id,
@@ -873,58 +869,33 @@ class User extends UserBase implements JWTSubject
     }
 
     /**
-     * Get decrypted OAuth access token
+     * Get decrypted OAuth access token for a specific linked provider
+     * @param string $provider Provider name (google, facebook, etc.)
      * @return string|null
      */
-    public function getOAuthAccessToken()
+    public function getOAuthAccessToken($provider)
     {
-        if (!$this->oauth_access_token) {
-            return null;
-        }
-
-        try {
-            return decrypt($this->oauth_access_token);
-        } catch (\Exception $e) {
-            \Log::error('Failed to decrypt OAuth access token', [
-                'user_id' => $this->id,
-                'error' => $e->getMessage()
-            ]);
-            return null;
-        }
+        return $this->oauthIdentities()->where('provider', $provider)->first()?->getAccessToken();
     }
 
     /**
-     * Get decrypted OAuth refresh token
+     * Get decrypted OAuth refresh token for a specific linked provider
+     * @param string $provider Provider name (google, facebook, etc.)
      * @return string|null
      */
-    public function getOAuthRefreshToken()
+    public function getOAuthRefreshToken($provider)
     {
-        if (!$this->oauth_refresh_token) {
-            return null;
-        }
-
-        try {
-            return decrypt($this->oauth_refresh_token);
-        } catch (\Exception $e) {
-            \Log::error('Failed to decrypt OAuth refresh token', [
-                'user_id' => $this->id,
-                'error' => $e->getMessage()
-            ]);
-            return null;
-        }
+        return $this->oauthIdentities()->where('provider', $provider)->first()?->getRefreshToken();
     }
 
     /**
-     * Check if OAuth token is expired
+     * Check if a specific linked provider's OAuth token is expired
+     * @param string $provider Provider name (google, facebook, etc.)
      * @return boolean
      */
-    public function isOAuthTokenExpired()
+    public function isOAuthTokenExpired($provider)
     {
-        if (!$this->oauth_token_expires_at) {
-            return false;
-        }
-
-        return Carbon::now()->isAfter($this->oauth_token_expires_at);
+        return $this->oauthIdentities()->where('provider', $provider)->first()?->isExpired() ?? false;
     }
 
     /**
@@ -935,9 +906,9 @@ class User extends UserBase implements JWTSubject
      */
     public static function findByOAuthProvider($provider, $providerId)
     {
-        return static::where('oauth_provider', $provider)
-            ->where('oauth_provider_id', $providerId)
-            ->first();
+        return OAuthIdentity::where('provider', $provider)
+            ->where('provider_id', $providerId)
+            ->first()?->user;
     }
 
     //
