@@ -122,8 +122,11 @@ class SocialAuth extends ComponentBase
             );
         }
 
-        // For linking, verify user is authenticated
-        if ($action === 'link' && !Auth::check()) {
+        // For linking, verify user is authenticated. The SPA never establishes a Winter
+        // "web" session (Auth::check()) — it authenticates purely via an httpOnly JWT
+        // cookie, so fall back to resolving that JWT directly (same cookie the jwt.auth
+        // middleware already reads for protected API routes).
+        if ($action === 'link' && !$this->resolveAuthenticatedUser()) {
             throw new ApplicationException(Lang::get('golem15.user::lang.oauth.must_be_logged_in'));
         }
 
@@ -595,7 +598,7 @@ class SocialAuth extends ComponentBase
      */
     protected function handleAccountLinking($provider, SocialiteUser $socialiteUser)
     {
-        $user = Auth::getUser();
+        $user = $this->resolveAuthenticatedUser();
         $providerUserId = $this->getProviderUserId($socialiteUser);
         if (!$providerUserId) {
             throw new ApplicationException('Nie udało się odczytać identyfikatora konta z dostawcy logowania.');
@@ -702,6 +705,32 @@ class SocialAuth extends ComponentBase
     //
     // Helper Methods
     //
+
+    /**
+     * Resolve the currently authenticated user for OAuth account-linking checks.
+     *
+     * Auth::check()/Auth::getUser() here resolve to Winter's own session/cookie-based
+     * auth manager (Golem15\User\Facades\Auth -> Golem15\User\Classes\AuthManager), which
+     * the SPA never populates — it authenticates purely via an httpOnly JWT cookie read
+     * by the 'api' guard (see JwtServiceProvider's Cookies parser). Try the Winter session
+     * first (covers any traditional CMS/web-session usage), then fall back to resolving
+     * that same JWT cookie directly.
+     */
+    protected function resolveAuthenticatedUser(): ?UserModel
+    {
+        $user = Auth::getUser();
+        if ($user) {
+            return $user;
+        }
+
+        try {
+            $jwtUser = JWTAuth::parseToken()->authenticate();
+        } catch (\Throwable $e) {
+            return null;
+        }
+
+        return $jwtUser instanceof UserModel ? $jwtUser : null;
+    }
 
     /**
      * Check if OAuth provider is configured
