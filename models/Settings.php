@@ -21,6 +21,7 @@ class Settings extends Model
      */
     protected $encryptable = [
         'google_client_secret',
+        'facebook_client_secret',
     ];
 
 

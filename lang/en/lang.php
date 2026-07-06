@@ -140,6 +140,11 @@ return [
         'google_client_id_comment' => 'From Google Cloud Console. Leave blank to keep using the GOOGLE_CLIENT_ID environment variable.',
         'google_client_secret' => 'Google Client Secret',
         'google_client_secret_comment' => 'Leave blank to keep using the GOOGLE_CLIENT_SECRET environment variable. Stored encrypted.',
+        'facebook_section' => 'Facebook',
+        'facebook_client_id' => 'Facebook App ID',
+        'facebook_client_id_comment' => 'From Facebook for Developers. Leave blank to keep using the FACEBOOK_CLIENT_ID environment variable.',
+        'facebook_client_secret' => 'Facebook App Secret',
+        'facebook_client_secret_comment' => 'Leave blank to keep using the FACEBOOK_CLIENT_SECRET environment variable. Stored encrypted.',
     ],
     'user' => [
         'label' => 'User',

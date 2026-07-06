@@ -373,12 +373,14 @@ class Plugin extends PluginBase
         try {
             $settings = Settings::instance();
 
-            $clientId = $settings->google_client_id;
-            $clientSecret = $settings->google_client_secret;
+            foreach (['google', 'facebook'] as $provider) {
+                $clientId = $settings->{$provider . '_client_id'};
+                $clientSecret = $settings->{$provider . '_client_secret'};
 
-            if (!empty($clientId) && !empty($clientSecret)) {
-                \Config::set('services.google.client_id', $clientId);
-                \Config::set('services.google.client_secret', $clientSecret);
+                if (!empty($clientId) && !empty($clientSecret)) {
+                    \Config::set("services.{$provider}.client_id", $clientId);
+                    \Config::set("services.{$provider}.client_secret", $clientSecret);
+                }
             }
         } catch (\Throwable $e) {
             // system_settings table not migrated yet, or a decrypt failure

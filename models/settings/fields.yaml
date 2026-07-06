@@ -194,3 +194,31 @@ tabs:
                 type: password
                 autocomplete: off
             tab: golem15.user::lang.settings.social_tab
+
+        # Facebook section
+        _facebook_section:
+            type: section
+            label: golem15.user::lang.settings.facebook_section
+            tab: golem15.user::lang.settings.social_tab
+
+        _facebook_oauth_hint:
+            type: hint
+            path: ~/plugins/golem15/user/models/settings/_facebook_oauth_hint.php
+            tab: golem15.user::lang.settings.social_tab
+
+        facebook_client_id:
+            span: left
+            label: golem15.user::lang.settings.facebook_client_id
+            comment: golem15.user::lang.settings.facebook_client_id_comment
+            type: text
+            tab: golem15.user::lang.settings.social_tab
+
+        facebook_client_secret:
+            span: right
+            label: golem15.user::lang.settings.facebook_client_secret
+            comment: golem15.user::lang.settings.facebook_client_secret_comment
+            type: text
+            attributes:
+                type: password
+                autocomplete: off
+            tab: golem15.user::lang.settings.social_tab
