@@ -151,3 +151,6 @@
 "3.2.1":
     - "Add must_change_password flag for admin-provisioned temporary passwords (additive)."
     - v3.2.1/add_must_change_password_to_users.php
+"3.3.0":
+    - "Add golem15_user_oauth_identities table so a user can link multiple OAuth providers simultaneously (backfills existing users.oauth_* data; old columns kept, unused, as a safety net)."
+    - v3.3.0/create_oauth_identities_table.php
