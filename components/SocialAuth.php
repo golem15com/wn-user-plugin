@@ -348,8 +348,14 @@ class SocialAuth extends ComponentBase
             ]
         );
 
-        // Log the user in
-        Auth::login($user, true);
+        // Log the user in via Winter's own session — only for genuine non-SPA (classic CMS
+        // page) flows. The SPA is purely JWT-authenticated (see completeSuccessfulAuth()'s
+        // token/cache mechanism below); planting this session cookie for mode=spa requests
+        // left a persistent identity that later "Connect provider" clicks could pick up
+        // instead of the SPA's actual logged-in account.
+        if (($this->getOAuthContext()['mode'] ?? 'web') !== 'spa') {
+            Auth::login($user, true);
+        }
 
         // Record IP address
         $user->touchIpAddress(Request::ip());
@@ -574,8 +580,11 @@ class SocialAuth extends ComponentBase
         // Fire registration event (listeners may run project-specific onboarding)
         Event::fire('golem15.user.register', [$user, []]);
 
-        // Log the user in
-        Auth::login($user, true);
+        // Log the user in via Winter's own session — only for genuine non-SPA flows.
+        // See the matching gate in handleOAuthLogin() for why.
+        if (($this->getOAuthContext()['mode'] ?? 'web') !== 'spa') {
+            Auth::login($user, true);
+        }
 
         // Record IP address
         $user->touchIpAddress(Request::ip());
@@ -679,7 +688,7 @@ class SocialAuth extends ComponentBase
      */
     public function onUnlinkOAuth()
     {
-        $user = Auth::getUser();
+        $user = $this->resolveAuthenticatedUser();
 
         if (!$user) {
             throw new ApplicationException(Lang::get('golem15.user::lang.oauth.must_be_logged_in'));
@@ -709,27 +718,38 @@ class SocialAuth extends ComponentBase
     /**
      * Resolve the currently authenticated user for OAuth account-linking checks.
      *
-     * Auth::check()/Auth::getUser() here resolve to Winter's own session/cookie-based
-     * auth manager (Golem15\User\Facades\Auth -> Golem15\User\Classes\AuthManager), which
-     * the SPA never populates — it authenticates purely via an httpOnly JWT cookie read
-     * by the 'api' guard (see JwtServiceProvider's Cookies parser). Try the Winter session
-     * first (covers any traditional CMS/web-session usage), then fall back to resolving
-     * that same JWT cookie directly.
+     * The SPA authenticates purely via an httpOnly JWT cookie (read by the 'api' guard, see
+     * JwtServiceProvider's Cookies parser) — never Winter's own session/cookie-based auth
+     * manager (Golem15\User\Facades\Auth -> Golem15\User\Classes\AuthManager). Try the JWT
+     * FIRST: a stale Winter 'user_auth' cookie (a 5-year-lived cookie Auth::login() plants)
+     * can otherwise outlive and silently shadow the SPA's real, current identity — this bit
+     * us in production (linking Google/Facebook operated on the wrong WavePath account
+     * because an old Winter session for a different account was still present).
+     *
+     * Deliberately does NOT use JWTAuth::parseToken()->authenticate()/toUser() — both only use
+     * the token's `sub` claim for an existence check (AuthManager::byId(), a bool) and then
+     * return whatever `AuthManager::user()` resolves, which ITSELF checks the Winter session
+     * first (classes/AuthManager.php:158-173) — i.e. those methods are contaminated by the
+     * exact same stale-session bug via the shared 'user.auth' provider binding. Read the `sub`
+     * claim and load the user model directly instead, bypassing that shared resolution path.
+     * Only fall back to the Winter session when no JWT is present at all, to keep any genuine
+     * non-SPA/CMS-page usage working.
      */
     protected function resolveAuthenticatedUser(): ?UserModel
     {
-        $user = Auth::getUser();
-        if ($user) {
-            return $user;
-        }
-
         try {
-            $jwtUser = JWTAuth::parseToken()->authenticate();
+            $userId = JWTAuth::parseToken()->getPayload()->get('sub');
+            if ($userId) {
+                $jwtUser = UserModel::find($userId);
+                if ($jwtUser) {
+                    return $jwtUser;
+                }
+            }
         } catch (\Throwable $e) {
-            return null;
+            // No/invalid JWT — fall through to the Winter session below.
         }
 
-        return $jwtUser instanceof UserModel ? $jwtUser : null;
+        return Auth::getUser();
     }
 
     /**
@@ -974,7 +994,12 @@ class SocialAuth extends ComponentBase
         }
 
         Event::fire('golem15.user.register', [$user, []]);
-        Auth::login($user, true);
+        // No Auth::login() here — this path is only ever reached via the SPA's
+        // oauthRegisterComplete API endpoint (structurally SPA-only: it requires a cached
+        // pending-registration payload that only onRedirectToProvider()'s frontend_callback
+        // branch creates), which is purely JWT-authenticated. Planting a Winter session
+        // cookie here previously caused "Connect provider" to silently operate on whichever
+        // account last completed this flow instead of the SPA's actual logged-in account.
         $user->touchIpAddress(Request::ip());
         Event::fire('golem15.user.login', [$user]);
 
@@ -998,7 +1023,7 @@ class SocialAuth extends ComponentBase
 
         $this->linkOAuthPayloadToUser($user, $provider, $payload);
 
-        Auth::login($user, true);
+        // No Auth::login() here — see buildAuthResultFromNewUser() above; same SPA-only path.
         $user->touchIpAddress(Request::ip());
         Event::fire('golem15.user.login', [$user]);
 
