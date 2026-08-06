@@ -19,6 +19,7 @@ use Illuminate\Support\Facades\Request as RequestFacade;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\ValidationException;
 use PHPOpenSourceSaver\JWTAuth\Contracts\JWTSubject;
+use PHPOpenSourceSaver\JWTAuth\Exceptions\JWTException;
 use PHPOpenSourceSaver\JWTAuth\Exceptions\TokenBlacklistedException;
 use PHPOpenSourceSaver\JWTAuth\Facades\JWTAuth;
 use Winter\Storm\Auth\AuthenticationException as AuthException;
@@ -154,6 +155,15 @@ class ApiController
                     return response()->json(['error' => 'Could not refresh token'], 401);
                 }
                 return response()->json(['token' => $token]);
+            } catch (JWTException $e) {
+                // A stale cookie is the NORMAL reason a refresh fails: the JWT expired past
+                // refresh_ttl, was blacklisted by a previous logout, or was signed with a
+                // rotated JWT_SECRET. All of those are TokenExpired/TokenBlacklisted/
+                // TokenInvalid, i.e. "this client is not authenticated" -- a 401, not a 500.
+                // safeExceptionStatus() has no getStatusCode() to read off a JWTException and
+                // fell through to 500, so every visitor holding a stale `token` cookie got a
+                // console full of 500s on app boot instead of a clean sign-in prompt.
+                return response()->json(['error' => 'Could not refresh token', 'msg' => $e->getMessage()], 401);
             } catch (\Exception $e) {
                 $msg = $this->safeExceptionMessage($e);
                 return response()->json(['error' => 'Could not refresh token', 'msg' => $msg], $this->safeExceptionStatus($e));
