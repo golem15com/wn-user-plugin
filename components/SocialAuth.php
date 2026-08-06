@@ -32,6 +32,9 @@ class SocialAuth extends ComponentBase
     protected const OAUTH_COMPLETE_TTL_MINUTES = 5;
     protected const OAUTH_PENDING_REGISTRATION_TTL_MINUTES = 10;
 
+    /** Providers honouring the OIDC `prompt=select_account` hint (see onRedirectToProvider). */
+    protected const PROMPT_SELECT_ACCOUNT_PROVIDERS = ['google'];
+
     public function componentDetails()
     {
         return [
@@ -168,7 +171,23 @@ class SocialAuth extends ComponentBase
         // throwing InvalidStateException on mismatch. This blocks login-CSRF
         // and link-CSRF replay attacks where an attacker captures their own
         // valid callback URL and tricks a victim into visiting it.
-        return Socialite::driver($provider)->redirect();
+        $driver = Socialite::driver($provider);
+
+        // Force the account chooser instead of the provider's silent auto-select. Google's
+        // default, for a visitor with exactly one signed-in account that has already granted
+        // consent, is to skip the picker entirely and complete the flow with NO visible UI --
+        // the callback returns tagged `prompt=none`. Two problems with that: the button looks
+        // like it did nothing (the round-trip is faster than a page paint), and there is no way
+        // to sign in as a DIFFERENT account without first signing out of Google elsewhere.
+        // It also matters for `action=link`, where picking the wrong account silently links
+        // the wrong provider identity.
+        // `prompt` is a standard OIDC parameter; scoped to the providers that actually honour
+        // it, since Facebook uses `auth_type` and GitHub has no equivalent.
+        if (in_array($provider, self::PROMPT_SELECT_ACCOUNT_PROVIDERS, true)) {
+            $driver = $driver->with(['prompt' => 'select_account']);
+        }
+
+        return $driver->redirect();
     }
 
     /**
