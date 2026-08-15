@@ -160,4 +160,111 @@ class SocialAuthGateTest extends UserPluginTestCase
         $this->assertStringContainsString('provider=google', $url);
         $this->assertStringContainsString('email=' . urlencode('new@example.tld'), $url);
     }
+
+    //
+    // GitHub gate verdict
+    //
+
+    public function test_github_passes_gate(): void
+    {
+        $component = new SocialAuth();
+        $verified = $this->invokeProtected($component, 'providerEmailVerified', [
+            'github',
+            // GitHub exposes no email_verified claim at all — Socialite guarantees the address
+            // is the primary AND verified one before it reaches us.
+            $this->socialiteUser('user@github.tld', []),
+        ]);
+
+        $this->assertTrue($verified);
+    }
+
+    //
+    // The pending payload must carry the gate verdict, or completePendingRegistration()
+    // cannot distinguish a verified match from an unverified one.
+    //
+
+    protected function cachedPendingPayload($redirect): array
+    {
+        parse_str((string) parse_url($redirect->getTargetUrl(), PHP_URL_QUERY), $query);
+        $this->assertArrayHasKey('pending_registration', $query);
+
+        $payload = \Cache::get('oauth-pending-registration:' . $query['pending_registration']);
+        $this->assertIsArray($payload);
+
+        return $payload;
+    }
+
+    public function test_pending_payload_records_unverified_provider(): void
+    {
+        session(['oauth_context' => [
+            'mode' => 'spa',
+            'frontend_callback' => 'https://app.example.tld/auth/oauth/callback',
+            'return_to' => '/',
+        ]]);
+
+        $component = new SocialAuth();
+        $payload = $this->cachedPendingPayload($this->invokeProtected($component, 'redirectToPendingRegistration', [
+            'facebook',
+            $this->socialiteUser('victim@example.tld', []),
+            'unverified_match',
+        ]));
+
+        $this->assertArrayHasKey('email_verified', $payload);
+        $this->assertFalse($payload['email_verified']);
+        $this->assertSame('unverified_match', $payload['reason']);
+    }
+
+    public function test_pending_payload_records_verified_provider(): void
+    {
+        session(['oauth_context' => [
+            'mode' => 'spa',
+            'frontend_callback' => 'https://app.example.tld/auth/oauth/callback',
+            'return_to' => '/',
+        ]]);
+
+        $component = new SocialAuth();
+        $payload = $this->cachedPendingPayload($this->invokeProtected($component, 'redirectToPendingRegistration', [
+            'google',
+            $this->socialiteUser('new@example.tld', ['email_verified' => true]),
+        ]));
+
+        $this->assertTrue($payload['email_verified']);
+        $this->assertNull($payload['reason']);
+    }
+
+    //
+    // Web-mode (no frontend_callback) divert must not recurse.
+    //
+    // Before the fix, a reasoned divert with no frontend_callback fell through to
+    // handleOAuthRegistration(), which re-triggered the very same divert and landed back here —
+    // unbounded recursion until the stack was exhausted (fatal, not a catchable exception).
+    //
+
+    public function test_web_mode_unverified_match_divert_does_not_recurse(): void
+    {
+        session()->forget('oauth_context');
+
+        $component = new SocialAuth();
+        $redirect = $this->invokeProtected($component, 'redirectToPendingRegistration', [
+            'facebook',
+            $this->socialiteUser('victim@example.tld', []),
+            'unverified_match',
+        ]);
+
+        $this->assertStringContainsString('/login', $redirect->getTargetUrl());
+    }
+
+    public function test_web_mode_missing_email_divert_does_not_recurse(): void
+    {
+        session()->forget('oauth_context');
+
+        $component = new SocialAuth();
+        $redirect = $this->invokeProtected($component, 'redirectToPendingRegistration', [
+            'facebook',
+            $this->socialiteUser(null, []),
+            'fb_no_email',
+        ]);
+
+        $this->assertStringContainsString('/login', $redirect->getTargetUrl());
+    }
 }

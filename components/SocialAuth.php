@@ -873,6 +873,17 @@ class SocialAuth extends ComponentBase
             return false;
         }
 
+        if ($provider === 'github') {
+            // GitHub exposes no `email_verified` claim, but Socialite's GithubProvider requests
+            // the `user:email` scope by default and overwrites the profile email with
+            // getEmailByToken(), which returns ONLY the address that is both primary AND
+            // verified — and null when no such address exists (see
+            // vendor/laravel/socialite/src/Two/GithubProvider.php:16,47,73). So an email that
+            // reaches us here is provider-verified by construction. Without this branch every
+            // GitHub sign-in fell through to the unverified path below.
+            return true;
+        }
+
         $raw = method_exists($socialiteUser, 'getRaw') ? $socialiteUser->getRaw() : [];
 
         return (bool) ($raw['email_verified'] ?? false);
@@ -885,6 +896,21 @@ class SocialAuth extends ComponentBase
         $providerUserId = $this->getProviderUserId($socialiteUser);
 
         if (!$frontendCallback) {
+            // Classic (non-SPA) flow: there is no pending screen to divert to. Falling through
+            // to handleOAuthRegistration() is correct ONLY for the genuine new-user case ($reason
+            // === null). When a $reason is set we got here FROM a security divert
+            // (handleOAuthLogin():312 / handleOAuthRegistration():421,432), and re-entering
+            // registration re-triggers that same divert, which lands back here — unbounded
+            // recursion until the stack is exhausted. Fail closed with a user-facing error.
+            if ($reason !== null) {
+                return $this->redirectOAuthError(Lang::get(
+                    $reason === 'fb_no_email'
+                        ? 'golem15.user::lang.oauth.provider_email_missing'
+                        : 'golem15.user::lang.oauth.email_exists_link_account',
+                    ['provider' => ucfirst($provider)]
+                ));
+            }
+
             return $this->handleOAuthRegistration($provider, $socialiteUser);
         }
 
@@ -903,6 +929,11 @@ class SocialAuth extends ComponentBase
             'email' => $socialiteUser->getEmail(),
             'avatar' => $socialiteUser->getAvatar(),
             'return_to' => $context['return_to'] ?? '/',
+            // Carry the D-06 verdict (and the divert reason) into the payload. Without it
+            // completePendingRegistration() cannot tell a provider-verified email match from
+            // an unverified one, and used to log the caller straight into the matched account.
+            'email_verified' => $this->providerEmailVerified($provider, $socialiteUser),
+            'reason' => $reason,
         ], now()->addMinutes(self::OAUTH_PENDING_REGISTRATION_TTL_MINUTES));
 
         session()->forget('oauth_context');
@@ -948,6 +979,25 @@ class SocialAuth extends ComponentBase
         if ($email) {
             $existingEmailUser = UserModel::where('email', $email)->first();
             if ($existingEmailUser) {
+                /*
+                 * D-06 bypass fix. The diverts that land a user on the pending screen
+                 * (handleOAuthLogin():312, handleOAuthRegistration():432) fire precisely BECAUSE
+                 * the provider does not assert this address belongs to the person signing in.
+                 * Logging them into the matched account here handed it to anyone able to present
+                 * the victim's email at an unverified provider — the gate redirected straight
+                 * into its own bypass. Only a provider-verified match may auto-link; anything
+                 * else must prove ownership out of band (password sign-in, then link from
+                 * settings via action=link).
+                 *
+                 * A missing key means the payload was cached before this fix shipped: fail closed.
+                 */
+                if (empty($payload['email_verified'])) {
+                    throw new ApplicationException(Lang::get(
+                        'golem15.user::lang.oauth.email_exists_link_account',
+                        ['provider' => ucfirst($provider)]
+                    ));
+                }
+
                 return $this->buildAuthResultFromExistingUser($existingEmailUser, $provider, $payload, 'login');
             }
         }

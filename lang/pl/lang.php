@@ -265,6 +265,15 @@ return [
         'right_to_erasure' => 'Prawo do usunięcia',
         'right_to_portability' => 'Prawo do przenoszenia danych',
     ],
+    /*
+     * Partial section on purpose: keys absent here fall back to lang/en per-key (Laravel's
+     * translator walks [locale, fallback_locale]), so only the user-facing OAuth errors that
+     * Polish visitors can actually hit are translated.
+     */
+    'oauth' => [
+        'email_exists_link_account' => 'Konto z tym adresem e-mail już istnieje. Ze względów bezpieczeństwa nie łączymy go automatycznie z kontem :provider. Zaloguj się hasłem — w razie potrzeby skorzystaj z opcji przypomnienia hasła — a następnie połącz konto :provider w ustawieniach.',
+        'provider_email_missing' => 'Serwis :provider nie udostępnił nam adresu e-mail, więc nie możemy utworzyć ani dopasować konta. Zaloguj się adresem e-mail i hasłem.',
+    ],
     'organisation' => [
         'id' => 'ID',
         'label' => 'Organizacja',

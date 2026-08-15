@@ -386,6 +386,7 @@ return [
         'must_be_logged_in' => 'You must be logged in to link an OAuth account.',
         'account_not_found' => 'No account found. Would you like to register?',
         'email_exists_link_account' => 'An account with this email already exists. Please sign in and link your :provider account from settings.',
+        'provider_email_missing' => ':provider did not share an email address with us, so we cannot create or match an account. Please sign in with your email and password instead.',
         'account_already_registered' => 'This :provider account is already registered. Please sign in.',
         'account_already_linked' => 'This :provider account is already linked to another user.',
         'no_provider_linked' => 'No OAuth provider is currently linked to your account.',
