@@ -54,6 +54,7 @@ class Plugin extends PluginBase
         $this->bootRepositories();
         // Load GDPR configuration
         \Config::set('gdpr', require __DIR__ . '/config/gdpr.php');
+        $this->exceptSpaJwtCookiesFromEncryption();
         $this->applyOAuthSettingsOverrides();
     }
 
@@ -388,5 +389,19 @@ class Plugin extends PluginBase
             // system_settings table not migrated yet, or a decrypt failure
             // (e.g. rotated APP_KEY) — fall through and keep the .env values.
         }
+    }
+
+    /**
+     * SPA JWTs live in JS-set cookies (`auth_token` plus a short-lived `token`
+     * mirror for OAuth account linking). Winter EncryptCookies decrypts every
+     * cookie not listed here and nulls the value on failure, so
+     * resolveAuthenticatedUser() saw nobody on GET /oauth/{provider}?action=link.
+     */
+    private function exceptSpaJwtCookiesFromEncryption(): void
+    {
+        \Config::set('cookie.unencryptedCookies', array_values(array_unique(array_merge(
+            (array) \Config::get('cookie.unencryptedCookies', []),
+            ['token', 'auth_token'],
+        ))));
     }
 }

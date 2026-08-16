@@ -41,9 +41,14 @@ class JwtServiceProvider extends LaravelServiceProvider
 
         $this->extendAuthGuard();
 
+        $decryptCookies = $this->config('decrypt_cookies');
+        $authTokenCookie = new Cookies($decryptCookies);
+        $authTokenCookie->setKey('auth_token');
+
         $this->app['tymon.jwt.parser']->addParser([
             new RouteParams(),
-            new Cookies($this->config('decrypt_cookies')),
+            new Cookies($decryptCookies),
+            $authTokenCookie,
         ]);
     }
 
