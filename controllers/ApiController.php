@@ -452,6 +452,117 @@ class ApiController
     }
 
     /**
+     * Authenticated avatar upload (JWT group).
+     *
+     * Replaces the attachOne File on the caller. SVG is excluded (image/svg+xml
+     * is executable in a browser). Size cap matches User::$rules avatar max.
+     *
+     * @param Request $request
+     * @return JsonResponse
+     */
+    public function updateAvatar(Request $request): JsonResponse
+    {
+        try {
+            $user = $this->authorize($request);
+        } catch (AuthenticationException|TokenBlacklistedException $e) {
+            return response()->json(['error' => true, 'message' => 'Unauthorized'], 401);
+        }
+
+        $validation = Validator::make($request->all(), [
+            'avatar' => 'required|file|mimes:jpeg,jpg,png,webp,gif|max:4000',
+        ]);
+
+        if ($validation->fails()) {
+            return response()->json([
+                'error'  => $validation->errors()->first(),
+                'errors' => $validation->errors()->toArray(),
+            ], 422);
+        }
+
+        $user->avatar = $request->file('avatar');
+        $user->forceSave();
+        $user->reloadRelations('avatar');
+
+        return response()->json([
+            'message' => 'Avatar updated',
+            'user'    => $user->getApiArray(),
+        ]);
+    }
+
+    /**
+     * Authenticated avatar removal (JWT group).
+     *
+     * @param Request $request
+     * @return JsonResponse
+     */
+    public function removeAvatar(Request $request): JsonResponse
+    {
+        try {
+            $user = $this->authorize($request);
+        } catch (AuthenticationException|TokenBlacklistedException $e) {
+            return response()->json(['error' => true, 'message' => 'Unauthorized'], 401);
+        }
+
+        if (!$user->avatar) {
+            return response()->json([
+                'error'  => Lang::get('golem15.user::lang.account.no_avatar'),
+                'errors' => ['avatar' => [Lang::get('golem15.user::lang.account.no_avatar')]],
+            ], 422);
+        }
+
+        $user->avatar()->remove($user->avatar);
+        $user->reloadRelations('avatar');
+        $user->setRelation('avatar', null);
+
+        return response()->json([
+            'message' => 'Avatar removed',
+            'user'    => $user->getApiArray(),
+        ]);
+    }
+
+    /**
+     * Authenticated marketing-consent toggle (JWT group).
+     *
+     * Grant and withdraw both go through the User helpers so ConsentAudit is
+     * written only on an actual state change. Never mass-assigned.
+     *
+     * @param Request $request
+     * @return JsonResponse
+     */
+    public function updateMarketingConsent(Request $request): JsonResponse
+    {
+        try {
+            $user = $this->authorize($request);
+        } catch (AuthenticationException|TokenBlacklistedException $e) {
+            return response()->json(['error' => true, 'message' => 'Unauthorized'], 401);
+        }
+
+        $validation = Validator::make($request->all(), [
+            'marketing_consent' => 'required|boolean',
+        ]);
+
+        if ($validation->fails()) {
+            return response()->json([
+                'error'  => $validation->errors()->first(),
+                'errors' => $validation->errors()->toArray(),
+            ], 422);
+        }
+
+        if ($request->boolean('marketing_consent')) {
+            $user->grantMarketingConsent();
+        } else {
+            $user->withdrawMarketingConsent();
+        }
+
+        $user->refresh();
+
+        return response()->json([
+            'message' => 'Marketing consent updated',
+            'user'    => $user->getApiArray(),
+        ]);
+    }
+
+    /**
      * Enumeration-safe password-reset request (D-09).
      *
      * Always returns an identical 200 body regardless of whether the email belongs to a real

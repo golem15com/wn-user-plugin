@@ -1005,6 +1005,33 @@ class User extends UserBase implements JWTSubject
     }
 
     /**
+     * Grant marketing consent (GDPR Article 7). No-op when already granted so
+     * toggling the same state in account settings does not duplicate the audit.
+     *
+     * @return void
+     */
+    public function grantMarketingConsent()
+    {
+        if ($this->marketing_consent) {
+            return;
+        }
+
+        $this->marketing_consent = true;
+        $this->marketing_consent_at = now();
+        $this->save();
+
+        ConsentAudit::create([
+            'user_id' => $this->id,
+            'consent_type' => ConsentAudit::CONSENT_TYPE_MARKETING,
+            'action' => ConsentAudit::ACTION_GRANTED,
+            'ip_address' => request()->ip(),
+            'user_agent' => request()->userAgent(),
+        ]);
+
+        \Log::info("Marketing consent granted", ['user_id' => $this->id]);
+    }
+
+    /**
      * Check if user has accepted current cookie policy version
      *
      * @return bool

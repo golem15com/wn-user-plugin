@@ -332,6 +332,8 @@ class Plugin extends PluginBase
                             'permissions' => $model->permissions,
                             'avatar' => $model->getAvatarThumb(),
                             'avatar_url' => $model->getAvatarThumb(128),
+                            'has_avatar' => (bool) $model->avatar,
+                            'marketing_consent' => (bool) $model->marketing_consent,
                             'groups' => $model->groups->pluck('name', 'id')->toArray(),
                             'role' => $model->role ? $model->role->slug : null,
                         ];

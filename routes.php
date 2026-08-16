@@ -106,6 +106,34 @@ Route::group(
         );
 
         /*
+         * Authenticated avatar upload / remove. Multipart file on upload;
+         * authorize() is the sole JWT gate (same pattern as /update).
+         */
+        Route::post(
+            '/avatar',
+            static function (Request $request) {
+                return (new \Golem15\User\Controllers\ApiController())->updateAvatar($request);
+            }
+        );
+        Route::post(
+            '/avatar/remove',
+            static function (Request $request) {
+                return (new \Golem15\User\Controllers\ApiController())->removeAvatar($request);
+            }
+        );
+
+        /*
+         * Authenticated marketing-consent toggle. Grant and withdraw both go
+         * through User model helpers so ConsentAudit stays complete (Art. 7).
+         */
+        Route::post(
+            '/marketing-consent',
+            static function (Request $request) {
+                return (new \Golem15\User\Controllers\ApiController())->updateMarketingConsent($request);
+            }
+        );
+
+        /*
          * PIN Login - for children to authenticate with their 4-digit PIN
          * This is a public endpoint (no auth required) since it initiates authentication
          */
