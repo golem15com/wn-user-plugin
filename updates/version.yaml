@@ -154,3 +154,5 @@
 "3.3.0":
     - "Add golem15_user_oauth_identities table so a user can link multiple OAuth providers simultaneously (backfills existing users.oauth_* data; old columns kept, unused, as a safety net)."
     - v3.3.0/create_oauth_identities_table.php
+"3.3.1":
+    - "Expired/invalid JWTs on /_user/api/v1 now return 401 instead of an unhandled 500 that logged a full stack trace on every request. No migration."

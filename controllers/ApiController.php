@@ -1319,19 +1319,49 @@ class ApiController
     }
 
     /**
+     * Resolve the caller from the request's JWT.
+     *
+     * Every way a token can fail to identify a user -- expired, malformed,
+     * blacklisted by a previous logout, signed with a rotated JWT_SECRET, or
+     * pointing at a deleted user row -- means the same thing: this client is
+     * not authenticated. All of them are normalised to AuthenticationException
+     * so callers get a 401.
+     *
+     * Previously the raw JWTException subclasses escaped: they are siblings of
+     * TokenBlacklistedException, not subclasses, so the callers' catch lists
+     * missed them. An expired token -- the single most routine outcome there
+     * is -- produced an unhandled 500 plus a full stack trace in system.log on
+     * every request, and clients that only refresh on 401 never recovered.
+     *
      * @param Request $request
-     * @return mixed
+     * @return UserModel
      * @throws AuthenticationException
-     * @throws TokenBlacklistedException
      */
     public function authorize(Request $request): UserModel
     {
         $token = TokenExtractor::fromRequest($request);
-        if ($token) {
-            JWTAuth::setToken($token);
-            return JWTAuth::toUser($token);
+        if (!$token) {
+            throw new AuthenticationException('Token not found');
         }
-        throw new AuthenticationException('Token not found');
+
+        try {
+            $user = JWTAuth::setToken($token)->toUser();
+        } catch (JWTException) {
+            // Deliberately not chained: Illuminate's AuthenticationException
+            // takes ($message, array $guards, $redirectTo) and has no $previous
+            // slot. Nothing is lost -- the reason a token failed must not reach
+            // the client anyway, or it becomes an oracle.
+            throw new AuthenticationException('Unauthorized');
+        }
+
+        // toUser() returns JWTSubject|false -- false when the `sub` claim no
+        // longer resolves to a user row. Without this guard that false hits the
+        // : UserModel return type and raises a TypeError, i.e. another 500.
+        if (!$user) {
+            throw new AuthenticationException('Unauthorized');
+        }
+
+        return $user;
     }
 
     private function canRegister(): bool

@@ -11,6 +11,7 @@ use Illuminate\Auth\AuthenticationException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
+use PHPOpenSourceSaver\JWTAuth\Exceptions\JWTException;
 use PHPOpenSourceSaver\JWTAuth\Exceptions\TokenBlacklistedException;
 use PHPOpenSourceSaver\JWTAuth\Facades\JWTAuth;
 
@@ -588,6 +589,13 @@ class TwoFactorApiController
 
     /**
      * Authorize the request via JWT and return the user.
+     *
+     * Mirrors ApiController::authorize() -- every JWT failure mode (expired,
+     * malformed, blacklisted, rotated secret) is normalised to
+     * AuthenticationException so callers return 401 instead of letting the raw
+     * JWTException escape into an unhandled 500 plus a logged stack trace.
+     *
+     * @throws AuthenticationException
      */
     protected function authorize(Request $request): UserModel
     {
@@ -596,8 +604,16 @@ class TwoFactorApiController
             throw new AuthenticationException('Token not found');
         }
 
-        JWTAuth::setToken($token);
-        $user = JWTAuth::toUser();
+        try {
+            $user = JWTAuth::setToken($token)->toUser();
+        } catch (JWTException) {
+            // Deliberately not chained: Illuminate's AuthenticationException
+            // takes ($message, array $guards, $redirectTo) and has no $previous
+            // slot. Nothing is lost -- the reason a token failed must not reach
+            // the client anyway, or it becomes an oracle.
+            throw new AuthenticationException('Unauthorized');
+        }
+
         if (!$user) {
             throw new AuthenticationException('Unauthorized');
         }
