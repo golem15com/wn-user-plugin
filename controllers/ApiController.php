@@ -225,7 +225,32 @@ class ApiController
         [$userId, $code] = $parts;
         $user = UserModel::find($userId);
 
-        if (!$user || !$user->attemptActivation($code)) {
+        if (!$user) {
+            return response()->json(['error' => 'This activation link is invalid or has expired'], 422);
+        }
+
+        /*
+         * Re-click / prefetch guard. Storm's attemptActivation() THROWS when the account is
+         * already active, so a second click on the emailed link -- or a mail scanner following
+         * it before the recipient does -- used to surface as an uncaught 500. Answer with a
+         * deterministic 200 the SPA can render as "already active" instead.
+         *
+         * No token is issued here: the activation code is nulled on first use, so the link is
+         * spent and must not keep minting sessions.
+         */
+        if ($user->is_activated) {
+            return response()->json([
+                'message'       => 'Account already activated',
+                'already_active' => true,
+            ], 200);
+        }
+
+        try {
+            if (!$user->attemptActivation($code)) {
+                return response()->json(['error' => 'This activation link is invalid or has expired'], 422);
+            }
+        }
+        catch (\Exception $ex) {
             return response()->json(['error' => 'This activation link is invalid or has expired'], 422);
         }
 
