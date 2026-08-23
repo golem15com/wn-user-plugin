@@ -115,7 +115,7 @@ class ApiController
                     'error' => true,
                     'message' => 'Unauthorized',
                 ],
-                500
+                401
             );
         }
     }
