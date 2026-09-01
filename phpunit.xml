@@ -42,5 +42,11 @@
         <env name="SESSION_DRIVER" value="array"/>
         <env name="DB_CONNECTION" value="sqlite"/>
         <env name="DB_DATABASE" value=":memory:"/>
+        <!-- 2kdvpvj1 pkt 1/3, D-14: identical to plugins/golem15/fonoteka/phpunit.xml,
+             both packages share the same production storage/logs/system.log and
+             the same CentrifugoClient config, so both need the same mechanical cut.
+             See that file's comment for the full rationale. -->
+        <env name="LOG_CHANNEL" value="testing"/>
+        <env name="CENTRIFUGO_API_KEY" value=""/>
     </php>
 </phpunit>
