@@ -341,6 +341,12 @@ class Plugin extends PluginBase
                         if (isset($model->is_onboarded)) {
                             $data['is_onboarded'] = (bool) $model->is_onboarded;
                         }
+                        // k7ut351s: not wrapped in isset() — after migration v3.4.0
+                        // the column always exists, and (bool) null would wrongly
+                        // read as "no self-set password" on a pre-migration call.
+                        // Default to the safe/neutral `true` if the attribute is
+                        // ever genuinely absent.
+                        $data['has_self_set_password'] = (bool) ($model->has_self_set_password ?? true);
                         // Let plugins contribute extra fields.
                         $extra = \Event::fire('golem15.user.getApiArray', [$model], false);
                         foreach ((array) $extra as $section) {

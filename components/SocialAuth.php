@@ -522,6 +522,11 @@ class SocialAuth extends ComponentBase
         $temporaryPassword = \Str::random(16);
         $user->password = $user->password_confirmation = $temporaryPassword;
 
+        // k7ut351s: mark this account as never having chosen its own password,
+        // from the first second it exists — do not rely solely on the migration
+        // backfill for accounts registered after this deploy.
+        $user->has_self_set_password = false;
+
         // Auto-activate OAuth users (provider verified email)
         $user->is_activated = true;
         $user->activated_at = \Carbon\Carbon::now();
@@ -712,8 +717,14 @@ class SocialAuth extends ComponentBase
             throw new ApplicationException(Lang::get('golem15.user::lang.oauth.no_provider_linked'));
         }
 
-        // Check if user has a password (prevent lockout)
-        if (empty($user->password)) {
+        // Prevent lockout. `empty($user->password)` was dead in the v3.3.0+ world
+        // (multi-provider OAuth identities): OAuth registration always sets a
+        // Str::random(16) placeholder, so $user->password is never empty and this
+        // guard never fired (k7ut351s, second half). The real lockout condition is:
+        // the account has no self-set password AND the provider being unlinked is
+        // its last remaining OAuth link. Unlinking one of several linked providers
+        // from a password-less account is safe and stays allowed.
+        if ($user->has_self_set_password === false && $user->oauthIdentities()->count() <= 1) {
             throw new ApplicationException(Lang::get('golem15.user::lang.oauth.cannot_unlink_without_password'));
         }
 
@@ -1018,6 +1029,8 @@ class SocialAuth extends ComponentBase
         $user->password = $user->password_confirmation = $temporaryPassword;
         $user->is_activated = true;
         $user->activated_at = \Carbon\Carbon::now();
+        // k7ut351s: same marker as registerFromSocialite() — see comment there.
+        $user->has_self_set_password = false;
         $user->forceSave();
 
         $this->restorePasswordConfirmation($user, $temporaryPassword);

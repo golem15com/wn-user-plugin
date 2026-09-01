@@ -579,7 +579,11 @@ class Account extends ComponentBase
 
         $data = post();
 
-        if ($this->updateRequiresPassword()) {
+        // k7ut351s: same predicate as ApiController::changePassword() — an account
+        // with no self-set password (OAuth registration placeholder) has no
+        // "current password" it could ever supply. updateRequiresPassword()'s
+        // signature and semantics are unchanged; only this second conjunct is added.
+        if ($this->updateRequiresPassword() && $user->has_self_set_password !== false) {
             if (!$user->checkHashValue('password', $data['password_current'])) {
                 throw new ValidationException(['password_current' => Lang::get('golem15.user::lang.account.invalid_current_pass')]);
             }
@@ -596,6 +600,11 @@ class Account extends ComponentBase
          * Password has changed, reauthenticate the user
          */
         if (array_key_exists('password', $data) && strlen($data['password'])) {
+            // Disarm: this CMS path is the same "self-service password write"
+            // as the API — the no-current-password window closes here too (k7ut351s).
+            $user->has_self_set_password = true;
+            $user->forceSave();
+
             Auth::login($user->reload(), true);
 
             // Revoke all trusted devices when password changes

@@ -418,9 +418,21 @@ class ApiController
 
         $minLength = UserModel::getMinPasswordLength();
 
+        // k7ut351s: an account that has never set its own password (OAuth
+        // registration placeholder, or the one-time post-backfill window) has no
+        // "current password" it could ever supply — Hash::check() against it can
+        // never pass. This predicate is the single, canonical gate for that
+        // exemption; do not duplicate it with a parallel hasOAuthProvider() check.
+        $hasSelfSetPassword = $user->has_self_set_password !== false;
+
+        $passwordRule = "required|between:$minLength,255|confirmed";
+        if ($hasSelfSetPassword) {
+            $passwordRule .= '|different:current_password';
+        }
+
         $validation = Validator::make($request->all(), [
-            'current_password' => 'required',
-            'password'         => "required|between:$minLength,255|confirmed|different:current_password",
+            'current_password' => $hasSelfSetPassword ? 'required' : 'nullable',
+            'password'         => $passwordRule,
         ]);
 
         if ($validation->fails()) {
@@ -431,7 +443,8 @@ class ApiController
         }
 
         // Verify the current password against the stored hash before allowing a change.
-        if (!Hash::check($request->get('current_password'), $user->password)) {
+        // Skipped entirely (not weakened) for an account with no self-set password.
+        if ($hasSelfSetPassword && !Hash::check($request->get('current_password'), $user->password)) {
             return response()->json([
                 'error'  => Lang::get('golem15.user::lang.account.invalid_login'),
                 'errors' => ['current_password' => [Lang::get('golem15.user::lang.account.invalid_login')]],
@@ -443,6 +456,9 @@ class ApiController
         // quirk on the second write (documented harness behaviour, Plan 05).
         $user->password = $request->get('password');
         $user->must_change_password = false;
+        // Disarm: the first successful self-service password write closes the
+        // no-current-password window for good (k7ut351s).
+        $user->has_self_set_password = true;
         $user->forceSave();
 
         return response()->json([
@@ -638,6 +654,12 @@ class ApiController
         if (!$user || !$user->attemptResetPassword($code, $request->get('password'))) {
             return response()->json(['error' => 'Invalid or expired reset code'], 422);
         }
+
+        // k7ut351s: /forgot-password is a third route to a self-chosen password.
+        // Disarm the same flag here, or an account that used this pre-existing
+        // (undocumented) bypass would stay in the no-current-password cohort forever.
+        $user->has_self_set_password = true;
+        $user->forceSave();
 
         return response()->json(['message' => 'Password has been reset']);
     }
