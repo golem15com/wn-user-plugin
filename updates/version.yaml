@@ -156,3 +156,6 @@
     - v3.3.0/create_oauth_identities_table.php
 "3.3.1":
     - "Expired/invalid JWTs on /_user/api/v1 now return 401 instead of an unhandled 500 that logged a full stack trace on every request. No migration."
+"3.4.0":
+    - "Add has_self_set_password flag for OAuth-created accounts (additive)."
+    - v3.4.0/add_has_self_set_password_to_users.php

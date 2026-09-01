@@ -138,6 +138,13 @@ class User extends UserBase implements JWTSubject
         'privacy_accepted' => 'boolean',
         'marketing_consent' => 'boolean',
         'must_change_password' => 'boolean',
+        // k7ut351s: deliberately NOT in $fillable (see above). Account::onUpdate()
+        // calls $user->fill($data) on a raw post(), and profile PUT endpoints also
+        // mass-fill this model — a fillable flag would let a client disarm its own
+        // credential gate by setting has_self_set_password=false. Only server-side
+        // paths (change-password, reset-password, CMS onUpdate, SocialAuth
+        // registration/backfill) ever write it, and only via property assignment.
+        'has_self_set_password' => 'boolean',
     ];
 
     public static $loginAttribute = null;
