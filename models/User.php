@@ -990,8 +990,14 @@ class User extends UserBase implements JWTSubject
 
     /**
      * How long an issued confirmation code remains valid.
+     *
+     * 30 minutes, not 15: mail delivery can be slow (greylisting, queued
+     * senders, provider-side spam scanning), and a code that expires while
+     * still in transit locks the user out of the very flow it protects.
+     * The code is single-use and bound to the account's own registered
+     * address, so the window length is not the control doing the work here.
      */
-    public const PASSWORD_BOOTSTRAP_CODE_TTL_MINUTES = 15;
+    public const PASSWORD_BOOTSTRAP_CODE_TTL_MINUTES = 30;
 
     /**
      * Generate, hash and persist a new confirmation code, replacing any previous one.
