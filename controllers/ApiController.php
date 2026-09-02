@@ -3,6 +3,7 @@
 namespace Golem15\User\Controllers;
 
 use Golem15\User\Classes\AuthManager;
+use Golem15\User\Classes\PasswordBootstrapMailer;
 use Golem15\User\Classes\TokenExtractor;
 use Golem15\User\Facades\Auth;
 use Golem15\User\Models\DeviceAuthSession;
@@ -442,13 +443,53 @@ class ApiController
             ], 422);
         }
 
-        // Verify the current password against the stored hash before allowing a change.
-        // Skipped entirely (not weakened) for an account with no self-set password.
-        if ($hasSelfSetPassword && !Hash::check($request->get('current_password'), $user->password)) {
-            return response()->json([
-                'error'  => Lang::get('golem15.user::lang.account.invalid_login'),
-                'errors' => ['current_password' => [Lang::get('golem15.user::lang.account.invalid_login')]],
-            ], 422);
+        if ($hasSelfSetPassword) {
+            // Verify the current password against the stored hash before allowing a
+            // change. Unchanged from before this fix.
+            if (!Hash::check($request->get('current_password'), $user->password)) {
+                return response()->json([
+                    'error'  => Lang::get('golem15.user::lang.account.invalid_login'),
+                    'errors' => ['current_password' => [Lang::get('golem15.user::lang.account.invalid_login')]],
+                ], 422);
+            }
+        } else {
+            // CR-01 (14-REVIEW.md): a bearer token alone is no longer sufficient for
+            // this cohort. A short-lived, single-use code emailed to the account's own
+            // registered address is required before the write commits — proof of
+            // mailbox access, a capability a stolen JWT alone does not grant. This does
+            // NOT reintroduce "current password required" (k7ut351s stays fixed): the
+            // account still never has to supply a password it never chose.
+            $confirmationCode = $request->get('password_bootstrap_code');
+
+            if (!$confirmationCode) {
+                $code = $user->issuePasswordBootstrapCode();
+                $mailed = PasswordBootstrapMailer::sendConfirmationCode($user, $code);
+
+                if (!$mailed) {
+                    // Degrade safely: never fall through and skip the check, and never
+                    // strand the caller either. /forgot-password (unaffected by this
+                    // change, always available) remains a working, discoverable
+                    // alternative regardless of mail transport health.
+                    return response()->json([
+                        'error'   => Lang::get('golem15.user::lang.account.password_bootstrap_mail_unavailable'),
+                        'requires_confirmation' => true,
+                        'mail_unavailable' => true,
+                    ], 503);
+                }
+
+                return response()->json([
+                    'message' => Lang::get('golem15.user::lang.account.password_bootstrap_confirmation_sent'),
+                    'requires_confirmation'  => true,
+                    'confirmation_channel'   => 'email',
+                ], 428);
+            }
+
+            if (!$user->verifyPasswordBootstrapCode($confirmationCode)) {
+                return response()->json([
+                    'error'  => Lang::get('golem15.user::lang.account.password_bootstrap_invalid_code'),
+                    'errors' => ['password_bootstrap_code' => [Lang::get('golem15.user::lang.account.password_bootstrap_invalid_code')]],
+                ], 422);
+            }
         }
 
         // Trusted server-side write: set the new (auto-hashed) password and clear the
@@ -460,6 +501,12 @@ class ApiController
         // no-current-password window for good (k7ut351s).
         $user->has_self_set_password = true;
         $user->forceSave();
+
+        if (!$hasSelfSetPassword) {
+            // Defence-in-depth (14-REVIEW.md CR-01 item (d)): best-effort, never blocks
+            // or reverses an already-committed, already-confirmed password change.
+            PasswordBootstrapMailer::sendSecurityNotification($user);
+        }
 
         return response()->json([
             'message' => 'Password changed',
@@ -660,6 +707,9 @@ class ApiController
         // (undocumented) bypass would stay in the no-current-password cohort forever.
         $user->has_self_set_password = true;
         $user->forceSave();
+        // Hygiene: a stale, unconsumed CR-01 confirmation code should not outlive a
+        // password change made through a different, already-verified-by-email route.
+        $user->clearPasswordBootstrapCode();
 
         return response()->json(['message' => 'Password has been reset']);
     }

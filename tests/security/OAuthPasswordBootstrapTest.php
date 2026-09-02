@@ -5,6 +5,8 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Lang;
+use Illuminate\Support\Facades\Mail;
+use Mockery;
 use Golem15\User\Components\SocialAuth;
 use Golem15\User\Controllers\ApiController;
 use Golem15\User\Models\User as UserModel;
@@ -24,7 +26,9 @@ use PHPOpenSourceSaver\JWTAuth\Facades\JWTAuth;
  *
  * These tests lock BOTH halves of the fix (14-01-PLAN.md Task 2):
  *  1. An account with has_self_set_password === false may change its password
- *     WITHOUT current_password.
+ *     WITHOUT current_password -- but ONLY after confirming a short-lived,
+ *     single-use code emailed to its own address (CR-01, 14-REVIEW.md; see
+ *     below).
  *  2. An account with a real, self-set password is BYTE-IDENTICAL to today:
  *     current_password is still required and still checked (proof: 422s, not
  *     a declaration).
@@ -37,6 +41,19 @@ use PHPOpenSourceSaver\JWTAuth\Facades\JWTAuth;
  *  5. OAuth registration marks brand-new accounts has_self_set_password=false
  *     from the first second they exist (does not rely solely on the v3.4.0
  *     migration backfill).
+ *
+ * CR-01 / WR-01 (code review of the above, 14-REVIEW.md): the tests below
+ * marked "CR-01" / "WR-01" close the two gaps that review found:
+ *  - CR-01 (critical): a bearer JWT alone was sufficient to complete #1 above,
+ *    turning any stolen token for this cohort into a permanent password
+ *    takeover. Fixed by requiring a short-lived, single-use confirmation code
+ *    emailed to the account's own registered address before the write commits
+ *    (User::issuePasswordBootstrapCode()/verifyPasswordBootstrapCode()).
+ *  - WR-01 (warning): SocialAuth::onUnlinkOAuth()'s lockout guard was
+ *    check-then-act (read count(), then delete) with no atomicity, so two
+ *    concurrent unlinks on a 2-identity password-less account could both pass
+ *    and strip every identity. Fixed by folding the guard into a single
+ *    atomic DELETE statement (User::unlinkOAuthProviderIfSafe()).
  *
  * @group security
  */
@@ -112,6 +129,20 @@ class OAuthPasswordBootstrapTest extends UserPluginTestCase
         return (new SocialAuth())->onUnlinkOAuth();
     }
 
+    /**
+     * Swap the Mail facade root with a Mockery spy (same pattern as
+     * PasswordResetActivateTest::spyMail() — MailFake silently drops the raw-view
+     * `Mail::queue($view, $data, $closure)` calls this plugin uses, so a spy on the
+     * underlying mailer is used instead of Mail::fake()).
+     */
+    protected function spyMail()
+    {
+        $spy = Mockery::spy('Illuminate\Contracts\Mail\Mailer');
+        Mail::swap($spy);
+
+        return $spy;
+    }
+
     protected function pendingPayload(array $overrides = []): array
     {
         return array_merge([
@@ -132,22 +163,59 @@ class OAuthPasswordBootstrapTest extends UserPluginTestCase
         ], $overrides);
     }
 
-    // 1. Half one of k7ut351s: OAuth account sets a password without current_password.
+    // 1. Half one of k7ut351s: OAuth account sets a password without current_password
+    //    — but ONLY after confirming the emailed code (CR-01, 14-REVIEW.md). This is
+    //    the k7ut351s regression guard: the legitimate owner must still be able to
+    //    finish the flow, never being sent back to "current password required".
 
     public function test_oauth_account_sets_password_without_current_password(): void
     {
         $user = $this->makeUser(['email' => 'oauth-half1@example.tld'], false);
         $this->linkOAuth($user, 'google');
 
-        $response = (new ApiController())->changePassword($this->authedRequest($user, [
+        $mail = $this->spyMail();
+
+        // Step 1: no confirmation code yet -> the write must NOT happen; a code is
+        // emailed instead.
+        $first = (new ApiController())->changePassword($this->authedRequest($user, [
             'password' => 'BrandNewSecret1',
             'password_confirmation' => 'BrandNewSecret1',
         ]));
+        $this->assertSame(428, $first->getStatusCode());
+        $this->assertTrue($first->getData(true)['requires_confirmation']);
 
-        $this->assertSame(200, $response->getStatusCode());
+        $user = $user->fresh();
+        $this->assertTrue(
+            Hash::check('placeholder-not-asserted-1', $user->password),
+            'The password must not change before the confirmation code is verified.'
+        );
+
+        $capturedCode = null;
+        $mail->shouldHaveReceived('queue')
+            ->with(
+                'golem15.user::mail.password_bootstrap_code',
+                Mockery::on(function ($data) use (&$capturedCode) {
+                    $capturedCode = $data['code'] ?? null;
+                    return true;
+                }),
+                Mockery::type('callable')
+            )
+            ->once();
+        $this->assertNotNull($capturedCode, 'A confirmation code must have been emailed to the account.');
+
+        // Step 2: the legitimate owner retrieves the code from their OWN mailbox
+        // (something a stolen bearer token does not grant — see the CR-01 tests
+        // below) and resubmits it. k7ut351s stays fixed: still no "current password".
+        $second = (new ApiController())->changePassword($this->authedRequest($user, [
+            'password' => 'BrandNewSecret1',
+            'password_confirmation' => 'BrandNewSecret1',
+            'password_bootstrap_code' => $capturedCode,
+        ]));
+        $this->assertSame(200, $second->getStatusCode());
 
         $user = $user->fresh();
         $this->assertTrue(Hash::check('BrandNewSecret1', $user->password));
+        $this->assertTrue((bool) $user->has_self_set_password);
     }
 
     // 2. Dowód neutralności: a real-password account is byte-identical to today.
@@ -243,9 +311,30 @@ class OAuthPasswordBootstrapTest extends UserPluginTestCase
         $user = $this->makeUser(['email' => 'oauth-disarm@example.tld'], false);
         $this->linkOAuth($user, 'google', 'disarm-1');
 
+        $mail = $this->spyMail();
+
+        $issue = (new ApiController())->changePassword($this->authedRequest($user, [
+            'password' => 'FirstSecret1',
+            'password_confirmation' => 'FirstSecret1',
+        ]));
+        $this->assertSame(428, $issue->getStatusCode());
+
+        $capturedCode = null;
+        $mail->shouldHaveReceived('queue')
+            ->with(
+                'golem15.user::mail.password_bootstrap_code',
+                Mockery::on(function ($data) use (&$capturedCode) {
+                    $capturedCode = $data['code'] ?? null;
+                    return true;
+                }),
+                Mockery::type('callable')
+            )
+            ->once();
+
         $first = (new ApiController())->changePassword($this->authedRequest($user, [
             'password' => 'FirstSecret1',
             'password_confirmation' => 'FirstSecret1',
+            'password_bootstrap_code' => $capturedCode,
         ]));
         $this->assertSame(200, $first->getStatusCode());
 
@@ -273,5 +362,164 @@ class OAuthPasswordBootstrapTest extends UserPluginTestCase
         $user = UserModel::find($result['user']['id']);
         $this->assertNotNull($user);
         $this->assertFalse((bool) $user->has_self_set_password);
+        // T-14-08 (14-REVIEW.md): registration-time flagging is a VERIFIED
+        // placeholder, distinct from the ambiguous v3.4.0 migration backfill.
+        $this->assertSame('oauth_registration', $user->password_bootstrap_source);
+    }
+
+    // 6. CR-01 (14-REVIEW.md): a bearer token alone must NOT be sufficient.
+    //
+    // Negative probe performed manually for this behaviour (documented in
+    // 14-REVIEW.md's "CR-01 / WR-01 resolution" section and the plan Summary): with
+    // ApiController::changePassword()'s confirmation-code branch temporarily reverted
+    // to fall straight through to the password write (the pre-fix shape), this test
+    // goes RED — the "attacker" call succeeds and the password changes. Restoring the
+    // fix returns it to GREEN. This is a genuine, firing probe, not a tautology.
+
+    public function test_stolen_token_alone_cannot_complete_relaxed_password_change(): void
+    {
+        $user = $this->makeUser(['email' => 'oauth-stolen@example.tld'], false);
+        $this->linkOAuth($user, 'google');
+
+        $this->spyMail();
+
+        // The attacker holds nothing but a valid bearer JWT for this account (exactly
+        // what authedRequest() mints) — no mailbox access, no password. First call:
+        // issues a confirmation code by mail, but must NOT touch the password.
+        $first = (new ApiController())->changePassword($this->authedRequest($user, [
+            'password' => 'AttackerChosen1',
+            'password_confirmation' => 'AttackerChosen1',
+        ]));
+        $this->assertSame(428, $first->getStatusCode());
+
+        $user = $user->fresh();
+        $this->assertTrue(
+            Hash::check('placeholder-not-asserted-1', $user->password),
+            'CR-01: possessing a bearer token alone must not change the password.'
+        );
+        $this->assertFalse((bool) $user->has_self_set_password);
+
+        // The attacker cannot read the account's mailbox, so guesses/forges a code.
+        $second = (new ApiController())->changePassword($this->authedRequest($user, [
+            'password' => 'AttackerChosen1',
+            'password_confirmation' => 'AttackerChosen1',
+            'password_bootstrap_code' => 'GUESSED1',
+        ]));
+        $this->assertSame(422, $second->getStatusCode());
+
+        $user = $user->fresh();
+        $this->assertTrue(
+            Hash::check('placeholder-not-asserted-1', $user->password),
+            'CR-01: a wrong/forged confirmation code must not change the password either.'
+        );
+        $this->assertFalse(
+            (bool) $user->has_self_set_password,
+            'The cohort flag must remain false — no trusted write ever occurred.'
+        );
+    }
+
+    public function test_confirmation_code_is_single_use_and_time_limited(): void
+    {
+        // Model-level proof of the two properties the "short-lived, single-use" claim
+        // depends on, independent of the controller's disarm-on-success side effect
+        // (which would otherwise mask a code being reusable within the same cohort).
+        $user = $this->makeUser(['email' => 'oauth-code-props@example.tld'], false);
+
+        $code = $user->issuePasswordBootstrapCode();
+
+        // Wrong code never verifies and never consumes the real one.
+        $this->assertFalse($user->verifyPasswordBootstrapCode('WRONGCODE'));
+        $this->assertTrue($user->verifyPasswordBootstrapCode($code), 'The correct code must verify.');
+
+        // Single-use: the same code must not verify a second time.
+        $this->assertFalse(
+            $user->verifyPasswordBootstrapCode($code),
+            'A confirmation code must not be replayable after a successful verification.'
+        );
+
+        // Time-limited: a fresh code manually pushed past its expiry must not verify,
+        // even though the hash comparison would otherwise succeed.
+        $expiredCode = $user->issuePasswordBootstrapCode();
+        $user->password_bootstrap_code_expires_at = \Carbon\Carbon::now()->subMinute();
+        $user->forceSave();
+        $this->assertFalse(
+            $user->fresh()->verifyPasswordBootstrapCode($expiredCode),
+            'An expired confirmation code must not verify even if the value matches.'
+        );
+    }
+
+    // 7. WR-01 (14-REVIEW.md): concurrent unlink cannot strip the last identity.
+
+    /**
+     * Negative-probe proof that the OLD check-then-act guard shape really was
+     * exploitable by two overlapping requests, reproduced mechanically (no real OS
+     * threads available inside PHPUnit): both "requests" read the SAME pre-delete
+     * identity count -- exactly what two concurrent HTTP requests would observe if
+     * they interleave between the read and the write -- and then both perform the
+     * unconditional low-level delete the old code used
+     * (User::unlinkOAuthProvider(), still present and still unconditional).
+     *
+     * This intentionally does NOT go through SocialAuth::onUnlinkOAuth() (the fixed
+     * entry point) — it exists to prove the vulnerability mechanism was real, as the
+     * "RED" half of the negative probe for the next test. A revert-and-rerun of the
+     * FIXED onUnlinkOAuth() back to `count() <= 1` + unlinkOAuthProvider() would NOT
+     * turn the next test red by itself, because two SEQUENTIAL calls (as a single
+     * PHPUnit test necessarily makes) always see the post-first-delete count even
+     * under the old code -- the race only exists when two requests' reads both land
+     * BEFORE either write, which is exactly what this test reproduces directly.
+     */
+    public function test_wr01_toctou_snapshot_would_zero_out_identities_under_old_guard_shape(): void
+    {
+        $user = $this->makeUser(['email' => 'oauth-race-old@example.tld'], false);
+        $this->linkOAuth($user, 'google', 'race-old-google');
+        $this->linkOAuth($user, 'facebook', 'race-old-facebook');
+
+        // Both "concurrent requests" observe the same pre-delete snapshot.
+        $snapshotCount = $user->oauthIdentities()->count();
+        $this->assertSame(2, $snapshotCount);
+        $requestAGuardPassed = $snapshotCount > 1; // old guard: NOT "<= 1" => allowed
+        $requestBGuardPassed = $snapshotCount > 1;
+        $this->assertTrue($requestAGuardPassed && $requestBGuardPassed);
+
+        // Both requests, having already "passed" the (now-stale) guard, perform the
+        // write half of the OLD code path.
+        $user->unlinkOAuthProvider('google');
+        $user->unlinkOAuthProvider('facebook');
+
+        $this->assertSame(
+            0,
+            $user->fresh()->oauthIdentities()->count(),
+            'This demonstrates the OLD check-then-act guard shape is exploitable: both '
+            . 'deletes proceed from a shared stale snapshot and every identity is lost.'
+        );
+    }
+
+    /**
+     * The FIXED entry point, exercised in the same two-identity-then-both-unlink
+     * shape as the negative probe above, must never reach the zero-identities
+     * outcome: User::unlinkOAuthProviderIfSafe() has no separate PHP-side read to
+     * share a stale snapshot with in the first place -- the guard condition is
+     * embedded in the DELETE statement's own WHERE clause and is evaluated by the
+     * database at the instant of the write, for every call, sequential or not.
+     */
+    public function test_concurrent_unlink_cannot_strip_last_identity(): void
+    {
+        $user = $this->makeUser(['email' => 'oauth-race@example.tld'], false);
+        $this->linkOAuth($user, 'google', 'race-google');
+        $this->linkOAuth($user, 'facebook', 'race-facebook');
+
+        $resultA = $this->unlinkAs($user, 'google');
+        $this->assertSame(['success' => true], $resultA);
+
+        $this->expectException(ApplicationException::class);
+        $this->expectExceptionMessage(Lang::get('golem15.user::lang.oauth.cannot_unlink_without_password'));
+
+        try {
+            $this->unlinkAs($user, 'facebook');
+        } finally {
+            $user = $user->fresh();
+            $this->assertSame(1, $user->oauthIdentities()->count(), 'Exactly one identity must survive.');
+            $this->assertTrue($user->hasOAuthProvider('facebook'));
+        }
     }
 }

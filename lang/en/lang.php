@@ -253,6 +253,11 @@ return [
         'update_requires_password_comment' => 'Require the current password of the user when changing their profile.',
         'no_avatar' => 'Your account has no display picture to remove.',
         'avatar_removed' => 'Your display picture has been successfully removed.',
+        // CR-01 (14-REVIEW.md): confirmation-code step for the no-current-password
+        // change-password path (accounts with has_self_set_password === false).
+        'password_bootstrap_confirmation_sent' => 'We emailed a confirmation code to your account\'s address. Enter it below to finish changing your password.',
+        'password_bootstrap_invalid_code' => 'That confirmation code is invalid or has expired. Please request a new one.',
+        'password_bootstrap_mail_unavailable' => 'We could not send the confirmation email right now. Please try again shortly, or use "Forgot password" instead.',
     ],
     'gdpr' => [
         // Consent validation

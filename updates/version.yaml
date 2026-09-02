@@ -159,3 +159,6 @@
 "3.4.0":
     - "Add has_self_set_password flag for OAuth-created accounts (additive)."
     - v3.4.0/add_has_self_set_password_to_users.php
+"3.4.1":
+    - "CR-01/T-14-08 fix: add password_bootstrap_source/code/code_expires_at columns backing a mandatory emailed confirmation code for the no-current-password change-password path (additive)."
+    - v3.4.1/add_password_bootstrap_fields_to_users.php

@@ -5,6 +5,7 @@ use Illuminate\Support\Facades\Cache;
 use PHPOpenSourceSaver\JWTAuth\Contracts\JWTSubject;
 use Str;
 use Auth;
+use Hash;
 use Lang;
 use Mail;
 use Event;
@@ -107,6 +108,13 @@ class User extends UserBase implements JWTSubject
      */
     protected $purgeable = ['password_confirmation', 'send_invite'];
 
+    /**
+     * Never serialize the hashed CR-01 confirmation code, on top of the base
+     * model's own password/reset_password_code/activation_code/persist_code list.
+     * @var array
+     */
+    protected $hidden = ['password', 'reset_password_code', 'activation_code', 'persist_code', 'password_bootstrap_code'];
+
     protected $dates = [
         'last_seen',
         'deleted_at',
@@ -119,6 +127,8 @@ class User extends UserBase implements JWTSubject
         // PIN system timestamps
         'pin_locked_until',
         'pin_recovery_expires_at',
+        // CR-01 password-bootstrap confirmation-code expiry (v3.4.1)
+        'password_bootstrap_code_expires_at',
         // GDPR consent timestamps
         'terms_accepted_at',
         'privacy_accepted_at',
@@ -876,6 +886,55 @@ class User extends UserBase implements JWTSubject
     }
 
     /**
+     * WR-01: atomically unlink an OAuth provider, refusing the delete if doing so would
+     * strip the account's last sign-in method.
+     *
+     * The old lockout guard in SocialAuth::onUnlinkOAuth() was check-then-act: read
+     * `oauthIdentities()->count() <= 1`, and only THEN call unlinkOAuthProvider(). Two
+     * concurrent unlink requests on a password-less, two-identity account could both
+     * observe the pre-delete count and both pass, stripping every identity.
+     *
+     * This method closes that window by making the guard and the write the SAME single
+     * SQL statement: the "is this account's real password present, or is this NOT the
+     * last remaining identity" condition lives in the DELETE's own WHERE clause,
+     * evaluated by the database at the instant the row is (or is not) removed. There is
+     * no separate SELECT for a second, concurrent request to race against -- a single
+     * DML statement is atomic per row on every SQL engine this plugin supports
+     * (SQLite/MySQL/PostgreSQL), so this is stronger than a `lockForUpdate()`-based fix
+     * would be under SQLite specifically (SQLite's grammar does not emit `FOR UPDATE`
+     * at all; a plain lock-based guard would silently do nothing there).
+     *
+     * @param string $provider Provider name (google, facebook, etc.)
+     * @return int Number of rows deleted: 1 on success, 0 if the guard blocked it (or
+     *             the provider was not linked in the first place -- the caller already
+     *             checked hasOAuthProvider() before calling this, so in practice 0 here
+     *             means "guard blocked it").
+     */
+    public function unlinkOAuthProviderIfSafe(string $provider): int
+    {
+        return \DB::table('golem15_user_oauth_identities')
+            ->where('user_id', $this->id)
+            ->where('provider', $provider)
+            ->where(function ($query) {
+                // Portable across SQLite/MySQL/PostgreSQL: whereExists() lets the query
+                // builder compile the boolean comparison per-grammar (raw `= 1` breaks
+                // on PostgreSQL's genuine boolean type), and the COUNT subquery is plain
+                // ANSI SQL identical on all three.
+                $query
+                    ->whereExists(function ($sub) {
+                        $sub->select(\DB::raw(1))
+                            ->from('users')
+                            ->whereColumn('users.id', 'golem15_user_oauth_identities.user_id')
+                            ->where('has_self_set_password', true);
+                    })
+                    ->orWhereRaw(
+                        '(SELECT COUNT(*) FROM golem15_user_oauth_identities AS oi WHERE oi.user_id = golem15_user_oauth_identities.user_id) > 1'
+                    );
+            })
+            ->delete();
+    }
+
+    /**
      * Get decrypted OAuth access token for a specific linked provider
      * @param string $provider Provider name (google, facebook, etc.)
      * @return string|null
@@ -916,6 +975,80 @@ class User extends UserBase implements JWTSubject
         return OAuthIdentity::where('provider', $provider)
             ->where('provider_id', $providerId)
             ->first()?->user;
+    }
+
+    //
+    // Password bootstrap confirmation code (CR-01, v3.4.1)
+    //
+    // A stolen bearer JWT is enough to authenticate as a user, but it does not grant
+    // access to that user's own email inbox. For the has_self_set_password === false
+    // cohort, ApiController::changePassword() / Account::onUpdate() require proof of
+    // that separate capability -- a short-lived, single-use code emailed to the
+    // account's own registered address -- before the no-current-password write is
+    // allowed to commit. See 14-REVIEW.md CR-01.
+    //
+
+    /**
+     * How long an issued confirmation code remains valid.
+     */
+    public const PASSWORD_BOOTSTRAP_CODE_TTL_MINUTES = 15;
+
+    /**
+     * Generate, hash and persist a new confirmation code, replacing any previous one.
+     * @return string The PLAINTEXT code -- only ever available here, to be emailed
+     *                 immediately. Never returned by any other method or API response.
+     */
+    public function issuePasswordBootstrapCode(): string
+    {
+        $code = Str::upper(Str::random(8));
+
+        $this->password_bootstrap_code = Hash::make($code);
+        $this->password_bootstrap_code_expires_at = Carbon::now()->addMinutes(self::PASSWORD_BOOTSTRAP_CODE_TTL_MINUTES);
+        $this->forceSave();
+
+        return $code;
+    }
+
+    /**
+     * Verify a caller-supplied code against the stored hash and expiry.
+     *
+     * Single-use: a successful check immediately clears the stored code so it cannot
+     * be replayed. An unsuccessful check (wrong code) leaves it intact so the user can
+     * retry until it expires -- ordinary OTP semantics.
+     *
+     * @param string|null $code
+     * @return bool
+     */
+    public function verifyPasswordBootstrapCode(?string $code): bool
+    {
+        if (!$code || !$this->password_bootstrap_code || !$this->password_bootstrap_code_expires_at) {
+            return false;
+        }
+
+        if (Carbon::now()->isAfter($this->password_bootstrap_code_expires_at)) {
+            return false;
+        }
+
+        if (!Hash::check(strtoupper((string) $code), $this->password_bootstrap_code)) {
+            return false;
+        }
+
+        $this->clearPasswordBootstrapCode();
+
+        return true;
+    }
+
+    /**
+     * Wipe out any pending confirmation code (used both after a successful verification
+     * and defensively any time a fresh password write commits by another route).
+     */
+    public function clearPasswordBootstrapCode(): void
+    {
+        if ($this->password_bootstrap_code || $this->password_bootstrap_code_expires_at) {
+            $this->password_bootstrap_code = null;
+            $this->password_bootstrap_code_expires_at = null;
+            $this->forceSave();
+        }
     }
 
     //

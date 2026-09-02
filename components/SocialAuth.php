@@ -526,6 +526,12 @@ class SocialAuth extends ComponentBase
         // from the first second it exists — do not rely solely on the migration
         // backfill for accounts registered after this deploy.
         $user->has_self_set_password = false;
+        // T-14-08 (14-REVIEW.md CR-01 resolution): this is a VERIFIED placeholder —
+        // we just generated it ourselves two lines up — unlike the v3.4.0 migration
+        // backfill, which cannot tell a genuine placeholder apart from a real,
+        // already-self-set password on an OAuth-linked account. Marking the source
+        // keeps the two populations auditable.
+        $user->password_bootstrap_source = 'oauth_registration';
 
         // Auto-activate OAuth users (provider verified email)
         $user->is_activated = true;
@@ -717,19 +723,29 @@ class SocialAuth extends ComponentBase
             throw new ApplicationException(Lang::get('golem15.user::lang.oauth.no_provider_linked'));
         }
 
-        // Prevent lockout. `empty($user->password)` was dead in the v3.3.0+ world
-        // (multi-provider OAuth identities): OAuth registration always sets a
-        // Str::random(16) placeholder, so $user->password is never empty and this
-        // guard never fired (k7ut351s, second half). The real lockout condition is:
-        // the account has no self-set password AND the provider being unlinked is
-        // its last remaining OAuth link. Unlinking one of several linked providers
-        // from a password-less account is safe and stays allowed.
-        if ($user->has_self_set_password === false && $user->oauthIdentities()->count() <= 1) {
+        // Display name only — read before the delete below removes the row. This is
+        // cosmetic (a label for the flash message), not part of the security guard, so
+        // it carries no TOCTOU risk of its own.
+        $providerName = $user->getOAuthProviderName($provider);
+
+        // WR-01 (14-REVIEW.md): the old guard was check-then-act — read
+        // `oauthIdentities()->count() <= 1`, and only THEN delete. Two concurrent
+        // unlink requests on a password-less, two-identity account could both observe
+        // the pre-delete count and both pass, stripping every identity. See
+        // User::unlinkOAuthProviderIfSafe() for why this is a single atomic DELETE
+        // instead of a lock — SQLite's grammar never emits `FOR UPDATE`, so a
+        // lock-based fix would be a no-op under the very test harness that exercises it.
+        $deleted = $user->unlinkOAuthProviderIfSafe($provider);
+
+        if ($deleted === 0) {
             throw new ApplicationException(Lang::get('golem15.user::lang.oauth.cannot_unlink_without_password'));
         }
 
-        $providerName = $user->getOAuthProviderName($provider);
-        $user->unlinkOAuthProvider($provider);
+        \Log::info('OAuth account unlinked', [
+            'user_id' => $user->id,
+            'provider' => $provider,
+            'email' => $user->email,
+        ]);
 
         Flash::success(Lang::get('golem15.user::lang.oauth.unlink_success', ['provider' => $providerName]));
 
@@ -1031,6 +1047,9 @@ class SocialAuth extends ComponentBase
         $user->activated_at = \Carbon\Carbon::now();
         // k7ut351s: same marker as registerFromSocialite() — see comment there.
         $user->has_self_set_password = false;
+        // T-14-08 (14-REVIEW.md CR-01 resolution): verified placeholder, same reasoning
+        // as registerFromSocialite() above.
+        $user->password_bootstrap_source = 'oauth_registration';
         $user->forceSave();
 
         $this->restorePasswordConfirmation($user, $temporaryPassword);

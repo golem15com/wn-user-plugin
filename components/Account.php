@@ -15,6 +15,7 @@ use ApplicationException;
 use Winter\Storm\Auth\AuthException;
 use Cms\Classes\Page;
 use Cms\Classes\ComponentBase;
+use Golem15\User\Classes\PasswordBootstrapMailer;
 use Golem15\User\Classes\TwoFactor\TwoFactorService;
 use Golem15\User\Models\User as UserModel;
 use Golem15\User\Models\Settings as UserSettings;
@@ -579,13 +580,49 @@ class Account extends ComponentBase
 
         $data = post();
 
+        $passwordChangeRequested = array_key_exists('password', $data) && strlen((string) $data['password']);
         // k7ut351s: same predicate as ApiController::changePassword() — an account
         // with no self-set password (OAuth registration placeholder) has no
         // "current password" it could ever supply. updateRequiresPassword()'s
         // signature and semantics are unchanged; only this second conjunct is added.
-        if ($this->updateRequiresPassword() && $user->has_self_set_password !== false) {
-            if (!$user->checkHashValue('password', $data['password_current'])) {
-                throw new ValidationException(['password_current' => Lang::get('golem15.user::lang.account.invalid_current_pass')]);
+        $relaxedCohort = $user->has_self_set_password === false;
+
+        if ($this->updateRequiresPassword()) {
+            if (!$relaxedCohort) {
+                if (!$user->checkHashValue('password', $data['password_current'])) {
+                    throw new ValidationException(['password_current' => Lang::get('golem15.user::lang.account.invalid_current_pass')]);
+                }
+            } elseif ($passwordChangeRequested) {
+                // CR-01 (14-REVIEW.md): mirrors ApiController::changePassword() — a
+                // signed-in CMS session for this cohort is not, by itself, proof of
+                // intent to change the password. Require the same emailed, short-lived,
+                // single-use code. Only triggered when a password change is actually
+                // part of this submission; profile-only edits (name/email/avatar) never
+                // touch this branch.
+                $confirmationCode = post('password_bootstrap_code');
+
+                if (!$confirmationCode) {
+                    $code = $user->issuePasswordBootstrapCode();
+                    $mailed = PasswordBootstrapMailer::sendConfirmationCode($user, $code);
+
+                    if (!$mailed) {
+                        // Degrade safely: abort the relaxed write, never skip the check.
+                        // /forgot-password remains a working, discoverable fallback.
+                        throw new ValidationException([
+                            'password_bootstrap_code' => Lang::get('golem15.user::lang.account.password_bootstrap_mail_unavailable'),
+                        ]);
+                    }
+
+                    throw new ValidationException([
+                        'password_bootstrap_code' => Lang::get('golem15.user::lang.account.password_bootstrap_confirmation_sent'),
+                    ]);
+                }
+
+                if (!$user->verifyPasswordBootstrapCode($confirmationCode)) {
+                    throw new ValidationException([
+                        'password_bootstrap_code' => Lang::get('golem15.user::lang.account.password_bootstrap_invalid_code'),
+                    ]);
+                }
             }
         }
 
@@ -599,7 +636,7 @@ class Account extends ComponentBase
         /*
          * Password has changed, reauthenticate the user
          */
-        if (array_key_exists('password', $data) && strlen($data['password'])) {
+        if ($passwordChangeRequested) {
             // Disarm: this CMS path is the same "self-service password write"
             // as the API — the no-current-password window closes here too (k7ut351s).
             $user->has_self_set_password = true;
@@ -610,6 +647,12 @@ class Account extends ComponentBase
             // Revoke all trusted devices when password changes
             $twoFactorService = app(TwoFactorService::class);
             $twoFactorService->revokeAllTrustedDevices($user);
+
+            if ($relaxedCohort) {
+                // Defence-in-depth (14-REVIEW.md CR-01 item (d)): best-effort, never
+                // blocks or reverses an already-committed, already-confirmed change.
+                PasswordBootstrapMailer::sendSecurityNotification($user);
+            }
         }
 
         Flash::success(post('flash', Lang::get(/*Settings successfully saved!*/'golem15.user::lang.account.success_saved')));

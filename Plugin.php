@@ -240,6 +240,8 @@ class Plugin extends PluginBase
             'golem15.user::mail.reactivate',
             'golem15.user::mail.invite',
             'golem15.user::mail.two_factor_code',
+            'golem15.user::mail.password_bootstrap_code',
+            'golem15.user::mail.security_password_changed',
         ];
     }
 

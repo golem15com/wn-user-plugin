@@ -206,6 +206,9 @@ return [
         'invalid_login' => 'Nieprawidłowy email lub hasło',
         'no_avatar' => 'Brak avatara',
         'avatar_removed' => 'Avatar usunięty',
+        'password_bootstrap_confirmation_sent' => 'Wysłaliśmy kod potwierdzający na adres e-mail przypisany do Twojego konta. Wpisz go poniżej, aby dokończyć zmianę hasła.',
+        'password_bootstrap_invalid_code' => 'Ten kod potwierdzający jest nieprawidłowy lub wygasł. Poproś o nowy.',
+        'password_bootstrap_mail_unavailable' => 'Nie udało się teraz wysłać e-maila z kodem potwierdzającym. Spróbuj ponownie za chwilę albo skorzystaj z opcji „Nie pamiętam hasła”.',
     ],
     'reset_password' => [
         'reset_password' => 'Zresetuj hasło',
