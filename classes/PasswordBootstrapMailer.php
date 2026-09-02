@@ -2,7 +2,6 @@
 
 namespace Golem15\User\Classes;
 
-use Lang;
 use Illuminate\Support\Facades\Mail;
 use Golem15\User\Models\User as UserModel;
 
