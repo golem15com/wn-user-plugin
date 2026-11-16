@@ -13,6 +13,8 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use PragmaRX\Google2FA\Google2FA;
 
+require_once __DIR__ . '/SoftAuthenticator.php';
+
 /**
  * Shared base for the phase 106.1 two-factor tests.
  *
@@ -59,6 +61,39 @@ abstract class TwoFactorTestCase extends UserPluginTestCase
         app()->forgetInstance(TwoFactorService::class);
 
         return app(TwoFactorService::class);
+    }
+
+    /**
+     * lbuchs accepts an http origin only for rpId "localhost".
+     */
+    protected function softAuthenticator(string $rpId = 'localhost', string $origin = 'http://localhost'): SoftAuthenticator
+    {
+        return new SoftAuthenticator($rpId, $origin);
+    }
+
+    /**
+     * Point WebAuthn at a fixed origin and policy, then rebuild the service
+     * (the lbuchs instance reads config in its constructor).
+     */
+    protected function configureWebAuthn(array $userConfig = [], string $appUrl = 'http://localhost', string $appName = 'Golem15 Test'): void
+    {
+        Config::set('app.url', $appUrl);
+        Config::set('app.name', $appName);
+        Config::set('golem15.user::webAuthnRpId', $userConfig['webAuthnRpId'] ?? null);
+        Config::set('golem15.user::webAuthnUserVerification', $userConfig['webAuthnUserVerification'] ?? 'preferred');
+        Config::set('golem15.user::webAuthnResidentKey', $userConfig['webAuthnResidentKey'] ?? null);
+    }
+
+    /**
+     * Register a SoftAuthenticator credential through TwoFactorService exactly as
+     * the API does: options first, then the attestation built over that challenge.
+     */
+    protected function registerSoftKey(UserModel $user, SoftAuthenticator $soft, bool $uv = true, ?string $name = null)
+    {
+        $service = $this->service();
+        $options = $service->getWebAuthnRegistrationOptions($user);
+
+        return $service->registerWebAuthn($user, $soft->create(base64_decode($options['challenge']), $uv), $options['challenge'], $name);
     }
 
     protected function makeUser(array $attrs = []): UserModel
