@@ -181,8 +181,10 @@ class WebAuthnMethod implements TwoFactorMethodInterface
             'is_enabled' => true,
         ]);
 
-        // Ensure the webauthn TwoFactorMethod record exists
-        TwoFactorMethod::firstOrCreate(
+        // Ensure the webauthn TwoFactorMethod record exists and is enabled: after
+        // every key was removed the row is disabled, and a new passkey must turn
+        // two-factor back on (D-08).
+        TwoFactorMethod::updateOrCreate(
             ['user_id' => $user->id, 'method' => TwoFactorMethod::METHOD_WEBAUTHN],
             ['is_enabled' => true]
         );

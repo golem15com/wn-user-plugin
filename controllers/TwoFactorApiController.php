@@ -11,6 +11,7 @@ use Golem15\User\Models\User as UserModel;
 use Illuminate\Auth\AuthenticationException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Validator;
 use PHPOpenSourceSaver\JWTAuth\Exceptions\JWTException;
 use PHPOpenSourceSaver\JWTAuth\Exceptions\TokenBlacklistedException;
@@ -297,13 +298,18 @@ class TwoFactorApiController
                 return response()->json(['error' => 'Invalid verification code.'], 422);
             }
 
-            // Return recovery codes if this is the first time
-            $status = $this->service->getStatus($user);
-
-            return response()->json([
+            $payload = [
                 'message' => 'TOTP enabled successfully.',
-                'status' => $status,
-            ]);
+                'status' => $this->service->getStatus($user),
+            ];
+
+            // First enrolment only: hand the freshly generated recovery codes over once.
+            $freshCodes = $this->service->consumeFreshRecoveryCodes();
+            if ($freshCodes !== null) {
+                $payload['recovery_codes'] = $freshCodes;
+            }
+
+            return response()->json($payload);
         } catch (AuthenticationException|TokenBlacklistedException $e) {
             return response()->json(['error' => 'Unauthorized'], 401);
         }
@@ -390,6 +396,11 @@ class TwoFactorApiController
 
             $options = $this->service->getWebAuthnRegistrationOptions($user);
 
+            // D-26: the registration challenge is held server-side (one-time, 5 min);
+            // webauthnRegister() ignores whatever challenge the client sends back.
+            // `challenge` stays in the response for backward compatibility.
+            Cache::put('2fa-webauthn-reg:' . $user->id, $options['challenge'], now()->addMinutes(5));
+
             return response()->json($options);
         } catch (AuthenticationException|TokenBlacklistedException $e) {
             return response()->json(['error' => 'Unauthorized'], 401);
@@ -411,7 +422,7 @@ class TwoFactorApiController
                 'attestation' => 'required|array',
                 'attestation.clientDataJSON' => 'required|string',
                 'attestation.attestationObject' => 'required|string',
-                'challenge' => 'required|string',
+                'challenge' => 'nullable|string',
                 'name' => 'nullable|string|max:255',
             ]);
 
@@ -422,14 +433,19 @@ class TwoFactorApiController
                 ], 422);
             }
 
+            $cached = Cache::pull('2fa-webauthn-reg:' . $user->id);
+            if (!is_string($cached) || $cached === '') {
+                return response()->json(['error' => 'Registration expired. Request new registration options.'], 422);
+            }
+
             $credential = $this->service->registerWebAuthn(
                 $user,
                 $request->get('attestation'),
-                $request->get('challenge'),
+                $cached,
                 $request->get('name')
             );
 
-            return response()->json([
+            $payload = [
                 'message' => 'Security key registered successfully.',
                 'credential' => [
                     'id' => $credential->id,
@@ -437,7 +453,15 @@ class TwoFactorApiController
                     'created_at' => $credential->created_at->toIso8601String(),
                 ],
                 'status' => $this->service->getStatus($user),
-            ]);
+            ];
+
+            // First enrolment only: hand the freshly generated recovery codes over once.
+            $freshCodes = $this->service->consumeFreshRecoveryCodes();
+            if ($freshCodes !== null) {
+                $payload['recovery_codes'] = $freshCodes;
+            }
+
+            return response()->json($payload);
         } catch (AuthenticationException|TokenBlacklistedException $e) {
             return response()->json(['error' => 'Unauthorized'], 401);
         } catch (\Exception $e) {
@@ -462,6 +486,43 @@ class TwoFactorApiController
 
             return response()->json([
                 'message' => 'Security key removed.',
+                'status' => $this->service->getStatus($user),
+            ]);
+        } catch (AuthenticationException|TokenBlacklistedException $e) {
+            return response()->json(['error' => 'Unauthorized'], 401);
+        }
+    }
+
+    /**
+     * Rename one of the caller's WebAuthn credentials.
+     *
+     * PATCH /_user/api/v1/2fa/webauthn/{id}
+     * Body: { name }
+     */
+    public function webauthnRename(Request $request, int $id): JsonResponse
+    {
+        try {
+            $user = $this->authorize($request);
+
+            $validation = Validator::make($request->all(), [
+                'name' => ['required', 'string', 'max:64', 'regex:/\S/'],
+            ]);
+
+            if ($validation->fails()) {
+                return response()->json([
+                    'error' => $validation->errors()->first(),
+                    'errors' => $validation->errors()->toArray(),
+                ], 422);
+            }
+
+            $renamed = $this->service->renameWebAuthnCredential($user, $id, trim((string) $request->get('name')));
+
+            if (!$renamed) {
+                return response()->json(['error' => 'Credential not found.'], 404);
+            }
+
+            return response()->json([
+                'message' => 'Security key renamed.',
                 'status' => $this->service->getStatus($user),
             ]);
         } catch (AuthenticationException|TokenBlacklistedException $e) {

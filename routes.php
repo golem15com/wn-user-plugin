@@ -426,6 +426,12 @@ Route::group(
                 return (new \Golem15\User\Controllers\TwoFactorApiController())->webauthnRemove($request, (int)$id);
             }
         )->where('id', '[0-9]+');
+        Route::patch(
+            'webauthn/{id}',
+            static function (Request $request, $id) {
+                return (new \Golem15\User\Controllers\TwoFactorApiController())->webauthnRename($request, (int)$id);
+            }
+        )->where('id', '[0-9]+');
         Route::get(
             'recovery-codes',
             static function (Request $request) {
