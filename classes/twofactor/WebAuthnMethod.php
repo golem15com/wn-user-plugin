@@ -79,13 +79,13 @@ class WebAuthnMethod implements TwoFactorMethodInterface
             $credentialPublicKey = base64_decode($credential->public_key);
 
             $this->webAuthn->processGet(
-                base64_decode($clientDataJSON),
-                base64_decode($authenticatorData),
-                base64_decode($signature),
-                $credentialPublicKey,
-                $challenge,
-                null,
-                $context['requireUserVerification'] ?? false
+                clientDataJSON: base64_decode($clientDataJSON),
+                authenticatorData: base64_decode($authenticatorData),
+                signature: base64_decode($signature),
+                credentialPublicKey: $credentialPublicKey,
+                challenge: $challenge,
+                prevSignatureCnt: null,
+                requireUserVerification: (bool) ($context['requireUserVerification'] ?? false) || $this->requiresUserVerification()
             );
 
             // Update sign count
@@ -123,14 +123,17 @@ class WebAuthnMethod implements TwoFactorMethodInterface
             })
             ->toArray();
 
+        // Named arguments: the positional call passed the exclude list into
+        // $crossPlatformAttachment, so excludeCredentials was never sent. No
+        // crossPlatformAttachment: platform and roaming authenticators are both allowed.
         $createArgs = $this->webAuthn->getCreateArgs(
-            \hex2bin(str_pad(dechex($user->id), 16, '0', STR_PAD_LEFT)),
-            $user->name ?? $user->email,
-            $user->email,
-            60,
-            $discoverable ? 'preferred' : false,  // requireResidentKey
-            false,      // requireUserVerification
-            $existingCredentials ?: null
+            userId: $this->userHandleFor($user->id),
+            userName: $user->name ?? $user->email,
+            userDisplayName: $user->email,
+            timeout: 60,
+            requireResidentKey: $this->residentKey($discoverable),
+            requireUserVerification: $this->userVerification(),
+            excludeCredentialIds: $existingCredentials
         );
 
         // Store challenge for verification
@@ -159,12 +162,12 @@ class WebAuthnMethod implements TwoFactorMethodInterface
         $challengeBuffer = new ByteBuffer(base64_decode($challenge));
 
         $data = $this->webAuthn->processCreate(
-            $clientDataJSON,
-            $attestationObject,
-            $challengeBuffer,
-            false,  // requireUserVerification
-            true,   // requireUserPresent
-            false   // failIfRootMismatch
+            clientDataJSON: $clientDataJSON,
+            attestationObject: $attestationObject,
+            challenge: $challengeBuffer,
+            requireUserVerification: $this->requiresUserVerification(),
+            requireUserPresent: true,
+            failIfRootMismatch: false
         );
 
         $credential = WebAuthnCredential::create([
@@ -205,11 +208,12 @@ class WebAuthnMethod implements TwoFactorMethodInterface
             })
             ->toArray();
 
+        // Named arguments: the positional call passed false/null into
+        // $allowUsb/$allowNfc, which dropped the usb and nfc transport hints.
         $getArgs = $this->webAuthn->getGetArgs(
-            array_map(fn($c) => $c['id'], $credentials),
-            60,
-            false,  // requireUserVerification
-            null    // allowedTransports determined per credential
+            credentialIds: array_map(fn($c) => $c['id'], $credentials),
+            timeout: 60,
+            requireUserVerification: $this->userVerification()
         );
 
         $challenge = base64_encode($this->webAuthn->getChallenge()->getBinaryString());
@@ -235,9 +239,9 @@ class WebAuthnMethod implements TwoFactorMethodInterface
     public function getPasswordlessAuthenticationOptions(): array
     {
         $getArgs = $this->webAuthn->getGetArgs(
-            [],     // empty allowCredentials — browser discovers passkeys
-            60,
-            false   // requireUserVerification
+            credentialIds: [],     // empty allowCredentials — browser discovers passkeys
+            timeout: 60,
+            requireUserVerification: $this->userVerification()
         );
 
         $challenge = base64_encode($this->webAuthn->getChallenge()->getBinaryString());
@@ -283,13 +287,13 @@ class WebAuthnMethod implements TwoFactorMethodInterface
             $credentialPublicKey = base64_decode($credential->public_key);
 
             $this->webAuthn->processGet(
-                base64_decode($clientDataJSON),
-                base64_decode($authenticatorData),
-                base64_decode($signature),
-                $credentialPublicKey,
-                $challengeBuffer,
-                null,
-                false
+                clientDataJSON: base64_decode($clientDataJSON),
+                authenticatorData: base64_decode($authenticatorData),
+                signature: base64_decode($signature),
+                credentialPublicKey: $credentialPublicKey,
+                challenge: $challengeBuffer,
+                prevSignatureCnt: null,
+                requireUserVerification: $this->requiresUserVerification()
             );
 
             // Update sign count
@@ -311,12 +315,60 @@ class WebAuthnMethod implements TwoFactorMethodInterface
     }
 
     /**
-     * Get the Relying Party ID from the app URL.
+     * The user handle bound to a credential at registration (8 bytes, big-endian user id).
+     */
+    public function userHandleFor(int $userId): string
+    {
+        return \hex2bin(str_pad(dechex($userId), 16, '0', STR_PAD_LEFT));
+    }
+
+    /**
+     * Get the Relying Party ID: config golem15.user::webAuthnRpId when set,
+     * otherwise the host of app.url (the behaviour before the key existed).
      */
     protected function getRpId(): string
     {
+        $configured = trim((string) config('golem15.user::webAuthnRpId', ''));
+        if ($configured !== '') {
+            return $configured;
+        }
+
         $url = config('app.url', 'localhost');
         $parsed = parse_url($url);
         return $parsed['host'] ?? 'localhost';
+    }
+
+    /**
+     * Configured user-verification requirement (required|preferred|discouraged),
+     * "preferred" when unset or invalid.
+     */
+    protected function userVerification(): string
+    {
+        $value = strtolower(trim((string) config('golem15.user::webAuthnUserVerification', 'preferred')));
+
+        return in_array($value, ['required', 'preferred', 'discouraged'], true) ? $value : 'preferred';
+    }
+
+    /**
+     * Whether the server must reject a response without the UV flag.
+     */
+    protected function requiresUserVerification(): bool
+    {
+        return $this->userVerification() === 'required';
+    }
+
+    /**
+     * Resident-key requirement for registration. A valid configured value wins;
+     * otherwise "preferred" for discoverable (passwordless) setups and not
+     * requested at all for the rest.
+     */
+    protected function residentKey(bool $discoverable): string|false
+    {
+        $value = strtolower(trim((string) config('golem15.user::webAuthnResidentKey', '')));
+        if (in_array($value, ['required', 'preferred', 'discouraged'], true)) {
+            return $value;
+        }
+
+        return $discoverable ? 'preferred' : false;
     }
 }

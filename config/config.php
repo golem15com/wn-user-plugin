@@ -141,4 +141,49 @@ return [
     */
 
     'useThrottle' => true,
+
+    /*
+    |--------------------------------------------------------------------------
+    | WebAuthn Relying Party ID
+    |--------------------------------------------------------------------------
+    |
+    | The domain every security key / passkey is bound to. Leave empty to use
+    | the host of app.url (the behaviour before this key existed). Set it to
+    | the registrable domain the browser is on (e.g. "example.com" when the
+    | SPA runs on www.example.com and the API on api.example.com).
+    |
+    | This is a one-way choice: every credential is bound to the RP ID at
+    | registration, so changing it later orphans all registered keys.
+    |
+    */
+
+    'webAuthnRpId' => env('WEBAUTHN_RP_ID', null),
+
+    /*
+    |--------------------------------------------------------------------------
+    | WebAuthn user verification
+    |--------------------------------------------------------------------------
+    |
+    | "preferred" (default) asks the authenticator for a PIN / biometric but
+    | accepts a response without it. "required" asks for it and makes the
+    | server reject any response without the user-verified (UV) flag, so
+    | U2F-only keys cannot enrol. "discouraged" asks the authenticator not to
+    | verify the user.
+    |
+    */
+
+    'webAuthnUserVerification' => env('WEBAUTHN_USER_VERIFICATION', 'preferred'),
+
+    /*
+    |--------------------------------------------------------------------------
+    | WebAuthn resident key (discoverable credential)
+    |--------------------------------------------------------------------------
+    |
+    | "required", "preferred" or "discouraged". Leave empty for the default
+    | rule: "preferred" when passwordless security-key login is enabled in
+    | the User settings, otherwise not requested.
+    |
+    */
+
+    'webAuthnResidentKey' => env('WEBAUTHN_RESIDENT_KEY', null),
 ];
