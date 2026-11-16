@@ -1,0 +1,16 @@
+subject = "A passkey was added to your account"
+description = "Security notification sent when a passkey or security key is added to an account"
+==
+Hello {{ name }}
+
+A passkey or security key named "{{ credential_name }}" was just added to your
+account.
+
+If this was you, no action is needed.
+
+If this was NOT you, reset your password immediately with the "forgot password"
+option, review your security settings and remove the passkey there.
+
+{% partial 'subcopy' body %}
+    **This is an automatic message. Please do not reply to it.**
+{% endpartial %}

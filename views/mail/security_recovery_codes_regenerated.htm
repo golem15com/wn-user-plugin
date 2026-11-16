@@ -1,0 +1,16 @@
+subject = "New recovery codes were generated"
+description = "Security notification sent when two-factor recovery codes are regenerated"
+==
+Hello {{ name }}
+
+New recovery codes were just generated for your account. Your previous codes no
+longer work.
+
+If this was you, no action is needed.
+
+If this was NOT you, reset your password immediately with the "forgot password"
+option and review your security settings.
+
+{% partial 'subcopy' body %}
+    **This is an automatic message. Please do not reply to it.**
+{% endpartial %}

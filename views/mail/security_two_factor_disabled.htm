@@ -1,0 +1,16 @@
+subject = "Two-factor authentication was turned off"
+description = "Security notification sent when two-factor authentication is turned off for an account"
+==
+Hello {{ name }}
+
+Two-factor authentication was just turned off for your account. Signing in no
+longer asks for a second step.
+
+If this was you, no action is needed.
+
+If this was NOT you, reset your password immediately with the "forgot password"
+option and review your security settings.
+
+{% partial 'subcopy' body %}
+    **This is an automatic message. Please do not reply to it.**
+{% endpartial %}

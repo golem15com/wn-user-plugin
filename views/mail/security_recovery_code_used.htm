@@ -1,0 +1,16 @@
+subject = "A recovery code was used to sign in"
+description = "Security notification sent when a two-factor recovery code is used to sign in"
+==
+Hello {{ name }}
+
+A recovery code was just used to sign in to your account. You have
+{{ remaining }} recovery codes left.
+
+If this was you, no action is needed.
+
+If this was NOT you, reset your password immediately with the "forgot password"
+option and review your security settings.
+
+{% partial 'subcopy' body %}
+    **This is an automatic message. Please do not reply to it.**
+{% endpartial %}

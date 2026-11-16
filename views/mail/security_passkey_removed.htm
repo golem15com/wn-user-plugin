@@ -1,0 +1,16 @@
+subject = "A passkey was removed from your account"
+description = "Security notification sent when a passkey or security key is removed from an account"
+==
+Hello {{ name }}
+
+The passkey or security key named "{{ credential_name }}" was just removed from
+your account.
+
+If this was you, no action is needed.
+
+If this was NOT you, reset your password immediately with the "forgot password"
+option and review your security settings.
+
+{% partial 'subcopy' body %}
+    **This is an automatic message. Please do not reply to it.**
+{% endpartial %}

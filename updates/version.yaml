@@ -167,3 +167,5 @@
     - v3.5.0/add_last_totp_timestep_to_two_factor_methods.php
 "3.5.1":
     - "Passwordless passkey JWT API, Setting-gated step-up for sensitive 2FA actions, 2FA-gated Google hand-off (additive; defaults unchanged)."
+"3.5.2":
+    - "Security notification mail templates for 2FA changes (additive; sent only when a host listens)."

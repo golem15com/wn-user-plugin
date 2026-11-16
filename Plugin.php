@@ -242,6 +242,12 @@ class Plugin extends PluginBase
             'golem15.user::mail.two_factor_code',
             'golem15.user::mail.password_bootstrap_code',
             'golem15.user::mail.security_password_changed',
+            'golem15.user::mail.security_two_factor_enabled',
+            'golem15.user::mail.security_two_factor_disabled',
+            'golem15.user::mail.security_passkey_added',
+            'golem15.user::mail.security_passkey_removed',
+            'golem15.user::mail.security_recovery_codes_regenerated',
+            'golem15.user::mail.security_recovery_code_used',
         ];
     }
 

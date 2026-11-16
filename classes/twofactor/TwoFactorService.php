@@ -337,6 +337,8 @@ class TwoFactorService
             return false;
         }
 
+        $before = $this->isEnabledForUser($user);
+
         $method = TwoFactorMethod::updateOrCreate(
             ['user_id' => $user->id, 'method' => TwoFactorMethod::METHOD_TOTP],
             ['is_enabled' => true, 'secret' => $secret]
@@ -351,6 +353,8 @@ class TwoFactorService
 
         Event::fire('golem15.user.2fa.enabled', [$user, TwoFactorMethod::METHOD_TOTP]);
 
+        $this->fireStateChangedIfFlipped($user, $before);
+
         return true;
     }
 
@@ -359,6 +363,8 @@ class TwoFactorService
      */
     public function enableEmailMethod(User $user): bool
     {
+        $before = $this->isEnabledForUser($user);
+
         TwoFactorMethod::updateOrCreate(
             ['user_id' => $user->id, 'method' => TwoFactorMethod::METHOD_EMAIL],
             ['is_enabled' => true]
@@ -367,6 +373,8 @@ class TwoFactorService
         $this->ensureRecoveryCodes($user);
 
         Event::fire('golem15.user.2fa.enabled', [$user, TwoFactorMethod::METHOD_EMAIL]);
+
+        $this->fireStateChangedIfFlipped($user, $before);
 
         return true;
     }
@@ -384,6 +392,8 @@ class TwoFactorService
             return false;
         }
 
+        $before = $this->isEnabledForUser($user);
+
         if ($method === TwoFactorMethod::METHOD_WEBAUTHN) {
             // Disable all WebAuthn credentials
             WebAuthnCredential::where('user_id', $user->id)->update(['is_enabled' => false]);
@@ -399,6 +409,8 @@ class TwoFactorService
             TwoFactorRecoveryCode::where('user_id', $user->id)->delete();
             TrustedDevice::where('user_id', $user->id)->delete();
         }
+
+        $this->fireStateChangedIfFlipped($user, $before);
 
         return true;
     }
@@ -417,11 +429,15 @@ class TwoFactorService
      */
     public function registerWebAuthn(User $user, array $response, string $challenge, ?string $name = null): WebAuthnCredential
     {
+        $before = $this->isEnabledForUser($user);
+
         $credential = $this->webAuthnMethod->verifyRegistration($user, $response, $challenge, $name);
 
         $this->ensureRecoveryCodes($user);
 
         Event::fire('golem15.user.2fa.webauthn.registered', [$user, $credential]);
+
+        $this->fireStateChangedIfFlipped($user, $before);
 
         return $credential;
     }
@@ -439,9 +455,15 @@ class TwoFactorService
             return false;
         }
 
+        $before = $this->isEnabledForUser($user);
+
+        // Captured before delete() so listeners can name the removed key (D-20).
+        // The third argument is additive: two-argument listeners ignore it.
+        $name = $credential->name ?? 'Security Key';
+
         $credential->delete();
 
-        Event::fire('golem15.user.2fa.webauthn.removed', [$user, $credentialId]);
+        Event::fire('golem15.user.2fa.webauthn.removed', [$user, $credentialId, $name]);
 
         // If no more WebAuthn credentials, disable the method
         if (!$this->webAuthnMethod->isConfiguredFor($user)) {
@@ -461,6 +483,8 @@ class TwoFactorService
             TwoFactorRecoveryCode::where('user_id', $user->id)->delete();
             TrustedDevice::where('user_id', $user->id)->delete();
         }
+
+        $this->fireStateChangedIfFlipped($user, $before);
 
         return true;
     }
@@ -776,6 +800,21 @@ class TwoFactorService
             'trusted_device_enabled' => $this->isTrustedDeviceEnabled(),
             'trusted_devices' => $trustedDevices,
         ];
+    }
+
+    /**
+     * Fire 'golem15.user.2fa.state_changed' [User $user, bool $enabledNow] when
+     * isEnabledForUser() flipped during the current mutation (D-20). Adding a
+     * second factor or removing one of several does not fire it. Additive: no
+     * listener is registered by the core, so nothing changes unless a host listens.
+     */
+    protected function fireStateChangedIfFlipped(User $user, bool $before): void
+    {
+        $after = $this->isEnabledForUser($user);
+
+        if ($after !== $before) {
+            Event::fire('golem15.user.2fa.state_changed', [$user, $after]);
+        }
     }
 
     /**
