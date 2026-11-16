@@ -6,6 +6,7 @@ use Golem15\User\Classes\TokenExtractor;
 use Golem15\User\Classes\TwoFactor\TwoFactorService;
 use Golem15\User\Models\TwoFactorChallenge;
 use Golem15\User\Models\TwoFactorMethod;
+use Golem15\User\Models\TwoFactorRecoveryCode;
 use Golem15\User\Models\User as UserModel;
 use Illuminate\Auth\AuthenticationException;
 use Illuminate\Http\JsonResponse;
@@ -56,10 +57,10 @@ class TwoFactorApiController
         );
 
         if (!$result) {
-            return response()->json([
+            return response()->json(array_merge([
                 'error' => 'Invalid verification code.',
                 'two_factor_failed' => true,
-            ], 401);
+            ], $this->service->describeChallenge((string) $request->get('challenge_token'))), 401);
         }
 
         return response()->json($this->withTrustedDevice($request, $result));
@@ -92,11 +93,13 @@ class TwoFactorApiController
         );
 
         if (!$result) {
-            return response()->json([
+            return response()->json(array_merge([
                 'error' => 'Invalid recovery code.',
                 'two_factor_failed' => true,
-            ], 401);
+            ], $this->service->describeChallenge((string) $request->get('challenge_token'))), 401);
         }
+
+        $result['recovery_codes_remaining'] = TwoFactorRecoveryCode::remainingCount((int) $result['user']['id']);
 
         return response()->json($this->withTrustedDevice($request, $result));
     }
@@ -197,7 +200,10 @@ class TwoFactorApiController
 
         $challenge = TwoFactorChallenge::findValidToken($request->get('challenge_token'));
         if (!$challenge || !$challenge->code) {
-            return response()->json(['error' => 'Invalid or expired challenge. Request WebAuthn options first.'], 401);
+            return response()->json(array_merge(
+                ['error' => 'Invalid or expired challenge. Request WebAuthn options first.'],
+                $this->service->describeChallenge((string) $request->get('challenge_token'))
+            ), 401);
         }
 
         $result = $this->service->verifyChallenge(
@@ -208,10 +214,10 @@ class TwoFactorApiController
         );
 
         if (!$result) {
-            return response()->json([
+            return response()->json(array_merge([
                 'error' => 'WebAuthn verification failed.',
                 'two_factor_failed' => true,
-            ], 401);
+            ], $this->service->describeChallenge((string) $request->get('challenge_token'))), 401);
         }
 
         return response()->json($this->withTrustedDevice($request, $result));

@@ -14,6 +14,7 @@ use Model;
  * @property string $method
  * @property bool $is_enabled
  * @property string|null $secret
+ * @property int|null $last_totp_timestep Timestep of the last accepted TOTP code (replay guard, D-28)
  * @property array|null $metadata
  * @property \Carbon\Carbon|null $last_used_at
  * @property \Carbon\Carbon $created_at

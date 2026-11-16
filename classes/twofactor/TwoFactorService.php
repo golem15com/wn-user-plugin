@@ -190,8 +190,13 @@ class TwoFactorService
             return false;
         }
 
-        // Mark challenge as completed
-        $challenge->markCompleted();
+        // Mark challenge as completed. The claim is atomic: when two correct
+        // verifies of one challenge race, only the one whose UPDATE affects the
+        // row mints a JWT.
+        if (!$this->claimChallenge($challenge)) {
+            Event::fire('golem15.user.2fa.failed', [$user, $method, $challenge->ip_address]);
+            return false;
+        }
 
         // Issue real JWT
         $jwtToken = JWTAuth::fromUser($user);
@@ -202,6 +207,39 @@ class TwoFactorService
             'token' => $jwtToken,
             'user' => $user->getApiArray(),
         ];
+    }
+
+    /**
+     * Describe a challenge's remaining budget for a failure response (D-19).
+     *
+     * Reads the row by token whatever its state. A missing row reports no attempts
+     * left and an expired challenge, so the client returns to the password step.
+     *
+     * @return array{attempts_remaining: int, challenge_expired: bool}
+     */
+    public function describeChallenge(string $token): array
+    {
+        $challenge = TwoFactorChallenge::where('token', $token)->first();
+
+        if (!$challenge) {
+            return ['attempts_remaining' => 0, 'challenge_expired' => true];
+        }
+
+        return [
+            'attempts_remaining' => max(0, (int) $challenge->max_attempts - (int) $challenge->attempts),
+            'challenge_expired' => $challenge->isExpired() || $challenge->isExhausted() || $challenge->isCompleted(),
+        ];
+    }
+
+    /**
+     * Atomically mark a challenge completed. True only for the one caller whose
+     * UPDATE affected the still-open row.
+     */
+    protected function claimChallenge(TwoFactorChallenge $challenge): bool
+    {
+        return TwoFactorChallenge::where('id', $challenge->id)
+            ->whereNull('completed_at')
+            ->update(['completed_at' => now()]) === 1;
     }
 
     /**
@@ -227,7 +265,8 @@ class TwoFactorService
      */
     public function confirmTotp(User $user, string $secret, string $code): bool
     {
-        if (!$this->totpMethod->verifyAgainstSecret($secret, $code)) {
+        $timestep = $this->totpMethod->timestepFor($secret, $code);
+        if ($timestep === false) {
             return false;
         }
 
@@ -235,6 +274,10 @@ class TwoFactorService
             ['user_id' => $user->id, 'method' => TwoFactorMethod::METHOD_TOTP],
             ['is_enabled' => true, 'secret' => $secret]
         );
+
+        // Record the confirmation code's timestep so the same code cannot then be
+        // used to sign in (replay guard, D-28).
+        TwoFactorMethod::where('id', $method->id)->update(['last_totp_timestep' => $timestep]);
 
         // Generate recovery codes if this is the first 2FA method
         $this->ensureRecoveryCodes($user);

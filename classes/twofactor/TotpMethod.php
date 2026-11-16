@@ -56,6 +56,11 @@ class TotpMethod implements TwoFactorMethodInterface
     /**
      * Verify a TOTP code against the user's stored secret.
      * Window of 1 allows codes from 30 seconds before/after.
+     *
+     * Replay guard (always on, D-28): a code is accepted only when its timestep is
+     * newer than the last accepted one for this method row, and the new timestep is
+     * claimed with one conditional UPDATE. Two concurrent requests carrying the same
+     * code race on that UPDATE and only one of them affects the row.
      */
     public function verify(User $user, string $code, ?array $context = null): bool
     {
@@ -68,7 +73,37 @@ class TotpMethod implements TwoFactorMethodInterface
             return false;
         }
 
-        return $this->google2fa->verifyKey($method->secret, $code, 1);
+        $timestep = $this->timestepFor($method->secret, $code, (int) ($method->last_totp_timestep ?? 0));
+        if ($timestep === false) {
+            return false;
+        }
+
+        $claimed = TwoFactorMethod::where('id', $method->id)
+            ->where(function ($query) use ($timestep) {
+                $query->whereNull('last_totp_timestep')
+                    ->orWhere('last_totp_timestep', '<', $timestep);
+            })
+            ->update(['last_totp_timestep' => $timestep]);
+
+        return $claimed === 1;
+    }
+
+    /**
+     * Return the timestep a valid code belongs to, or false.
+     *
+     * Only timesteps newer than $after match. $after is always passed to google2fa
+     * as an int: with a null old timestamp verifyKeyNewer() returns boolean true
+     * instead of the matched timestep.
+     */
+    public function timestepFor(string $secret, string $code, int $after = 0): int|false
+    {
+        $result = $this->google2fa->verifyKeyNewer($secret, $code, $after, 1);
+
+        if ($result === false || $result === true) {
+            return false;
+        }
+
+        return (int) $result;
     }
 
     /**
