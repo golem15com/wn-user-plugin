@@ -333,6 +333,20 @@ Route::group(
                 return (new \Golem15\User\Controllers\TwoFactorApiController())->webauthnVerify($request);
             }
         );
+        // Passwordless passkey sign-in (403 unless two_factor_passwordless_login
+        // is on and webauthn is an available method).
+        Route::post(
+            'passwordless/options',
+            static function (Request $request) {
+                return (new \Golem15\User\Controllers\TwoFactorApiController())->passwordlessOptions($request);
+            }
+        );
+        Route::post(
+            'passwordless/verify',
+            static function (Request $request) {
+                return (new \Golem15\User\Controllers\TwoFactorApiController())->passwordlessVerify($request);
+            }
+        );
     }
 );
 

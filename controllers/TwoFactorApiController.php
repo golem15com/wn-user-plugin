@@ -13,6 +13,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Str;
 use PHPOpenSourceSaver\JWTAuth\Exceptions\JWTException;
 use PHPOpenSourceSaver\JWTAuth\Exceptions\TokenBlacklistedException;
 use PHPOpenSourceSaver\JWTAuth\Facades\JWTAuth;
@@ -222,6 +223,96 @@ class TwoFactorApiController
         }
 
         return response()->json($this->withTrustedDevice($request, $result));
+    }
+
+    // ========================================================================
+    // Passwordless ("Sign in with passkey") Endpoints (unauthenticated, D-04)
+    // ========================================================================
+
+    /**
+     * Get discoverable-credential assertion options for a passkey sign-in.
+     *
+     * POST /_user/api/v1/2fa/passwordless/options
+     * Returns { options, handle }. The challenge is held server-side under the
+     * handle for 2 minutes and can be answered once.
+     */
+    public function passwordlessOptions(Request $request): JsonResponse
+    {
+        if (!$this->passwordlessAvailable()) {
+            return response()->json(['error' => 'Passwordless sign-in is not available.'], 403);
+        }
+
+        $opts = $this->service->getPasswordlessAuthenticationOptions();
+        $handle = Str::random(64);
+
+        Cache::put('2fa-passwordless:' . $handle, $opts['challenge'], now()->addMinutes(2));
+
+        return response()->json([
+            'options' => $opts['options'],
+            'handle' => $handle,
+        ]);
+    }
+
+    /**
+     * Verify a passkey assertion and sign its owner in (no challenge row: a
+     * user-verified passkey is a complete sign-in, D-06a).
+     *
+     * POST /_user/api/v1/2fa/passwordless/verify
+     * Body: { handle, assertion: { id, response: { clientDataJSON, authenticatorData, signature, userHandle } } }
+     */
+    public function passwordlessVerify(Request $request): JsonResponse
+    {
+        if (!$this->passwordlessAvailable()) {
+            return response()->json(['error' => 'Passwordless sign-in is not available.'], 403);
+        }
+
+        $validation = Validator::make($request->all(), [
+            'handle' => 'required|string|size:64',
+            'assertion' => 'required|array',
+            'assertion.id' => 'required|string',
+            'assertion.response' => 'required|array',
+            'assertion.response.clientDataJSON' => 'required|string',
+            'assertion.response.authenticatorData' => 'required|string',
+            'assertion.response.signature' => 'required|string',
+            'assertion.response.userHandle' => 'required|string',
+        ]);
+
+        if ($validation->fails()) {
+            return response()->json([
+                'error' => $validation->errors()->first(),
+                'errors' => $validation->errors()->toArray(),
+            ], 422);
+        }
+
+        // One-time: the handle is spent whatever the outcome.
+        $challenge = Cache::pull('2fa-passwordless:' . $request->get('handle'));
+
+        $user = is_string($challenge) && $challenge !== ''
+            ? $this->service->verifyPasswordlessAssertion(json_encode($request->get('assertion')), $challenge)
+            : null;
+
+        // One generic refusal for every failure, so the response never says which
+        // check failed or whether the account exists.
+        if (!$user
+            || !$user->is_activated
+            || $user->isBanned()
+            || (method_exists($user, 'isChild') && $user->isChild())) {
+            return response()->json([
+                'error' => 'Passkey sign-in failed.',
+                'passkey_failed' => true,
+            ], 401);
+        }
+
+        if ($ipAddress = $request->ip()) {
+            $user->touchIpAddress($ipAddress);
+        }
+
+        event('golem15.user.login', [$user]);
+
+        return response()->json([
+            'token' => JWTAuth::fromUser($user),
+            'user' => $user->getApiArray(),
+        ]);
     }
 
     // ========================================================================
@@ -642,6 +733,16 @@ class TwoFactorApiController
      * If trust_device is requested and trusted devices are enabled,
      * create a trusted device token and add it to the result.
      */
+    /**
+     * Passkey sign-in is opt-in: the passwordless Setting must be on and
+     * WebAuthn must be an available method (off by default, D-04).
+     */
+    protected function passwordlessAvailable(): bool
+    {
+        return $this->service->isPasswordlessLoginEnabled()
+            && $this->service->isMethodAvailable(TwoFactorMethod::METHOD_WEBAUTHN);
+    }
+
     protected function withTrustedDevice(Request $request, array $result): array
     {
         if ($request->get('trust_device') && $this->service->isTrustedDeviceEnabled()) {

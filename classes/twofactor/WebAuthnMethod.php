@@ -263,25 +263,45 @@ class WebAuthnMethod implements TwoFactorMethodInterface
      */
     public function verifyPasswordlessAssertion(string $assertionJson, string $challenge): ?User
     {
+        $credential = null;
+
         try {
             $clientData = json_decode($assertionJson, true);
             if (!$clientData) {
                 return null;
             }
 
-            $credentialId = $clientData['id'] ?? '';
+            $credentialId = (string) ($clientData['id'] ?? '');
             $clientDataJSON = $clientData['response']['clientDataJSON'] ?? '';
             $authenticatorData = $clientData['response']['authenticatorData'] ?? '';
             $signature = $clientData['response']['signature'] ?? '';
 
-            // Find the credential across all users
-            $credential = WebAuthnCredential::where('is_enabled', true)
-                ->get()
-                ->first(function ($cred) use ($credentialId) {
-                    return $cred->credential_id === $credentialId;
-                });
+            if ($credentialId === '') {
+                return null;
+            }
 
-            if (!$credential) {
+            // Look the credential up directly instead of scanning every row. The
+            // exact comparison guards against a case-insensitive column collation.
+            $credential = WebAuthnCredential::where('credential_id', $credentialId)
+                ->where('is_enabled', true)
+                ->first();
+
+            if (!$credential || !hash_equals((string) $credential->credential_id, $credentialId)) {
+                return null;
+            }
+
+            // lbuchs leaves the userHandle check to the relying party: the handle
+            // the authenticator returns must be the one bound to the credential's
+            // owner at registration. Discoverable credentials (the only kind that
+            // can sign in without a username) always return it.
+            $userHandle = base64_decode((string) ($clientData['response']['userHandle'] ?? ''), true);
+            if ($userHandle === false || $userHandle === ''
+                || !hash_equals($this->userHandleFor((int) $credential->user_id), $userHandle)) {
+                \Log::warning('Passwordless WebAuthn verification failed', [
+                    'credential_id' => $credential->id,
+                    'user_id' => $credential->user_id,
+                    'error' => 'userHandle mismatch',
+                ]);
                 return null;
             }
 
@@ -309,7 +329,10 @@ class WebAuthnMethod implements TwoFactorMethodInterface
 
             return User::find($credential->user_id);
         } catch (\Exception $e) {
+            // Ids only: never log assertion bytes.
             \Log::warning('Passwordless WebAuthn verification failed', [
+                'credential_id' => $credential?->id,
+                'user_id' => $credential?->user_id,
                 'error' => $e->getMessage(),
             ]);
             return null;
