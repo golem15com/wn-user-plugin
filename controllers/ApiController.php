@@ -1107,6 +1107,11 @@ class ApiController
             return response()->json(['error' => 'OAuth completion code is invalid or expired'], 410);
         }
 
+        // D-09: a 2FA user signed in with a provider gets a challenge, not a token.
+        if (!empty($payload['two_factor_required'])) {
+            return response()->json($this->twoFactorChallengeResponse($payload, 'login'));
+        }
+
         return response()->json([
             'token' => $payload['token'] ?? null,
             'user' => $payload['user'] ?? null,
@@ -1150,6 +1155,11 @@ class ApiController
             $result = $component->completePendingRegistration($payload);
             Cache::forget('oauth-pending-registration:' . $pendingCode);
 
+            // D-09: an existing 2FA account matched here gets a challenge, not a token.
+            if (!empty($result['two_factor_required'])) {
+                return response()->json($this->twoFactorChallengeResponse($result, 'login'));
+            }
+
             return response()->json([
                 'token' => $result['token'],
                 'user' => $result['user'],
@@ -1166,6 +1176,21 @@ class ApiController
         } catch (\Exception $ex) {
             return response()->json(['error' => $this->safeExceptionMessage($ex)], $this->safeExceptionStatus($ex));
         }
+    }
+
+    /**
+     * The challenge hand-off an OAuth completion returns for a 2FA user (D-09).
+     */
+    protected function twoFactorChallengeResponse(array $payload, string $defaultAction): array
+    {
+        return [
+            'two_factor_required' => true,
+            'challenge_token' => $payload['challenge_token'] ?? null,
+            'available_methods' => $payload['available_methods'] ?? [],
+            'expires_at' => $payload['expires_at'] ?? null,
+            'action' => $payload['action'] ?? $defaultAction,
+            'return_to' => $payload['return_to'] ?? '/',
+        ];
     }
 
     /**

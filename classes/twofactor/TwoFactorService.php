@@ -217,6 +217,66 @@ class TwoFactorService
     }
 
     /**
+     * Hand a first-factor sign-in (e.g. OAuth) over to the second factor:
+     * create a challenge and describe it, with no token and no user (D-09).
+     *
+     * @return array{two_factor_required: true, challenge_token: string, available_methods: string[], expires_at: string}
+     */
+    public function buildChallengePayload(User $user, ?string $ipAddress = null, ?string $userAgent = null): array
+    {
+        $challenge = $this->createChallenge($user, $ipAddress, $userAgent);
+
+        return [
+            'two_factor_required' => true,
+            'challenge_token' => $challenge->token,
+            'available_methods' => $this->getEnabledMethods($user),
+            'expires_at' => $challenge->expires_at->toIso8601String(),
+        ];
+    }
+
+    /**
+     * Complete a valid challenge with a trusted-device token belonging to the
+     * challenge's user (D-03). Mints the JWT and fires the login events exactly
+     * once (atomic claim). False for a disabled feature, another user's device,
+     * an invalid/expired challenge or one that was already completed.
+     *
+     * @return array{token: string, user: array}|false
+     */
+    public function completeChallengeWithTrustedDevice(string $challengeToken, string $deviceToken): array|false
+    {
+        if ($deviceToken === '' || !$this->isTrustedDeviceEnabled()) {
+            return false;
+        }
+
+        $challenge = TwoFactorChallenge::findValidToken($challengeToken);
+        if (!$challenge) {
+            return false;
+        }
+
+        $user = $challenge->user;
+        if (!$user) {
+            return false;
+        }
+
+        if (!$this->checkTrustedDeviceToken((int) $user->id, $deviceToken)) {
+            return false;
+        }
+
+        if (!$this->claimChallenge($challenge)) {
+            return false;
+        }
+
+        $jwtToken = JWTAuth::fromUser($user);
+        event('golem15.user.login', [$user]);
+        Event::fire('golem15.user.2fa.verified', [$user, 'trusted_device']);
+
+        return [
+            'token' => $jwtToken,
+            'user' => $user->getApiArray(),
+        ];
+    }
+
+    /**
      * Describe a challenge's remaining budget for a failure response (D-19).
      *
      * Reads the row by token whatever its state. A missing row reports no attempts

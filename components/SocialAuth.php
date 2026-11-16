@@ -11,6 +11,7 @@ use ValidationException;
 use ApplicationException;
 use Cms\Classes\Page;
 use Cms\Classes\ComponentBase;
+use Golem15\User\Classes\TwoFactor\TwoFactorService;
 use Golem15\User\Models\User as UserModel;
 use Golem15\User\Models\UserGroup;
 use Golem15\User\Models\Settings as UserSettings;
@@ -376,11 +377,20 @@ class SocialAuth extends ComponentBase
             Auth::login($user, true);
         }
 
-        // Record IP address
-        $user->touchIpAddress(Request::ip());
+        // D-09: for a 2FA user in SPA mode the provider is only the first factor.
+        // completeSuccessfulAuth() hands off a challenge instead of a token, and
+        // the IP record and login event wait for the verified second factor
+        // (verifyChallenge fires golem15.user.login on success).
+        $deferToSecondFactor = ($this->getOAuthContext()['mode'] ?? 'web') === 'spa'
+            && $this->twoFactor()->isEnabledForUser($user);
 
-        // Fire login event
-        Event::fire('golem15.user.login', [$user]);
+        if (!$deferToSecondFactor) {
+            // Record IP address
+            $user->touchIpAddress(Request::ip());
+
+            // Fire login event
+            Event::fire('golem15.user.login', [$user]);
+        }
 
         \Log::info('OAuth login successful', [
             'user_id' => $user->id,
@@ -647,6 +657,15 @@ class SocialAuth extends ComponentBase
             throw new ApplicationException(Lang::get('golem15.user::lang.oauth.must_be_logged_in'));
         }
 
+        // A 2FA user must be signed in through the JWT (every factor passed) to
+        // link a provider in SPA mode; a Winter session alone is not enough
+        // (closes the session-plus-link bypass, D-09).
+        if (($this->getOAuthContext()['mode'] ?? 'web') === 'spa'
+            && $this->resolveJwtUser() === null
+            && $this->twoFactor()->isEnabledForUser($user)) {
+            throw new ApplicationException(Lang::get('golem15.user::lang.oauth.must_be_logged_in'));
+        }
+
         // Check if this OAuth account is already linked to another user
         $existingUser = $providerUserId ? UserModel::findByOAuthProvider($provider, $providerUserId) : null;
         if ($existingUser && $existingUser->id !== $user->id) {
@@ -778,6 +797,15 @@ class SocialAuth extends ComponentBase
      */
     protected function resolveAuthenticatedUser(): ?UserModel
     {
+        return $this->resolveJwtUser() ?? Auth::getUser();
+    }
+
+    /**
+     * The user named by the request's JWT `sub` claim, or null when there is no
+     * valid JWT. See resolveAuthenticatedUser() for why the claim is read directly.
+     */
+    protected function resolveJwtUser(): ?UserModel
+    {
         try {
             $userId = JWTAuth::parseToken()->getPayload()->get('sub');
             if ($userId) {
@@ -787,10 +815,15 @@ class SocialAuth extends ComponentBase
                 }
             }
         } catch (\Throwable $e) {
-            // No/invalid JWT — fall through to the Winter session below.
+            // No/invalid JWT.
         }
 
-        return Auth::getUser();
+        return null;
+    }
+
+    protected function twoFactor(): TwoFactorService
+    {
+        return app(TwoFactorService::class);
     }
 
     /**
@@ -849,12 +882,24 @@ class SocialAuth extends ComponentBase
             $frontendCallback = $context['frontend_callback'] ?? null;
             if ($frontendCallback) {
                 $code = Str::random(64);
-                Cache::put('oauth-complete:' . $code, [
-                    'token' => JWTAuth::fromUser($user),
-                    'user' => $user->getApiArray(),
-                    'action' => $action,
-                    'return_to' => $context['return_to'] ?? '/',
-                ], now()->addMinutes(self::OAUTH_COMPLETE_TTL_MINUTES));
+
+                if ($this->twoFactor()->isEnabledForUser($user)) {
+                    // D-09: the provider is only the first factor. The SPA gets a
+                    // challenge to answer, never a token, for a 2FA user.
+                    $completion = $this->twoFactor()->buildChallengePayload($user, Request::ip(), Request::userAgent()) + [
+                        'action' => $action,
+                        'return_to' => $context['return_to'] ?? '/',
+                    ];
+                } else {
+                    $completion = [
+                        'token' => JWTAuth::fromUser($user),
+                        'user' => $user->getApiArray(),
+                        'action' => $action,
+                        'return_to' => $context['return_to'] ?? '/',
+                    ];
+                }
+
+                Cache::put('oauth-complete:' . $code, $completion, now()->addMinutes(self::OAUTH_COMPLETE_TTL_MINUTES));
 
                 session()->forget('oauth_context');
                 session()->forget('oauth_consent');
@@ -1118,6 +1163,15 @@ class SocialAuth extends ComponentBase
         }
 
         $this->linkOAuthPayloadToUser($user, $provider, $payload);
+
+        // D-09: a 2FA user gets a challenge, not a token; the IP record and the
+        // login event wait for the verified second factor.
+        if ($this->twoFactor()->isEnabledForUser($user)) {
+            return $this->twoFactor()->buildChallengePayload($user, Request::ip(), Request::userAgent()) + [
+                'action' => $action,
+                'return_to' => $payload['return_to'] ?? '/',
+            ];
+        }
 
         // No Auth::login() here — see buildAuthResultFromNewUser() above; same SPA-only path.
         $user->touchIpAddress(Request::ip());
