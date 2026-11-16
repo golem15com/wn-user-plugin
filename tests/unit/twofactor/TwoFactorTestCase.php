@@ -31,6 +31,12 @@ abstract class TwoFactorTestCase extends UserPluginTestCase
     {
         parent::setUp();
 
+        // Settings::resetDefault() (parent) only drops the static Settings
+        // instance when a settings row still exists. After the previous test's
+        // rollback there is none, so Settings::set() values from an earlier test
+        // class would leak in. Start every 2FA test from the defaults.
+        \System\Behaviors\SettingsModel::clearInternalCache();
+
         if (!Config::get('jwt.secret')) {
             Config::set('jwt.secret', 'testing-only-deterministic-jwt-secret-key-0001');
         }
