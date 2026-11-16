@@ -96,6 +96,11 @@ abstract class TwoFactorTestCase extends UserPluginTestCase
         return $service->registerWebAuthn($user, $soft->create(base64_decode($options['challenge']), $uv), $options['challenge'], $name);
     }
 
+    protected function jwtFor(UserModel $user): string
+    {
+        return \PHPOpenSourceSaver\JWTAuth\Facades\JWTAuth::fromUser($user);
+    }
+
     protected function makeUser(array $attrs = []): UserModel
     {
         static $seq = 0;
