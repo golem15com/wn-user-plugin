@@ -8,10 +8,12 @@ use Golem15\User\Models\TwoFactorChallenge;
 use Golem15\User\Models\TwoFactorMethod;
 use Golem15\User\Models\TwoFactorRecoveryCode;
 use Golem15\User\Models\User as UserModel;
+use Golem15\User\Models\WebAuthnCredential;
 use Illuminate\Auth\AuthenticationException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 use PHPOpenSourceSaver\JWTAuth\Exceptions\JWTException;
@@ -415,6 +417,11 @@ class TwoFactorApiController
     {
         try {
             $user = $this->authorize($request);
+
+            if ($refusal = $this->guardStepUp($request, $user)) {
+                return $refusal;
+            }
+
             $this->service->disableMethod($user, TwoFactorMethod::METHOD_TOTP);
 
             return response()->json([
@@ -569,6 +576,11 @@ class TwoFactorApiController
     {
         try {
             $user = $this->authorize($request);
+
+            if ($refusal = $this->guardStepUp($request, $user)) {
+                return $refusal;
+            }
+
             $removed = $this->service->removeWebAuthnCredential($user, $id);
 
             if (!$removed) {
@@ -661,9 +673,15 @@ class TwoFactorApiController
         try {
             $user = $this->authorize($request);
 
-            $password = $request->get('password');
-            if (!$password || !$user->checkHashValue('password', $password)) {
-                return response()->json(['error' => 'Password confirmation required.'], 403);
+            if ($this->service->isStepUpRequired()) {
+                if ($refusal = $this->guardStepUp($request, $user)) {
+                    return $refusal;
+                }
+            } else {
+                $password = $request->get('password');
+                if (!$password || !$user->checkHashValue('password', $password)) {
+                    return response()->json(['error' => 'Password confirmation required.'], 403);
+                }
             }
 
             $codes = $this->service->generateRecoveryCodes($user);
@@ -672,6 +690,27 @@ class TwoFactorApiController
                 'recovery_codes' => $codes,
                 'message' => 'Save these codes securely. They will not be shown again.',
             ]);
+        } catch (AuthenticationException|TokenBlacklistedException $e) {
+            return response()->json(['error' => 'Unauthorized'], 401);
+        }
+    }
+
+    /**
+     * Get assertion options for a passkey step-up proof (D-12).
+     *
+     * POST /_user/api/v1/2fa/step-up/webauthn/options
+     * Returns { options }; answer with step_up: { type: "webauthn", assertion }.
+     */
+    public function stepUpWebauthnOptions(Request $request): JsonResponse
+    {
+        try {
+            $user = $this->authorize($request);
+
+            if (!WebAuthnCredential::where('user_id', $user->id)->where('is_enabled', true)->exists()) {
+                return response()->json(['error' => 'No passkey registered.'], 422);
+            }
+
+            return response()->json($this->service->getStepUpWebAuthnOptions($user));
         } catch (AuthenticationException|TokenBlacklistedException $e) {
             return response()->json(['error' => 'Unauthorized'], 401);
         }
@@ -733,6 +772,47 @@ class TwoFactorApiController
      * If trust_device is requested and trusted devices are enabled,
      * create a trusted device token and add it to the result.
      */
+    /**
+     * Step-up gate for sensitive 2FA changes (D-12). Null when the Setting is
+     * off or the proof is valid; otherwise the 403/429 response to return.
+     *
+     * The proof is `step_up: {type: totp|webauthn|password, ...}`; a top-level
+     * `password` without `step_up` counts as a password proof (the legacy
+     * regenerate body). The limiter only runs with the Setting on, so sites
+     * that leave it off keep today's routes and limits.
+     */
+    protected function guardStepUp(Request $request, UserModel $user): ?JsonResponse
+    {
+        if (!$this->service->isStepUpRequired()) {
+            return null;
+        }
+
+        $key = '2fa-step-up:' . $user->id;
+
+        if (RateLimiter::tooManyAttempts($key, 10)) {
+            return response()->json([
+                'error' => 'Too many attempts. Try again later.',
+                'retry_after' => RateLimiter::availableIn($key),
+            ], 429);
+        }
+
+        $proof = $request->input('step_up');
+        if ($proof === null && $request->has('password')) {
+            $proof = ['type' => 'password', 'password' => $request->input('password')];
+        }
+
+        if (is_array($proof) && $this->service->verifyStepUp($user, $proof)) {
+            return null;
+        }
+
+        RateLimiter::hit($key, 60);
+
+        return response()->json([
+            'error' => 'Step-up verification failed.',
+            'step_up_failed' => true,
+        ], 403);
+    }
+
     /**
      * Passkey sign-in is opt-in: the passwordless Setting must be on and
      * WebAuthn must be an available method (off by default, D-04).

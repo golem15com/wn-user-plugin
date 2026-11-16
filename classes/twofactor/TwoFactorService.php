@@ -2,6 +2,7 @@
 
 namespace Golem15\User\Classes\TwoFactor;
 
+use Cache;
 use Cookie;
 use Golem15\User\Models\Settings as UserSettings;
 use Golem15\User\Models\TrustedDevice;
@@ -444,6 +445,71 @@ class TwoFactorService
     public function verifyPasswordlessAssertion(string $assertionJson, string $challenge): ?User
     {
         return $this->webAuthnMethod->verifyPasswordlessAssertion($assertionJson, $challenge);
+    }
+
+    // ========================================================================
+    // Step-up for sensitive 2FA changes (D-12)
+    // ========================================================================
+
+    /**
+     * Whether turning off TOTP, removing a passkey and regenerating recovery
+     * codes need a fresh proof (Setting two_factor_step_up_required, off by default).
+     */
+    public function isStepUpRequired(): bool
+    {
+        return (bool) UserSettings::get('two_factor_step_up_required', false);
+    }
+
+    /**
+     * Assertion options for a passkey step-up proof. The challenge is held
+     * server-side (one-time, 5 minutes) and never returned to the client.
+     *
+     * @return array{options: mixed}
+     */
+    public function getStepUpWebAuthnOptions(User $user): array
+    {
+        $opts = $this->webAuthnMethod->getAuthenticationOptions($user);
+
+        Cache::put('2fa-stepup:' . $user->id, $opts['challenge'], now()->addMinutes(5));
+
+        return ['options' => $opts['options']];
+    }
+
+    /**
+     * Check a step-up proof: {type: totp, code} (replay-guarded), {type:
+     * webauthn, assertion} answering getStepUpWebAuthnOptions(), or {type:
+     * password, password} for accounts that set their own password.
+     */
+    public function verifyStepUp(User $user, array $proof): bool
+    {
+        switch ($proof['type'] ?? null) {
+            case 'totp':
+                $code = $proof['code'] ?? null;
+
+                return is_scalar($code) && $this->totpMethod->verify($user, (string) $code);
+
+            case 'webauthn':
+                $assertion = $proof['assertion'] ?? null;
+                $challenge = Cache::pull('2fa-stepup:' . $user->id);
+                if (!is_string($challenge) || $challenge === '' || !is_array($assertion)) {
+                    return false;
+                }
+
+                return $this->webAuthnMethod->verify($user, (string) json_encode($assertion), ['challenge' => $challenge]);
+
+            case 'password':
+                // An OAuth placeholder password was never chosen by the user, so
+                // it cannot prove anything (RESEARCH P8).
+                $password = $proof['password'] ?? null;
+                if ($user->has_self_set_password === false || !is_string($password) || $password === '') {
+                    return false;
+                }
+
+                return (bool) $user->checkHashValue('password', $password);
+
+            default:
+                return false;
+        }
     }
 
     // ========================================================================

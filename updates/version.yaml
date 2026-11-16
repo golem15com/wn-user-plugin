@@ -165,3 +165,5 @@
 "3.5.0":
     - "Two-factor hardening (additive): TOTP replay guard column last_totp_timestep, WebAuthn rpId/UV/residentKey config, server-side registration challenge, passkey rename. Defaults unchanged except the always-on TOTP replay guard (D-28)."
     - v3.5.0/add_last_totp_timestep_to_two_factor_methods.php
+"3.5.1":
+    - "Passwordless passkey JWT API, Setting-gated step-up for sensitive 2FA actions, 2FA-gated Google hand-off (additive; defaults unchanged)."

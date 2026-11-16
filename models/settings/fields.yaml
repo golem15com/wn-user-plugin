@@ -128,6 +128,14 @@ tabs:
             type: switch
             tab: golem15.user::lang.settings.two_factor_tab
 
+        # Step-up for sensitive 2FA changes
+        two_factor_step_up_required:
+            span: full
+            label: golem15.user::lang.settings.two_factor_step_up_required
+            comment: golem15.user::lang.settings.two_factor_step_up_required_comment
+            type: switch
+            tab: golem15.user::lang.settings.two_factor_tab
+
         # Trust Device
         trusted_device_enabled:
             span: left

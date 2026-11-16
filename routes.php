@@ -453,6 +453,12 @@ Route::group(
             }
         );
         Route::post(
+            'step-up/webauthn/options',
+            static function (Request $request) {
+                return (new \Golem15\User\Controllers\TwoFactorApiController())->stepUpWebauthnOptions($request);
+            }
+        );
+        Route::post(
             'recovery-codes/regenerate',
             static function (Request $request) {
                 return (new \Golem15\User\Controllers\TwoFactorApiController())->regenerateRecoveryCodes($request);

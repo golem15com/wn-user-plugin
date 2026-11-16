@@ -128,6 +128,8 @@ return [
         'two_factor_enforce_groups_comment' => 'When enforced, limit requirement to these groups. Leave empty to enforce for all users.',
         'two_factor_passwordless_login' => 'Passwordless Security Key Login',
         'two_factor_passwordless_login_comment' => 'Allow users to sign in with a security key or passkey without entering a password. Keys must be registered from the account page first.',
+        'two_factor_step_up_required' => 'Require a fresh second factor for sensitive 2FA changes',
+        'two_factor_step_up_required_comment' => 'Turning off the authenticator app, removing a passkey and regenerating recovery codes need a current code, a passkey or the account password.',
         'trusted_device_enabled' => 'Trust this Device',
         'trusted_device_enabled_comment' => 'Allow users to skip 2FA on trusted devices for a configurable period.',
         'trusted_device_ttl_days' => 'Trust Duration (days)',

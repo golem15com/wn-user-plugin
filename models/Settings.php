@@ -59,6 +59,7 @@ class Settings extends Model
         $this->two_factor_challenge_ttl = config('golem15.user::twoFactorChallengeTtl', 5);
         $this->two_factor_enforce_groups = config('golem15.user::twoFactorEnforceGroups', []);
         $this->two_factor_passwordless_login = config('golem15.user::twoFactorPasswordlessLogin', false);
+        $this->two_factor_step_up_required = config('golem15.user::twoFactorStepUpRequired', false);
         $this->trusted_device_enabled = config('golem15.user::trustedDeviceEnabled', false);
         $this->trusted_device_ttl_days = config('golem15.user::trustedDeviceTtlDays', 30);
     }
