@@ -154,8 +154,9 @@ class DeviceFlowApiController
         }
 
         // Raw column: the model accessor invents a name ("Linux PC") when null.
-        $deviceName = trim((string) ($session->getAttributes()['device_name'] ?? ''));
-        $deviceName = $deviceName === '' ? null : mb_substr($deviceName, 0, 64);
+        // The name comes from the unauthenticated initiate, so only its safe
+        // display form is returned (no control/bidi characters, no markup).
+        $deviceName = DeviceAuthSession::cleanDisplayName($session->getAttributes()['device_name'] ?? null);
         $ua = DeviceAuthSession::userAgentParts($session->device_user_agent);
 
         return response()->json([

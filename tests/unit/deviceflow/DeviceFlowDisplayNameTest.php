@@ -88,4 +88,42 @@ class DeviceFlowDisplayNameTest extends DeviceFlowTestCase
             'email' => ['support@evil.example'],
         ];
     }
+
+    // ---- read side (107.1 review WR-01) ---------------------------------------
+
+    public function test_describe_returns_only_the_safe_display_form_of_the_name(): void
+    {
+        $viewer = $this->makeUser();
+        $raw = "\u{202E}[Reset](https://evil.example)\u{200B} <b>now</b>";
+
+        [$token] = $this->initiateRedeemable(['device_name' => $raw]);
+        $this->assertSame($raw, $this->deviceSession($token)->getAttributes()['device_name'], 'stored as sent');
+
+        [$status, $body] = $this->describe($token, $viewer);
+        $this->assertSame(200, $status);
+        $this->assertSame(DeviceAuthSession::cleanDisplayName($raw), $body['data']['device_name']);
+        $this->assertSame('Reset(httpsevilexample) bnowb', $body['data']['device_name']);
+    }
+
+    public function test_a_redeemable_initiate_rejects_an_over_length_device_name(): void
+    {
+        [, $challenge] = $this->pkcePair();
+
+        [$status, $body] = $this->initiate(['code_challenge' => $challenge, 'device_name' => str_repeat('a', 256)]);
+        $this->assertSame(422, $status);
+        $this->assertArrayHasKey('device_name', $body['errors']);
+
+        [$status] = $this->initiate(['code_challenge' => $challenge, 'device_name' => str_repeat('a', 255)]);
+        $this->assertSame(200, $status);
+    }
+
+    public function test_a_legacy_initiate_still_takes_any_device_name(): void
+    {
+        // No code_challenge: no new validation and the name is stored verbatim, as before 3.6.0.
+        $raw = '[Old](tablet) ' . str_repeat('x', 300);
+        [$status, $body] = $this->initiate(['device_name' => $raw]);
+
+        $this->assertSame(200, $status, json_encode($body));
+        $this->assertSame($raw, $this->deviceSession($body['data']['token'])->getAttributes()['device_name']);
+    }
 }

@@ -1321,9 +1321,12 @@ class ApiController
         // Validated only when present, so existing callers are unaffected.
         $codeChallenge = null;
         if ($request->has('code_challenge') || $request->has('code_challenge_method')) {
-            $validation = Validator::make($request->only(['code_challenge', 'code_challenge_method']), [
+            // device_name is checked only on this PKCE path, so callers that send
+            // no challenge are unaffected; it must fit the string(255) column.
+            $validation = Validator::make($request->only(['code_challenge', 'code_challenge_method', 'device_name']), [
                 'code_challenge' => ['required', 'string', 'size:43', 'regex:/^[A-Za-z0-9_\-]{43}$/'],
                 'code_challenge_method' => ['sometimes', 'string', 'in:S256'],
+                'device_name' => ['nullable', 'string', 'max:255'],
             ]);
 
             if ($validation->fails()) {
