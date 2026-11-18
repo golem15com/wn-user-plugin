@@ -1310,13 +1310,36 @@ class ApiController
             'name' => $request->input('device_name'),
         ];
 
+        // Optional PKCE (RFC 7636, S256 only). A client that sends a challenge can
+        // later redeem a JWT itself via POST devices/redeem with the verifier.
+        // Validated only when present, so existing callers are unaffected.
+        $codeChallenge = null;
+        if ($request->has('code_challenge') || $request->has('code_challenge_method')) {
+            $validation = Validator::make($request->only(['code_challenge', 'code_challenge_method']), [
+                'code_challenge' => ['required', 'string', 'size:43', 'regex:/^[A-Za-z0-9_\-]{43}$/'],
+                'code_challenge_method' => ['sometimes', 'string', 'in:S256'],
+            ]);
+
+            if ($validation->fails()) {
+                return response()->json([
+                    'error' => 'Validation failed',
+                    'errors' => $validation->errors()->toArray(),
+                ], 422);
+            }
+
+            $codeChallenge = (string) $request->input('code_challenge');
+        }
+
+        $pendingTtlMinutes = DeviceAuthSession::pendingTtlMinutes();
+
         // Create session without user_id - will be linked when parent confirms
         $session = DeviceAuthSession::create([
             'token' => \Illuminate\Support\Str::random(64),
             'short_code' => $this->generateUniqueShortCode(),
+            'code_challenge' => $codeChallenge,
             'user_id' => null,
             'status' => DeviceAuthSession::STATUS_PENDING,
-            'expires_at' => \Carbon\Carbon::now()->addMinutes(5),
+            'expires_at' => \Carbon\Carbon::now()->addMinutes($pendingTtlMinutes),
             'device_ip' => $deviceInfo['ip'],
             'device_user_agent' => $deviceInfo['user_agent'],
             'device_name' => $deviceInfo['name'],
@@ -1329,6 +1352,8 @@ class ApiController
                 'short_code' => $session->short_code,
                 'auth_url' => $session->getAuthUrl(),
                 'expires_at' => $session->expires_at->toIso8601String(),
+                'expires_in' => $pendingTtlMinutes * 60,
+                'interval' => DeviceAuthSession::POLL_INTERVAL_SECONDS,
             ],
         ]);
     }

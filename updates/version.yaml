@@ -169,3 +169,6 @@
     - "Passwordless passkey JWT API, Setting-gated step-up for sensitive 2FA actions, 2FA-gated Google hand-off (additive; defaults unchanged)."
 "3.5.2":
     - "Security notification mail templates for 2FA changes (additive; sent only when a host listens)."
+"3.6.0":
+    - "Device-flow redeem for API clients (additive): PKCE code_challenge + denied_at columns, poll/redeem/describe/deny endpoints, named device limiters, configurable pending/redeem lifetimes. Sessions without code_challenge behave as before."
+    - v3.6.0/add_device_auth_pkce_and_denied_at.php

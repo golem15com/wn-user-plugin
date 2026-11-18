@@ -20,6 +20,8 @@ use Model;
  * @property string|null $device_ip
  * @property string|null $device_user_agent
  * @property string|null $device_name
+ * @property string|null $code_challenge PKCE S256 challenge (RFC 7636); non-null = redeemable session
+ * @property Carbon|null $denied_at
  * @property string|null $auth_ip
  * @property Carbon|null $confirmed_at
  * @property Carbon|null $used_at
@@ -48,6 +50,7 @@ class DeviceAuthSession extends Model
     protected $fillable = [
         'token',
         'short_code',
+        'code_challenge',
         'user_id',
         'status',
         'expires_at',
@@ -67,6 +70,7 @@ class DeviceAuthSession extends Model
     protected $dates = [
         'expires_at',
         'confirmed_at',
+        'denied_at',
         'used_at',
         'last_activity_at',
         'created_at',
@@ -88,6 +92,12 @@ class DeviceAuthSession extends Model
     const STATUS_USED = 'used';
     const STATUS_EXPIRED = 'expired';
     const STATUS_REVOKED = 'revoked';
+
+    /**
+     * Poll interval (seconds) advertised to API clients of the redeemable flow
+     * (RFC 8628 style "interval").
+     */
+    public const POLL_INTERVAL_SECONDS = 3;
 
     /**
      * Generate a new authorization session for a user
@@ -269,6 +279,13 @@ class DeviceAuthSession extends Model
         $this->confirmed_at = Carbon::now();
         $this->auth_ip = $authIp ?? request()->ip();
 
+        // A redeemable session must be redeemed shortly after the browser confirms
+        // it: the confirmed grant lives for the redeem window only. Sessions
+        // without a code_challenge keep their original expires_at.
+        if ($this->isRedeemable()) {
+            $this->expires_at = Carbon::now()->addSeconds(self::redeemTtlSeconds());
+        }
+
         return $this->save();
     }
 
@@ -316,6 +333,93 @@ class DeviceAuthSession extends Model
     {
         $this->status = self::STATUS_REVOKED;
         return $this->save();
+    }
+
+    /**
+     * Whether this session was created with a PKCE code_challenge, i.e. it can only
+     * be completed by POST devices/redeem with the matching code_verifier. Every
+     * rule added for the redeem flow is gated on this.
+     *
+     * @return bool
+     */
+    public function isRedeemable(): bool
+    {
+        return $this->code_challenge !== null && $this->code_challenge !== '';
+    }
+
+    /**
+     * Verify a PKCE code_verifier against the stored S256 challenge
+     * (RFC 7636 section 4.6), in constant time.
+     *
+     * @param string $verifier
+     * @return bool
+     */
+    public function verifyCodeVerifier(string $verifier): bool
+    {
+        if (!$this->isRedeemable() || !preg_match('/^[A-Za-z0-9\-._~]{43,128}$/', $verifier)) {
+            return false;
+        }
+
+        $computed = rtrim(strtr(base64_encode(hash('sha256', $verifier, true)), '+/', '-_'), '=');
+
+        return hash_equals((string) $this->code_challenge, $computed);
+    }
+
+    /**
+     * Pending window for new device sessions, in minutes (Setting
+     * device_auth_pending_ttl, default 5 as before).
+     *
+     * @return int
+     */
+    public static function pendingTtlMinutes(): int
+    {
+        return max(1, (int) Settings::get('device_auth_pending_ttl', 5));
+    }
+
+    /**
+     * Redeem window after confirm for redeemable sessions, in seconds (Setting
+     * device_auth_redeem_ttl, default 60).
+     *
+     * @return int
+     */
+    public static function redeemTtlSeconds(): int
+    {
+        return max(10, (int) Settings::get('device_auth_redeem_ttl', 60));
+    }
+
+    /**
+     * Status as reported to API clients: revoked reads as "denied", and a pending
+     * or confirmed session past its window reads as "expired".
+     *
+     * @return string
+     */
+    public function publicStatus(): string
+    {
+        if ($this->status === self::STATUS_REVOKED) {
+            return 'denied';
+        }
+
+        if (in_array($this->status, [self::STATUS_PENDING, self::STATUS_CONFIRMED], true) && $this->isExpired()) {
+            return self::STATUS_EXPIRED;
+        }
+
+        return (string) $this->status;
+    }
+
+    /**
+     * Whole seconds until expires_at, never negative.
+     *
+     * @return int
+     */
+    public function secondsLeft(): int
+    {
+        if (!$this->expires_at) {
+            return 0;
+        }
+
+        $now = Carbon::now();
+
+        return $this->expires_at->greaterThan($now) ? (int) $now->diffInSeconds($this->expires_at) : 0;
     }
 
     /**

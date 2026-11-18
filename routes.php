@@ -17,6 +17,42 @@ RateLimiter::for('2fa-verify', function (Request $request) {
     return Limit::perMinute(10)->by($request->ip());
 });
 
+/*
+ * Device-flow limiters (additive). Each endpoint gets its own bucket on top of
+ * user-api. Distinct `by` prefixes keep the per-limit keys apart.
+ */
+RateLimiter::for('device-initiate', function (Request $request) {
+    return [
+        Limit::perMinute(10)->by('ip:' . $request->ip()),
+        Limit::perHour(60)->by('iph:' . $request->ip()),
+    ];
+});
+
+RateLimiter::for('device-poll', function (Request $request) {
+    return [
+        Limit::perMinute(40)->by('tok:' . hash('sha256', (string) $request->input('token'))),
+        Limit::perMinute(120)->by('ip:' . $request->ip()),
+    ];
+});
+
+RateLimiter::for('device-redeem', function (Request $request) {
+    return [
+        Limit::perMinute(10)->by('ip:' . $request->ip()),
+    ];
+});
+
+RateLimiter::for('device-describe', function (Request $request) {
+    return [
+        Limit::perMinute(30)->by('u:' . ($request->user()?->id ?: $request->ip())),
+    ];
+});
+
+RateLimiter::for('device-deny', function (Request $request) {
+    return [
+        Limit::perMinute(10)->by('u:' . ($request->user()?->id ?: $request->ip())),
+    ];
+});
+
 Route::group(
     ['prefix' => '/_user/api/v1', 'middleware' => ['throttle:user-api', 'bindings']],
     static function () {
@@ -216,13 +252,31 @@ Route::group(
             static function (Request $request) {
                 return (new \Golem15\User\Controllers\ApiController())->initiateDeviceAuth($request);
             }
-        );
+        )->middleware('throttle:device-initiate');
         Route::get(
             'devices/status/{token}',
             static function (Request $request, $token) {
                 return (new \Golem15\User\Controllers\ApiController())->deviceAuthStatus($request, $token);
             }
         );
+
+        /*
+         * Device-flow redeem for API clients holding a PKCE verifier (sessions
+         * initiated with code_challenge only). Token and verifier travel in the
+         * POST body, never in the URL.
+         */
+        Route::post(
+            'devices/poll',
+            static function (Request $request) {
+                return (new \Golem15\User\Controllers\DeviceFlowApiController())->poll($request);
+            }
+        )->middleware('throttle:device-poll');
+        Route::post(
+            'devices/redeem',
+            static function (Request $request) {
+                return (new \Golem15\User\Controllers\DeviceFlowApiController())->redeem($request);
+            }
+        )->middleware('throttle:device-redeem');
     });
 
 /*
