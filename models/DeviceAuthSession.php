@@ -100,6 +100,11 @@ class DeviceAuthSession extends Model
     public const POLL_INTERVAL_SECONDS = 3;
 
     /**
+     * Longest device name cleanDisplayName() returns, in characters.
+     */
+    public const DISPLAY_NAME_MAX = 64;
+
+    /**
      * Generate a new authorization session for a user
      *
      * @param User $user
@@ -465,6 +470,44 @@ class DeviceAuthSession extends Model
             'app' => ($app === null || $app === 'Unknown Browser') ? null : $app,
             'os' => ($os === null || $os === 'Unknown OS') ? null : $os,
         ];
+    }
+
+    /**
+     * A caller-supplied device name made safe to show to a person: a confirm page
+     * or an email (Markdown + HTML). device_name comes from the unauthenticated
+     * initiate call, so it is treated as hostile.
+     *
+     * Control and format characters (NUL, tabs, bidi overrides, zero-width) are
+     * removed. Whitespace is collapsed. Then only a small display character set is
+     * kept: letters, combining marks, digits, space, ( ) ' and -. That drops every
+     * Markdown or HTML metacharacter ([ ] < > * _ ` # ! | ~ &), and also the URL
+     * and domain characters (: / . @), so the result cannot render as a link or as
+     * markup, and a mail client cannot auto-link it. The result is capped at
+     * DISPLAY_NAME_MAX characters. Empty or non-string input gives null.
+     *
+     * Additive helper. It does not change what is stored or what the
+     * device_name accessor returns.
+     *
+     * @param mixed $name
+     * @return string|null
+     */
+    public static function cleanDisplayName(mixed $name): ?string
+    {
+        if (!is_string($name)) {
+            return null;
+        }
+
+        $clean = preg_replace('/[\p{Cc}\p{Cf}]/u', '', $name);
+        if (!is_string($clean)) {
+            return null; // invalid UTF-8
+        }
+
+        $clean = (string) preg_replace('/\s+/u', ' ', $clean);
+        $clean = (string) preg_replace("/[^\\p{L}\\p{M}\\p{N} ()'\\-]/u", '', $clean);
+        $clean = trim((string) preg_replace('/ {2,}/', ' ', $clean));
+        $clean = trim(mb_substr($clean, 0, self::DISPLAY_NAME_MAX));
+
+        return $clean === '' ? null : $clean;
     }
 
     /**
