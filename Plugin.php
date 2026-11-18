@@ -248,6 +248,7 @@ class Plugin extends PluginBase
             'golem15.user::mail.security_passkey_removed',
             'golem15.user::mail.security_recovery_codes_regenerated',
             'golem15.user::mail.security_recovery_code_used',
+            'golem15.user::mail.security_device_signed_in',
         ];
     }
 

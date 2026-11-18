@@ -156,6 +156,23 @@ tabs:
                 field: trusted_device_enabled
                 condition: checked
 
+        # Device sign-in (device flow) lifetimes
+        device_auth_pending_ttl:
+            span: left
+            label: golem15.user::lang.settings.device_auth_pending_ttl
+            comment: golem15.user::lang.settings.device_auth_pending_ttl_comment
+            type: number
+            default: 5
+            tab: golem15.user::lang.settings.two_factor_tab
+
+        device_auth_redeem_ttl:
+            span: right
+            label: golem15.user::lang.settings.device_auth_redeem_ttl
+            comment: golem15.user::lang.settings.device_auth_redeem_ttl_comment
+            type: number
+            default: 60
+            tab: golem15.user::lang.settings.two_factor_tab
+
         # Enforce for Groups
         two_factor_enforce_groups:
             span: full

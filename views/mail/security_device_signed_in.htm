@@ -1,0 +1,16 @@
+subject = "A desktop app signed in to your account"
+description = "Security notification sent when a desktop app signs in through the browser hand-off"
+==
+Hello {{ name }}
+
+A desktop app signed in to your account: {{ device_name }}, from IP address
+{{ ip }}, on {{ time }}.
+
+If this was you, no action is needed.
+
+If this was NOT you, reset your password immediately with the "forgot password"
+option and review your security settings.
+
+{% partial 'subcopy' body %}
+    **This is an automatic message. Please do not reply to it.**
+{% endpartial %}
