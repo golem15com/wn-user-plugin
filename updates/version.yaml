@@ -170,5 +170,5 @@
 "3.5.2":
     - "Security notification mail templates for 2FA changes (additive; sent only when a host listens)."
 "3.6.0":
-    - "Device-flow redeem for API clients (additive): PKCE code_challenge + denied_at columns, poll/redeem/describe/deny endpoints, named device limiters, configurable pending/redeem lifetimes. Sessions without code_challenge behave as before."
+    - "Device-flow redeem for API clients (additive): PKCE code_challenge + denied_at columns, poll/redeem/describe/deny endpoints, named device limiters (the initiate limiter applies only to requests carrying code_challenge), configurable pending/redeem lifetimes. Sessions and initiate calls without code_challenge behave as before."
     - v3.6.0/add_device_auth_pkce_and_denied_at.php

@@ -22,6 +22,14 @@ RateLimiter::for('2fa-verify', function (Request $request) {
  * user-api. Distinct `by` prefixes keep the per-limit keys apart.
  */
 RateLimiter::for('device-initiate', function (Request $request) {
+    // Only redeemable (PKCE) initiates get the stricter bucket: the same condition
+    // that makes initiateDeviceAuth() take its PKCE path. Legacy QR/short-code
+    // callers (no code_challenge) keep exactly their previous limits (user-api only),
+    // so fleets behind one NAT are unaffected.
+    if (!$request->has('code_challenge') && !$request->has('code_challenge_method')) {
+        return Limit::none();
+    }
+
     return [
         Limit::perMinute(10)->by('ip:' . $request->ip()),
         Limit::perHour(60)->by('iph:' . $request->ip()),
