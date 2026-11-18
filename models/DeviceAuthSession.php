@@ -423,6 +423,51 @@ class DeviceAuthSession extends Model
     }
 
     /**
+     * Deny a pending session (a signed-in user refused it in the browser).
+     *
+     * Stored as status "revoked" plus denied_at: the status column is a strict
+     * ENUM, and revoked sessions are already excluded by findValidToken() /
+     * findValidShortCode(), so a denied session can never be confirmed later.
+     *
+     * @return bool false when the session is not pending
+     */
+    public function deny(): bool
+    {
+        if (!$this->isPending()) {
+            return false;
+        }
+
+        $this->status = self::STATUS_REVOKED;
+        $this->denied_at = Carbon::now();
+
+        return $this->save();
+    }
+
+    /**
+     * Split a user agent into the app (browser family) and OS family, using
+     * TrustedDevice::parseDeviceName(). Unknown parts are null.
+     *
+     * @param string|null $userAgent
+     * @return array{app: ?string, os: ?string}
+     */
+    public static function userAgentParts(?string $userAgent): array
+    {
+        $userAgent = trim((string) $userAgent);
+        if ($userAgent === '') {
+            return ['app' => null, 'os' => null];
+        }
+
+        $parts = explode(' on ', TrustedDevice::parseDeviceName($userAgent), 2);
+        $app = $parts[0] ?? null;
+        $os = $parts[1] ?? null;
+
+        return [
+            'app' => ($app === null || $app === 'Unknown Browser') ? null : $app,
+            'os' => ($os === null || $os === 'Unknown OS') ? null : $os,
+        ];
+    }
+
+    /**
      * Update last activity timestamp
      *
      * @return bool

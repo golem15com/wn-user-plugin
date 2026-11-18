@@ -221,7 +221,9 @@ class DeviceAuth extends ComponentBase
 
         $authSession = DeviceAuthSession::where('token', $token)->first();
 
-        if (!$authSession) {
+        // Verifier (PKCE) sessions complete only via POST devices/redeem with the
+        // verifier; holding the link token must never sign anyone in here.
+        if (!$authSession || $authSession->code_challenge !== null) {
             return ['status' => 'expired', 'message' => 'Authorization token not found'];
         }
 

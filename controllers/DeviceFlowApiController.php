@@ -125,9 +125,100 @@ class DeviceFlowApiController
         ]);
     }
 
+    /**
+     * POST /devices/describe  {token}  (JWT)
+     *
+     * What is asking, for the browser confirm page. Details only while pending;
+     * no user data, token or challenge ever.
+     */
+    public function describe(Request $request): JsonResponse
+    {
+        try {
+            $this->authorize($request);
+        } catch (AuthenticationException) {
+            return response()->json(['error' => 'Unauthorized'], 401);
+        }
+
+        if ($invalid = $this->validateTokenRequest($request)) {
+            return $invalid;
+        }
+
+        $session = $this->findRedeemableSession($request);
+        if (!$session) {
+            return response()->json(['error' => 'Session not found'], 404);
+        }
+
+        $status = $session->publicStatus();
+        if ($status !== DeviceAuthSession::STATUS_PENDING) {
+            return response()->json(['success' => true, 'data' => ['status' => $status]]);
+        }
+
+        // Raw column: the model accessor invents a name ("Linux PC") when null.
+        $deviceName = trim((string) ($session->getAttributes()['device_name'] ?? ''));
+        $deviceName = $deviceName === '' ? null : mb_substr($deviceName, 0, 64);
+        $ua = DeviceAuthSession::userAgentParts($session->device_user_agent);
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'status' => $status,
+                'short_code' => $session->short_code,
+                'device_name' => $deviceName,
+                'app' => $ua['app'],
+                'os' => $ua['os'],
+                'ip' => $session->device_ip,
+                'created_at' => $session->created_at?->toIso8601String(),
+                'expires_in' => $session->secondsLeft(),
+            ],
+        ]);
+    }
+
+    /**
+     * POST /devices/deny  {token}  (JWT)
+     *
+     * Refuse a pending verifier session (revoked + denied_at).
+     */
+    public function deny(Request $request): JsonResponse
+    {
+        try {
+            $this->authorize($request);
+        } catch (AuthenticationException) {
+            return response()->json(['error' => 'Unauthorized'], 401);
+        }
+
+        if ($invalid = $this->validateTokenRequest($request)) {
+            return $invalid;
+        }
+
+        $session = $this->findRedeemableSession($request);
+        if (!$session) {
+            return response()->json(['error' => 'Session not found'], 404);
+        }
+
+        if (!$session->deny()) {
+            return response()->json([
+                'error' => 'Session is not pending',
+                'status' => $session->publicStatus(),
+            ], 409);
+        }
+
+        return response()->json(['success' => true, 'data' => ['status' => 'denied']]);
+    }
+
     // ------------------------------------------------------------------------
     // Helpers
     // ------------------------------------------------------------------------
+
+    /**
+     * The redeemable session for the token in the body, or null (unknown token
+     * or a legacy session without a code_challenge).
+     */
+    protected function findRedeemableSession(Request $request): ?DeviceAuthSession
+    {
+        $session = DeviceAuthSession::where('token', (string) $request->input('token'))->first();
+
+        return ($session && $session->isRedeemable()) ? $session : null;
+    }
 
     /**
      * 422 when token / code_verifier are missing or malformed, null otherwise.

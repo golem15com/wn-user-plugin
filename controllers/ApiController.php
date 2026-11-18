@@ -1274,6 +1274,12 @@ class ApiController
             }
 
             $session = DeviceAuthSession::findValidShortCode($code);
+
+            // A verifier (PKCE) session's short code is display-only: it can be
+            // confirmed by its link token only, never by a typed code.
+            if ($session && $session->isRedeemable()) {
+                $session = null;
+            }
         }
         // Try token (from QR code scan)
         elseif ($request->has('token')) {
@@ -1366,7 +1372,9 @@ class ApiController
     {
         $session = DeviceAuthSession::where('token', $token)->first();
 
-        if (!$session) {
+        // Verifier (PKCE) sessions are polled via POST devices/poll with the
+        // verifier; the link token alone must never reveal their user_id.
+        if (!$session || $session->isRedeemable()) {
             return response()->json(['error' => 'Session not found'], 404);
         }
 

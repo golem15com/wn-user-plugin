@@ -277,6 +277,23 @@ Route::group(
                 return (new \Golem15\User\Controllers\DeviceFlowApiController())->redeem($request);
             }
         )->middleware('throttle:device-redeem');
+
+        /*
+         * Browser side of the redeemable flow (JWT): describe what is asking,
+         * or refuse it. The link token travels in the POST body.
+         */
+        Route::post(
+            'devices/describe',
+            static function (Request $request) {
+                return (new \Golem15\User\Controllers\DeviceFlowApiController())->describe($request);
+            }
+        )->middleware('throttle:device-describe');
+        Route::post(
+            'devices/deny',
+            static function (Request $request) {
+                return (new \Golem15\User\Controllers\DeviceFlowApiController())->deny($request);
+            }
+        )->middleware('throttle:device-deny');
     });
 
 /*
